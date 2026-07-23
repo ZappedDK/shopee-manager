@@ -3,6 +3,7 @@ import { PlatformIcon } from './PlatformIcon';
 import { api } from './services/api';
 import { Dashboard } from './Dashboard';
 import { Login } from './Login';
+import { SimuladorPreco } from './SimuladorPreco';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
 import {
   colors, layoutStyle, sidebarStyle, contentStyle, sidebarGroupLabelStyle, menuItemStyle,
@@ -11,7 +12,7 @@ import {
   tableHeaderStyle, tableCellStyle,
 } from './theme';
 
-type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas';
+type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas' | 'simulador';
 
 function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
@@ -233,12 +234,12 @@ function App() {
   return (
     <div style={layoutStyle} className="app-layout">
       <div style={sidebarStyle} className="app-sidebar">
-        <div style={{ marginBottom: '20px', textAlign: 'center' }} className="app-sidebar-brand">
-          <img src="/logo.png" alt="Skold Stock Logo" style={{ width: '140px', marginBottom: '12px' }} />
+        <div style={{ marginBottom: '12px', textAlign: 'center' }} className="app-sidebar-brand">
+          <img src="/logo.png" alt="Skold Stock Logo" style={{ maxWidth: '120px', maxHeight: '100px', objectFit: 'contain', marginBottom: '4px' }} />
           <h1
             className="brand-title"
             style={{
-              fontSize: '22px',
+              fontSize: '20px',
               color: colors.textPrimary,
               fontWeight: 600,
               margin: 0,
@@ -263,6 +264,9 @@ function App() {
           <MenuItem icon="📊" label="Visão Geral" target="dashboard" />
           <MenuItem icon="📦" label="Controle de Estoque" target="estoque" />
           <MenuItem icon="🧺" label="Almoxarifado" target="almoxarifado" />
+
+          <div style={sidebarGroupLabelStyle}>Ferramentas</div>
+          <MenuItem icon="🎯" label="Simulador de Preço" target="simulador" />
 
           <div style={sidebarGroupLabelStyle}>Configurações</div>
           <MenuItem icon="🏪" label="Plataformas de Venda" target="plataformas" />
@@ -295,6 +299,9 @@ function App() {
 
       <div style={contentStyle} className="app-content">
         {view === 'dashboard' && <Dashboard />}
+
+        {view === 'simulador' && <SimuladorPreco />}
+
 
         {view === 'almoxarifado' && (
           <div>

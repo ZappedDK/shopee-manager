@@ -36,6 +36,24 @@ html, body, #root {
   display: none;
 }
 
+/* Sidebar Nav no Desktop: flex-1 com rolagem interna independente */
+@media (min-width: 861px) {
+  .app-sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+  }
+
+  .app-sidebar-nav::-webkit-scrollbar {
+    width: 4px;
+  }
+  .app-sidebar-nav::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+  }
+}
+
 /* Tabelas: sempre dentro de um wrapper com scroll horizontal,
    assim nunca quebram o layout, mesmo no desktop com telas
    estreitas ou zoom alto. */

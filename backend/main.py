@@ -9,7 +9,7 @@ from typing import List
 from core.database import engine, get_db, Base
 from models import domain as models_domain
 from schemas import domain as schemas_domain
-from services.financeiro import calcular_metricas_plataforma
+from services.financeiro import calcular_metricas_plataforma, calcular_preco_por_margem
 
 # Cria as tabelas no banco de dados fisicamente
 Base.metadata.create_all(bind=engine)
@@ -288,6 +288,83 @@ def relatorio_financeiro_produto(sku: str, db: Session = Depends(get_db)):
         metricas_multiplas.append(res_plat)
     
     return {"produto": produto.nome, "embalagem_utilizada": produto.embalagem.nome, "analises": metricas_multiplas}
+
+@app.get("/simular-preco", tags=["Inteligência Financeira"])
+def simular_preco_livre(
+    custo_produto: float,
+    margem_desejada: float = 20.0,
+    embalagem_id: int = None,
+    custo_embalagem_custom: float = 0.0,
+    db: Session = Depends(get_db)
+):
+    etiqueta = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave="etiqueta_padrao").first()
+    custo_etiq = (etiqueta.valor_pacote / etiqueta.qtd_unidades) if etiqueta else 0.0
+
+    custo_emb = custo_embalagem_custom
+    if embalagem_id:
+        emb = db.query(models_domain.Embalagem).filter_by(id=embalagem_id).first()
+        if emb and emb.qtd_unidades > 0:
+            custo_emb = emb.custo_pacote / emb.qtd_unidades
+
+    plataformas = db.query(models_domain.Plataforma).all()
+    resultados = []
+
+    for plat in plataformas:
+        sim = calcular_preco_por_margem(
+            custo_unitario=custo_produto,
+            custo_embalagem_un=custo_emb,
+            custo_etiqueta_un=custo_etiq,
+            plataforma=plat,
+            margem_desejada_pct=margem_desejada
+        )
+        resultados.append(sim)
+
+    return {
+        "custo_produto": custo_produto,
+        "custo_embalagem": custo_emb,
+        "custo_etiqueta": custo_etiq,
+        "margem_desejada_pct": margem_desejada,
+        "simulacoes": resultados
+    }
+
+@app.get("/produtos/{sku}/simular-preco", tags=["Inteligência Financeira"])
+def simular_preco_produto_existente(
+    sku: str,
+    margem_desejada: float = 20.0,
+    db: Session = Depends(get_db)
+):
+    produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado.")
+
+    etiqueta = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave="etiqueta_padrao").first()
+    custo_etiq = (etiqueta.valor_pacote / etiqueta.qtd_unidades) if etiqueta else 0.0
+    custo_emb = (produto.embalagem.custo_pacote / produto.embalagem.qtd_unidades) if produto.embalagem else 0.0
+
+    resultados = []
+    plataformas_alvo = produto.plataformas if produto.plataformas else db.query(models_domain.Plataforma).all()
+
+    for plat in plataformas_alvo:
+        sim = calcular_preco_por_margem(
+            custo_unitario=produto.custo_produto,
+            custo_embalagem_un=custo_emb,
+            custo_etiqueta_un=custo_etiq,
+            plataforma=plat,
+            margem_desejada_pct=margem_desejada
+        )
+        resultados.append(sim)
+
+    return {
+        "sku": produto.sku,
+        "nome": produto.nome,
+        "preco_venda_atual": produto.preco_venda,
+        "custo_produto": produto.custo_produto,
+        "custo_embalagem": custo_emb,
+        "custo_etiqueta": custo_etiq,
+        "margem_desejada_pct": margem_desejada,
+        "simulacoes": resultados
+    }
+
 
 # --- WEBHOOKS E INTEGRAÇÕES ---
 class ShopeeWebhookPayload(BaseModel):

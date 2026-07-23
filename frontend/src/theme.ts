@@ -45,9 +45,13 @@ export const sidebarStyle: CSSProperties = {
   flexShrink: 0,
   backgroundColor: colors.bgSidebar,
   color: colors.textPrimary,
-  padding: '32px 18px',
+  padding: '20px 16px',
   display: 'flex',
   flexDirection: 'column',
+  height: '100vh',
+  position: 'sticky',
+  top: 0,
+  boxSizing: 'border-box',
   borderRight: `1px solid ${colors.border}`,
 };
 
