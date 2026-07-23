@@ -1,0 +1,20 @@
+Coloque aqui os arquivos de logo das plataformas.
+
+O nome do arquivo precisa ser o nome da plataforma "simplificado":
+minúsculas, sem espaço, sem acento, sem símbolo.
+
+Exemplos:
+  Plataforma cadastrada    ->  Nome do arquivo esperado
+  "Shopee"                 ->  shopee.png
+  "Mercado Livre"          ->  mercadolivre.png
+  "TikTok Shop"            ->  tiktokshop.png
+  "Shein"                  ->  shein.png
+  "Amazon"                 ->  amazon.png
+  "Magalu"                 ->  magalu.png
+
+Formatos aceitos (nessa ordem de prioridade): .png, .svg, .webp, .jpg, .jpeg
+Se não achar nenhum arquivo correspondente, o sistema volta a usar o emoji
+cadastrado na plataforma automaticamente — nada quebra.
+
+Dica: prefira PNG com fundo transparente, quadrado (ex: 64x64 ou 128x128px),
+fica com aparência mais uniforme na tabela e nos cadastros.

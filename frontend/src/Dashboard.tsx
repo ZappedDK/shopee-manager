@@ -39,6 +39,7 @@ export function Dashboard() {
     ...cardStyle,
     padding: '20px 24px',
     flex: 1,
+    minWidth: '220px',
   };
 
   return (
@@ -86,6 +87,8 @@ export function Dashboard() {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  gap: '10px',
+                  flexWrap: 'wrap',
                 }}
               >
                 <span style={{ color: colors.textSecondary }}>

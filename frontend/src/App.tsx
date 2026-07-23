@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PlatformIcon } from './PlatformIcon';
 import { api } from './services/api';
 import { Dashboard } from './Dashboard';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
@@ -29,6 +30,9 @@ function App() {
 
   // Edição de plataforma
   const [editandoPlataforma, setEditandoPlataforma] = useState<any | null>(null);
+
+  // Menu mobile (hambúrguer) — só é usado em telas estreitas via CSS
+  const [menuAberto, setMenuAberto] = useState(false);
 
   // --- FUNÇÃO ÚNICA E CONSOLIDADA ---
   const carregarInsumos = () => {
@@ -182,7 +186,7 @@ function App() {
     return (
       <div
         style={menuItemStyle(ativo)}
-        onClick={() => setView(target)}
+        onClick={() => { setView(target); setMenuAberto(false); }}
         onMouseEnter={e => { if (!ativo) e.currentTarget.style.backgroundColor = 'rgba(148,163,184,0.08)'; }}
         onMouseLeave={e => { if (!ativo) e.currentTarget.style.backgroundColor = 'transparent'; }}
       >
@@ -192,24 +196,35 @@ function App() {
   };
 
   return (
-    <div style={layoutStyle}>
-      <div style={sidebarStyle}>
-        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+    <div style={layoutStyle} className="app-layout">
+      <div style={sidebarStyle} className="app-sidebar">
+        <div style={{ marginBottom: '20px', textAlign: 'center' }} className="app-sidebar-brand">
           <img src="/logo.png" alt="Logo" style={{ width: '140px', marginBottom: '12px' }} />
           <h1 style={{ fontSize: '16px', color: colors.textPrimary, fontWeight: 600, margin: 0 }}>Estoque Compra Certa</h1>
         </div>
 
-        <div style={sidebarGroupLabelStyle}>Principal</div>
-        <MenuItem icon="📊" label="Visão Geral" target="dashboard" />
-        <MenuItem icon="📦" label="Controle de Estoque" target="estoque" />
-        <MenuItem icon="🧺" label="Almoxarifado" target="almoxarifado" />
+        <button
+          className="mobile-menu-toggle"
+          onClick={() => setMenuAberto(aberto => !aberto)}
+          aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}
+          aria-expanded={menuAberto}
+        >
+          {menuAberto ? '✕' : '☰'}
+        </button>
 
-        <div style={sidebarGroupLabelStyle}>Configurações</div>
-        <MenuItem icon="🏪" label="Plataformas de Venda" target="plataformas" />
-        <MenuItem icon="⚙️" label="Cadastros e Config." target="cadastros" />
+        <div className={`app-sidebar-nav${menuAberto ? ' open' : ''}`}>
+          <div style={sidebarGroupLabelStyle}>Principal</div>
+          <MenuItem icon="📊" label="Visão Geral" target="dashboard" />
+          <MenuItem icon="📦" label="Controle de Estoque" target="estoque" />
+          <MenuItem icon="🧺" label="Almoxarifado" target="almoxarifado" />
+
+          <div style={sidebarGroupLabelStyle}>Configurações</div>
+          <MenuItem icon="🏪" label="Plataformas de Venda" target="plataformas" />
+          <MenuItem icon="⚙️" label="Cadastros e Config." target="cadastros" />
+        </div>
       </div>
 
-      <div style={contentStyle}>
+      <div style={contentStyle} className="app-content">
         {view === 'dashboard' && <Dashboard />}
 
         {view === 'almoxarifado' && (
@@ -221,7 +236,7 @@ function App() {
               <div style={{ ...cardStyle, borderLeft: '4px solid #10b981' }}>
                 <h3 style={cardTitleStyle}>🏷️ Etiqueta de Envio Padrão</h3>
                 {etiquetaPadrao ? (
-                  <div style={{ display: 'flex', gap: '40px', marginTop: '18px' }}>
+                  <div style={{ display: 'flex', gap: '40px', marginTop: '18px', flexWrap: 'wrap' }}>
                     <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '13px' }}>Custo do Rolo</p><strong style={{ color: colors.textPrimary, fontSize: '18px' }}>R$ {etiquetaPadrao.valor_pacote.toFixed(2)}</strong></div>
                     <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '13px' }}>Qtd. no Rolo</p><strong style={{ color: colors.textPrimary, fontSize: '18px' }}>{etiquetaPadrao.qtd_unidades} un.</strong></div>
                     <div style={{ borderLeft: `1px solid ${colors.border}`, paddingLeft: '40px' }}><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '13px' }}>Custo por Etiqueta</p><strong style={{ color: colors.success, fontSize: '20px' }}>R$ {(etiquetaPadrao.valor_pacote / etiquetaPadrao.qtd_unidades).toFixed(4)}</strong></div>
@@ -235,42 +250,44 @@ function App() {
             <div style={cardStyle}>
               <h3 style={cardTitleStyle}>📦 Embalagens e Caixas</h3>
               <p style={cardDescStyle}>Custo de cada embalagem usado para calcular o custo unitário por produto.</p>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={tableHeaderStyle}>ID</th>
-                    <th style={tableHeaderStyle}>Nome da Embalagem</th>
-                    <th style={tableHeaderStyle}>Custo do Pacote</th>
-                    <th style={tableHeaderStyle}>Qtd. no Pacote</th>
-                    <th style={tableHeaderStyle}>Custo Unitário</th>
-                    <th style={tableHeaderStyle}>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {embalagens.map(emb => (
-                    <tr key={emb.id}>
-                      <td style={tableCellStyle}>#{emb.id}</td>
-                      <td style={tableCellStyle}>{emb.nome}</td>
-                      <td style={tableCellStyle}>R$ {emb.custo_pacote.toFixed(2)}</td>
-                      <td style={tableCellStyle}>{emb.qtd_unidades} un.</td>
-                      <td style={{ ...tableCellStyle, color: colors.cyan, fontWeight: 'bold' }}>R$ {(emb.custo_pacote / emb.qtd_unidades).toFixed(2)}</td>
-                      <td style={tableCellStyle}>
-                        <button
-                          onClick={() => excluirEmbalagem(emb.id, emb.nome)}
-                          style={btnDangerStyle}
-                          onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerHover}
-                          onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.danger}
-                        >
-                          Excluir
-                        </button>
-                      </td>
+              <div className="table-scroll">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={tableHeaderStyle}>ID</th>
+                      <th style={tableHeaderStyle}>Nome da Embalagem</th>
+                      <th style={tableHeaderStyle}>Custo do Pacote</th>
+                      <th style={tableHeaderStyle}>Qtd. no Pacote</th>
+                      <th style={tableHeaderStyle}>Custo Unitário</th>
+                      <th style={tableHeaderStyle}>Ações</th>
                     </tr>
-                  ))}
-                  {embalagens.length === 0 && (
-                    <tr><td colSpan={6} style={{ ...tableCellStyle, textAlign: 'center', color: colors.textMuted }}>Nenhuma embalagem cadastrada ainda.</td></tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {embalagens.map(emb => (
+                      <tr key={emb.id}>
+                        <td style={tableCellStyle}>#{emb.id}</td>
+                        <td style={tableCellStyle}>{emb.nome}</td>
+                        <td style={tableCellStyle}>R$ {emb.custo_pacote.toFixed(2)}</td>
+                        <td style={tableCellStyle}>{emb.qtd_unidades} un.</td>
+                        <td style={{ ...tableCellStyle, color: colors.cyan, fontWeight: 'bold' }}>R$ {(emb.custo_pacote / emb.qtd_unidades).toFixed(2)}</td>
+                        <td style={tableCellStyle}>
+                          <button
+                            onClick={() => excluirEmbalagem(emb.id, emb.nome)}
+                            style={btnDangerStyle}
+                            onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerHover}
+                            onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.danger}
+                          >
+                            Excluir
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {embalagens.length === 0 && (
+                      <tr><td colSpan={6} style={{ ...tableCellStyle, textAlign: 'center', color: colors.textMuted }}>Nenhuma embalagem cadastrada ainda.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -310,14 +327,14 @@ function App() {
                     .catch(err => mostrarMensagem('❌ Erro: ' + (err.response?.data?.detail || 'Erro ao cadastrar'), 7000));
               }}>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                  <input name="nome" placeholder="Nome (Ex: Mercado Livre)" required style={{ ...inputStyle, flex: 2, marginBottom: 0 }} />
-                  <input name="icone" placeholder="Emoji (Ex: 🟨)" required style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+                  <input name="nome" placeholder="Nome (Ex: Mercado Livre)" required style={{ ...inputStyle, flex: 2, marginBottom: 0, maxWidth: '100%', minWidth: '160px' }} />
+                  <input name="icone" placeholder="Emoji (Ex: 🟨)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '100px' }} />
                 </div>
 
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '20px' }}>
-                  <input name="taxa_plataforma" type="number" step="0.001" placeholder="Taxa Padrão (Ex: 0.14 = 14%)" required style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
-                  <input name="taxa_fixa" type="number" step="0.01" placeholder="Taxa Fixa (R$)" required style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
-                  <input name="taxa_extra" type="number" step="0.001" placeholder="Taxa Extra (Ex: 0.06 = 6%)" defaultValue="0" style={{ ...inputStyle, flex: 1, marginBottom: 0 }} />
+                  <input name="taxa_plataforma" type="number" step="0.001" placeholder="Taxa Padrão (Ex: 0.14 = 14%)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '160px' }} />
+                  <input name="taxa_fixa" type="number" step="0.01" placeholder="Taxa Fixa (R$)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '160px' }} />
+                  <input name="taxa_extra" type="number" step="0.001" placeholder="Taxa Extra (Ex: 0.06 = 6%)" defaultValue="0" style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '160px' }} />
                 </div>
 
                 <button
@@ -335,107 +352,111 @@ function App() {
               <h3 style={cardTitleStyle}>Plataformas Ativas no Sistema</h3>
               <p style={cardDescStyle}>Taxas usadas automaticamente no cálculo de margem por produto.</p>
 
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={tableHeaderStyle}>Plataforma</th>
-                    <th style={tableHeaderStyle}>Taxa Padrão</th>
-                    <th style={tableHeaderStyle}>Taxa Fixa</th>
-                    <th style={tableHeaderStyle}>Taxa Extra</th>
-                    <th style={tableHeaderStyle}>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {plataformas.map(plat => {
-                    const editando = editandoPlataforma && editandoPlataforma.id === plat.id;
+              <div className="table-scroll">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={tableHeaderStyle}>Plataforma</th>
+                      <th style={tableHeaderStyle}>Taxa Padrão</th>
+                      <th style={tableHeaderStyle}>Taxa Fixa</th>
+                      <th style={tableHeaderStyle}>Taxa Extra</th>
+                      <th style={tableHeaderStyle}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {plataformas.map(plat => {
+                      const editando = editandoPlataforma && editandoPlataforma.id === plat.id;
 
-                    if (editando) {
+                      if (editando) {
+                        return (
+                          <tr key={plat.id} style={{ backgroundColor: colors.bgCardAlt }}>
+                            <td style={tableCellStyle}>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                  value={editandoPlataforma.icone}
+                                  onChange={e => setEditandoPlataforma({ ...editandoPlataforma, icone: e.target.value })}
+                                  style={{ ...inputStyle, width: '54px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
+                                />
+                                <input
+                                  value={editandoPlataforma.nome}
+                                  onChange={e => setEditandoPlataforma({ ...editandoPlataforma, nome: e.target.value })}
+                                  style={{ ...inputStyle, marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
+                                />
+                              </div>
+                            </td>
+                            <td style={tableCellStyle}>
+                              <input
+                                type="number" step="0.001"
+                                value={editandoPlataforma.taxa_plataforma}
+                                onChange={e => setEditandoPlataforma({ ...editandoPlataforma, taxa_plataforma: e.target.value })}
+                                style={{ ...inputStyle, width: '90px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
+                              />
+                            </td>
+                            <td style={tableCellStyle}>
+                              <input
+                                type="number" step="0.01"
+                                value={editandoPlataforma.taxa_fixa}
+                                onChange={e => setEditandoPlataforma({ ...editandoPlataforma, taxa_fixa: e.target.value })}
+                                style={{ ...inputStyle, width: '90px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
+                              />
+                            </td>
+                            <td style={tableCellStyle}>
+                              <input
+                                type="number" step="0.001"
+                                value={editandoPlataforma.taxa_extra}
+                                onChange={e => setEditandoPlataforma({ ...editandoPlataforma, taxa_extra: e.target.value })}
+                                style={{ ...inputStyle, width: '90px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
+                              />
+                            </td>
+                            <td style={{ ...tableCellStyle, display: 'flex', gap: '8px' }}>
+                              <button
+                                onClick={salvarEdicaoPlataforma}
+                                style={btnSuccessStyle}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0d9668'}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.success}
+                              >
+                                Salvar
+                              </button>
+                              <button
+                                onClick={cancelarEdicaoPlataforma}
+                                style={btnNeutralStyle}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
+                              >
+                                Cancelar
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      }
+
                       return (
-                        <tr key={plat.id} style={{ backgroundColor: colors.bgCardAlt }}>
+                        <tr key={plat.id}>
                           <td style={tableCellStyle}>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <input
-                                value={editandoPlataforma.icone}
-                                onChange={e => setEditandoPlataforma({ ...editandoPlataforma, icone: e.target.value })}
-                                style={{ ...inputStyle, width: '54px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
-                              />
-                              <input
-                                value={editandoPlataforma.nome}
-                                onChange={e => setEditandoPlataforma({ ...editandoPlataforma, nome: e.target.value })}
-                                style={{ ...inputStyle, marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
-                              />
-                            </div>
+                            <PlatformIcon nome={plat.nome} icone={plat.icone} size={22} /> <strong>{plat.nome}</strong>
                           </td>
+                          <td style={tableCellStyle}>{(plat.taxa_plataforma * 100).toFixed(1)}%</td>
+                          <td style={tableCellStyle}>R$ {plat.taxa_fixa.toFixed(2)}</td>
+                          <td style={tableCellStyle}>{((plat.taxa_extra || 0) * 100).toFixed(1)}%</td>
                           <td style={tableCellStyle}>
-                            <input
-                              type="number" step="0.001"
-                              value={editandoPlataforma.taxa_plataforma}
-                              onChange={e => setEditandoPlataforma({ ...editandoPlataforma, taxa_plataforma: e.target.value })}
-                              style={{ ...inputStyle, width: '90px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
-                            />
-                          </td>
-                          <td style={tableCellStyle}>
-                            <input
-                              type="number" step="0.01"
-                              value={editandoPlataforma.taxa_fixa}
-                              onChange={e => setEditandoPlataforma({ ...editandoPlataforma, taxa_fixa: e.target.value })}
-                              style={{ ...inputStyle, width: '90px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
-                            />
-                          </td>
-                          <td style={tableCellStyle}>
-                            <input
-                              type="number" step="0.001"
-                              value={editandoPlataforma.taxa_extra}
-                              onChange={e => setEditandoPlataforma({ ...editandoPlataforma, taxa_extra: e.target.value })}
-                              style={{ ...inputStyle, width: '90px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
-                            />
-                          </td>
-                          <td style={{ ...tableCellStyle, display: 'flex', gap: '8px' }}>
                             <button
-                              onClick={salvarEdicaoPlataforma}
-                              style={btnSuccessStyle}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0d9668'}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.success}
-                            >
-                              Salvar
-                            </button>
-                            <button
-                              onClick={cancelarEdicaoPlataforma}
+                              onClick={() => iniciarEdicaoPlataforma(plat)}
                               style={btnNeutralStyle}
                               onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
                               onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
                             >
-                              Cancelar
+                              Editar
                             </button>
                           </td>
                         </tr>
                       );
-                    }
-
-                    return (
-                      <tr key={plat.id}>
-                        <td style={tableCellStyle}>{plat.icone} <strong>{plat.nome}</strong></td>
-                        <td style={tableCellStyle}>{(plat.taxa_plataforma * 100).toFixed(1)}%</td>
-                        <td style={tableCellStyle}>R$ {plat.taxa_fixa.toFixed(2)}</td>
-                        <td style={tableCellStyle}>{((plat.taxa_extra || 0) * 100).toFixed(1)}%</td>
-                        <td style={tableCellStyle}>
-                          <button
-                            onClick={() => iniciarEdicaoPlataforma(plat)}
-                            style={btnNeutralStyle}
-                            onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
-                            onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
-                          >
-                            Editar
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {plataformas.length === 0 && (
-                    <tr><td colSpan={5} style={{ ...tableCellStyle, textAlign: 'center', color: colors.textMuted }}>Nenhuma plataforma cadastrada.</td></tr>
-                  )}
-                </tbody>
-              </table>
+                    })}
+                    {plataformas.length === 0 && (
+                      <tr><td colSpan={5} style={{ ...tableCellStyle, textAlign: 'center', color: colors.textMuted }}>Nenhuma plataforma cadastrada.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -518,14 +539,14 @@ function App() {
                     .catch(err => mostrarMensagem('❌ Erro: ' + (err.response?.data?.detail || 'Erro ao cadastrar'), 7000));
               }}>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                  <input name="sku" placeholder="SKU Idêntico à Shopee" required style={{ ...inputStyle, flex: 1, maxWidth: 'none' }} />
-                  <input name="nome" placeholder="Nome do Produto" required style={{ ...inputStyle, flex: 2, maxWidth: 'none' }} />
+                  <input name="sku" placeholder="SKU Idêntico à Shopee" required style={{ ...inputStyle, flex: 1, maxWidth: 'none', minWidth: '160px' }} />
+                  <input name="nome" placeholder="Nome do Produto" required style={{ ...inputStyle, flex: 2, maxWidth: 'none', minWidth: '200px' }} />
                 </div>
 
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                  <input name="preco_venda" type="number" step="0.01" placeholder="Preço de Venda (R$)" required style={{ ...inputStyle, flex: 1, maxWidth: 'none' }} />
-                  <input name="custo_produto" type="number" step="0.01" placeholder="Custo da Mercadoria (R$)" required style={{ ...inputStyle, flex: 1, maxWidth: 'none' }} />
-                  <input name="quantidade_estoque" type="number" placeholder="Estoque Inicial" required style={{ ...inputStyle, flex: 1, maxWidth: 'none' }} />
+                  <input name="preco_venda" type="number" step="0.01" placeholder="Preço de Venda (R$)" required style={{ ...inputStyle, flex: 1, maxWidth: 'none', minWidth: '160px' }} />
+                  <input name="custo_produto" type="number" step="0.01" placeholder="Custo da Mercadoria (R$)" required style={{ ...inputStyle, flex: 1, maxWidth: 'none', minWidth: '160px' }} />
+                  <input name="quantidade_estoque" type="number" placeholder="Estoque Inicial" required style={{ ...inputStyle, flex: 1, maxWidth: 'none', minWidth: '160px' }} />
                 </div>
 
                 <div style={{ marginBottom: '18px' }}>
@@ -534,7 +555,7 @@ function App() {
                     {plataformas.map(plat => (
                       <label key={plat.id} style={{ color: colors.textPrimary, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
                         <input type="checkbox" name="plataformas" value={plat.id} />
-                        {plat.icone} {plat.nome}
+                        <PlatformIcon nome={plat.nome} icone={plat.icone} size={18} /> {plat.nome}
                       </label>
                     ))}
                     {plataformas.length === 0 && (
@@ -598,105 +619,109 @@ function App() {
                 />
               </div>
 
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={tableHeaderStyle}>SKU</th>
-                    <th style={tableHeaderStyle}>Produto</th>
-                    <th style={tableHeaderStyle}>Custo Unit.</th>
-                    <th style={tableHeaderStyle}>Estoque</th>
-                    <th style={tableHeaderStyle}>Valor do Estoque</th>
-                    <th style={tableHeaderStyle}>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {produtosFiltrados.map(item => {
-                    const analisePrincipal = (item.analises_plataformas && item.analises_plataformas.length > 0)
-                                             ? item.analises_plataformas[0]
-                                             : null;
+              <div className="table-scroll">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={tableHeaderStyle}>SKU</th>
+                      <th style={tableHeaderStyle}>Produto</th>
+                      <th style={tableHeaderStyle}>Custo Unit.</th>
+                      <th style={tableHeaderStyle}>Estoque</th>
+                      <th style={tableHeaderStyle}>Valor do Estoque</th>
+                      <th style={tableHeaderStyle}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {produtosFiltrados.map(item => {
+                      const analisePrincipal = (item.analises_plataformas && item.analises_plataformas.length > 0)
+                                               ? item.analises_plataformas[0]
+                                               : null;
 
-                    return (
-                      <React.Fragment key={item.sku}>
-                        <tr style={{ backgroundColor: linhaExpandida === item.sku ? colors.bgCardAlt : 'transparent', transition: '0.2s' }}>
-                          <td style={tableCellStyle}><strong>{item.sku}</strong></td>
-                          <td style={tableCellStyle}>{item.nome}</td>
-                          <td style={tableCellStyle}>R$ {item.custo_produto.toFixed(2)}</td>
-                          <td style={{ ...tableCellStyle, color: item.quantidade_estoque <= 10 ? '#f87171' : colors.textPrimary, fontWeight: 'bold' }}>{item.quantidade_estoque} un.</td>
-                          <td style={tableCellStyle}>R$ {item.valor_estoque ? item.valor_estoque.toFixed(2) : '0.00'}</td>
-                          <td style={{ ...tableCellStyle, display: 'flex', gap: '8px' }}>
-                            <button
-                              onClick={() => toggleExpandir(item.sku)}
-                              style={btnNeutralStyle}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
-                            >
-                              {linhaExpandida === item.sku ? 'Ocultar' : '+ Info'}
-                            </button>
-                            <button
-                              onClick={() => excluirProduto(item.sku)}
-                              style={btnDangerStyle}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerHover}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.danger}
-                            >
-                              Excluir
-                            </button>
-                          </td>
-                        </tr>
-
-                        {linhaExpandida === item.sku && (
-                          <tr>
-                            <td colSpan={6} style={{ padding: '0', borderBottom: `1px solid ${colors.border}` }}>
-                              <div style={{ padding: '22px', backgroundColor: colors.bgCardAlt }}>
-                                <div style={{ marginBottom: '16px', color: colors.textSecondary, fontSize: '14px' }}>
-                                    <strong>Valor Total do SKU em Estoque: </strong> <span style={{ color: colors.textPrimary, fontWeight: 'bold' }}>R$ {item.valor_estoque ? item.valor_estoque.toFixed(2) : '0.00'}</span>
-                                </div>
-
-                                {!item.analises_plataformas || item.analises_plataformas.length === 0 ? (
-                                   <p style={{ color: '#f87171' }}>Nenhuma plataforma vinculada a este produto.</p>
-                                ) : (
-                                    item.analises_plataformas.map((ana: any, index: number) => (
-                                      <div key={index} style={{ marginBottom: '16px', borderBottom: `1px solid ${colors.border}`, paddingBottom: '16px' }}>
-                                        <h4 style={{ color: colors.accent, margin: '0 0 16px 0', fontSize: '15px' }}>{ana.icone} {ana.plataforma_nome}</h4>
-
-                                        <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                          <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>ROAS Mín.</p><strong style={{ color: colors.textPrimary }}>{ana.roas_minimo ? ana.roas_minimo.toFixed(2) : '0.00'}</strong></div>
-                                          <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Plat.</p><strong style={{ color: colors.danger }}>R$ {ana.taxa_plataforma_real ? ana.taxa_plataforma_real.toFixed(2) : '0.00'}</strong></div>
-                                          <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Fixa</p><strong style={{ color: colors.danger }}>R$ {ana.taxa_fixa ? ana.taxa_fixa.toFixed(2) : '0.00'}</strong></div>
-                                          <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Emb.</p><strong style={{ color: colors.danger }}>R$ {ana.custo_embalagem ? ana.custo_embalagem.toFixed(2) : '0.00'}</strong></div>
-                                          <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Etiq.</p><strong style={{ color: colors.danger }}>R$ {ana.custo_etiqueta ? ana.custo_etiqueta.toFixed(2) : '0.00'}</strong></div>
-
-                                          <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
-                                             <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custo Total</p>
-                                             <strong style={{ color: colors.amber, fontSize: '16px' }}>R$ {ana.custo_total ? ana.custo_total.toFixed(2) : '0.00'}</strong>
-                                          </div>
-
-                                          <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
-                                             <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Preço Venda</p>
-                                             <strong style={{ color: colors.cyan, fontSize: '16px' }}>R$ {item.preco_venda ? item.preco_venda.toFixed(2) : '0.00'}</strong>
-                                          </div>
-
-                                          <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
-                                             <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Margem</p>
-                                             <strong style={{ color: ana.margem_final > 0 ? colors.successText : colors.danger, fontSize: '16px' }}>{(ana.margem_final * 100).toFixed(2)}%</strong>
-                                          </div>
-
-                                          <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
-                                             <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lucro Líquido</p>
-                                             <strong style={{ color: ana.lucro_liquido > 0 ? colors.success : colors.danger, fontSize: '18px' }}>R$ {ana.lucro_liquido ? ana.lucro_liquido.toFixed(2) : '0.00'}</strong>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))
-                                )}
-                              </div>
+                      return (
+                        <React.Fragment key={item.sku}>
+                          <tr style={{ backgroundColor: linhaExpandida === item.sku ? colors.bgCardAlt : 'transparent', transition: '0.2s' }}>
+                            <td style={tableCellStyle}><strong>{item.sku}</strong></td>
+                            <td style={tableCellStyle}>{item.nome}</td>
+                            <td style={tableCellStyle}>R$ {item.custo_produto.toFixed(2)}</td>
+                            <td style={{ ...tableCellStyle, color: item.quantidade_estoque <= 10 ? '#f87171' : colors.textPrimary, fontWeight: 'bold' }}>{item.quantidade_estoque} un.</td>
+                            <td style={tableCellStyle}>R$ {item.valor_estoque ? item.valor_estoque.toFixed(2) : '0.00'}</td>
+                            <td style={{ ...tableCellStyle, display: 'flex', gap: '8px' }}>
+                              <button
+                                onClick={() => toggleExpandir(item.sku)}
+                                style={btnNeutralStyle}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
+                              >
+                                {linhaExpandida === item.sku ? 'Ocultar' : '+ Info'}
+                              </button>
+                              <button
+                                onClick={() => excluirProduto(item.sku)}
+                                style={btnDangerStyle}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerHover}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.danger}
+                              >
+                                Excluir
+                              </button>
                             </td>
                           </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+
+                          {linhaExpandida === item.sku && (
+                            <tr>
+                              <td colSpan={6} style={{ padding: '0', borderBottom: `1px solid ${colors.border}` }}>
+                                <div style={{ padding: '22px', backgroundColor: colors.bgCardAlt }}>
+                                  <div style={{ marginBottom: '16px', color: colors.textSecondary, fontSize: '14px' }}>
+                                      <strong>Valor Total do SKU em Estoque: </strong> <span style={{ color: colors.textPrimary, fontWeight: 'bold' }}>R$ {item.valor_estoque ? item.valor_estoque.toFixed(2) : '0.00'}</span>
+                                  </div>
+
+                                  {!item.analises_plataformas || item.analises_plataformas.length === 0 ? (
+                                     <p style={{ color: '#f87171' }}>Nenhuma plataforma vinculada a este produto.</p>
+                                  ) : (
+                                      item.analises_plataformas.map((ana: any, index: number) => (
+                                        <div key={index} style={{ marginBottom: '16px', borderBottom: `1px solid ${colors.border}`, paddingBottom: '16px' }}>
+                                          <h4 style={{ color: colors.accent, margin: '0 0 16px 0', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <PlatformIcon nome={ana.plataforma_nome} icone={ana.icone} size={20} /> {ana.plataforma_nome}
+                                          </h4>
+
+                                          <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>ROAS Mín.</p><strong style={{ color: colors.textPrimary }}>{ana.roas_minimo ? ana.roas_minimo.toFixed(2) : '0.00'}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Plat.</p><strong style={{ color: colors.danger }}>R$ {ana.taxa_plataforma_real ? ana.taxa_plataforma_real.toFixed(2) : '0.00'}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Fixa</p><strong style={{ color: colors.danger }}>R$ {ana.taxa_fixa ? ana.taxa_fixa.toFixed(2) : '0.00'}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Emb.</p><strong style={{ color: colors.danger }}>R$ {ana.custo_embalagem ? ana.custo_embalagem.toFixed(2) : '0.00'}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Etiq.</p><strong style={{ color: colors.danger }}>R$ {ana.custo_etiqueta ? ana.custo_etiqueta.toFixed(2) : '0.00'}</strong></div>
+
+                                            <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
+                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custo Total</p>
+                                               <strong style={{ color: colors.amber, fontSize: '16px' }}>R$ {ana.custo_total ? ana.custo_total.toFixed(2) : '0.00'}</strong>
+                                            </div>
+
+                                            <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
+                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Preço Venda</p>
+                                               <strong style={{ color: colors.cyan, fontSize: '16px' }}>R$ {item.preco_venda ? item.preco_venda.toFixed(2) : '0.00'}</strong>
+                                            </div>
+
+                                            <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
+                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Margem</p>
+                                               <strong style={{ color: ana.margem_final > 0 ? colors.successText : colors.danger, fontSize: '16px' }}>{(ana.margem_final * 100).toFixed(2)}%</strong>
+                                            </div>
+
+                                            <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
+                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lucro Líquido</p>
+                                               <strong style={{ color: ana.lucro_liquido > 0 ? colors.success : colors.danger, fontSize: '18px' }}>R$ {ana.lucro_liquido ? ana.lucro_liquido.toFixed(2) : '0.00'}</strong>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
               {produtosDetalhados.length === 0 && (
                 <p style={{ textAlign: 'center', color: colors.textMuted, marginTop: '24px' }}>Nenhum produto cadastrado ainda.</p>
