@@ -27,3 +27,33 @@ class ProdutoCreate(BaseModel):
     embalagem_id: int
     # O segredo está aqui: permitindo que a API receba a lista de Checkboxes
     plataformas_ids: List[int] = []
+
+class UsuarioCreate(BaseModel):
+    nome: str
+    email: str
+    senha: str
+
+class UsuarioResponse(BaseModel):
+    id: int
+    nome: str
+    email: str
+
+    class Config:
+        from_attributes = True
+
+class LoginRequest(BaseModel):
+    email: str
+    senha: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    usuario: UsuarioResponse
+
+class EsqueciSenhaRequest(BaseModel):
+    email: str
+
+class RedefinirSenhaRequest(BaseModel):
+    email: str
+    token: str
+    nova_senha: str

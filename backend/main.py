@@ -14,7 +14,7 @@ from services.financeiro import calcular_metricas_plataforma
 # Cria as tabelas no banco de dados fisicamente
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Shopee & TikTok Manager API")
+app = FastAPI(title="Skold Stock API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,9 +24,87 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from core.auth import (
+    gerar_hash_senha,
+    verificar_senha,
+    criar_token_acesso,
+    gerar_token_recuperacao,
+    get_current_user
+)
+from datetime import datetime, timedelta
+
 @app.get("/")
 def read_root():
     return {"status": "online", "message": "Sistema de Controle de Estoque Operante!"}
+
+# --- ROTAS DE AUTENTICAÇÃO ---
+@app.post("/auth/registro", response_model=schemas_domain.UsuarioResponse, tags=["Autenticação"])
+def registrar_usuario(dados: schemas_domain.UsuarioCreate, db: Session = Depends(get_db)):
+    if db.query(models_domain.Usuario).filter_by(email=dados.email.lower()).first():
+        raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado.")
+    
+    novo_usuario = models_domain.Usuario(
+        nome=dados.nome,
+        email=dados.email.lower(),
+        senha_hash=gerar_hash_senha(dados.senha)
+    )
+    db.add(novo_usuario)
+    db.commit()
+    db.refresh(novo_usuario)
+    return novo_usuario
+
+@app.post("/auth/login", response_model=schemas_domain.TokenResponse, tags=["Autenticação"])
+def login(dados: schemas_domain.LoginRequest, db: Session = Depends(get_db)):
+    usuario = db.query(models_domain.Usuario).filter_by(email=dados.email.lower()).first()
+    if not usuario or not verificar_senha(dados.senha, usuario.senha_hash):
+        raise HTTPException(status_code=401, detail="E-mail ou senha incorretos.")
+    
+    token = criar_token_acesso(dados={"sub": usuario.id})
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "usuario": usuario
+    }
+
+@app.get("/auth/me", response_model=schemas_domain.UsuarioResponse, tags=["Autenticação"])
+def obter_usuario_logado(usuario_atual: models_domain.Usuario = Depends(get_current_user)):
+    return usuario_atual
+
+@app.post("/auth/esqueci-senha", tags=["Autenticação"])
+def solicitar_recuperacao_senha(dados: schemas_domain.EsqueciSenhaRequest, db: Session = Depends(get_db)):
+    usuario = db.query(models_domain.Usuario).filter_by(email=dados.email.lower()).first()
+    if not usuario:
+        return {"status": "sucesso", "mensagem": "Se o e-mail estiver cadastrado, enviamos as instruções de recuperação."}
+    
+    token_reset = gerar_token_recuperacao()
+    usuario.reset_token = token_reset
+    usuario.reset_token_expira = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
+    
+    print(f"--> [RECOVER TOKEN] E-mail: {usuario.email} | Token: {token_reset}")
+    
+    return {
+        "status": "sucesso",
+        "mensagem": "Token de recuperação gerado com sucesso.",
+        "reset_token": token_reset
+    }
+
+@app.post("/auth/redefinir-senha", tags=["Autenticação"])
+def redefinir_senha(dados: schemas_domain.RedefinirSenhaRequest, db: Session = Depends(get_db)):
+    usuario = db.query(models_domain.Usuario).filter_by(email=dados.email.lower()).first()
+    if not usuario or usuario.reset_token != dados.token:
+        raise HTTPException(status_code=400, detail="Token de recuperação inválido ou e-mail incorreto.")
+    
+    if usuario.reset_token_expira and usuario.reset_token_expira < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="O token de recuperação expirou. Solicite um novo.")
+    
+    usuario.senha_hash = gerar_hash_senha(dados.nova_senha)
+    usuario.reset_token = None
+    usuario.reset_token_expira = None
+    db.commit()
+    
+    return {"status": "sucesso", "mensagem": "Senha alterada com sucesso! Faça login com a nova senha."}
+
 
 # --- ROTAS DE PLATAFORMAS (NOVAS) ---
 @app.post("/plataformas/", tags=["Cadastros"])

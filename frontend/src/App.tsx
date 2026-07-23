@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlatformIcon } from './PlatformIcon';
 import { api } from './services/api';
 import { Dashboard } from './Dashboard';
+import { Login } from './Login';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
 import {
   colors, layoutStyle, sidebarStyle, contentStyle, sidebarGroupLabelStyle, menuItemStyle,
@@ -13,8 +14,38 @@ import {
 type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas';
 
 function App() {
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [usuario, setUsuario] = useState<any>(() => {
+    const saved = localStorage.getItem('usuario');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setToken(null);
+      setUsuario(null);
+    };
+    window.addEventListener('unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('unauthorized', handleUnauthorized);
+  }, []);
+
+  const handleLoginSuccess = (newToken: string, novoUsuario: any) => {
+    localStorage.setItem('token', newToken);
+    localStorage.setItem('usuario', JSON.stringify(novoUsuario));
+    setToken(newToken);
+    setUsuario(novoUsuario);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    setToken(null);
+    setUsuario(null);
+  };
+
   const [plataformas, setPlataformas] = useState<any[]>([]);
   const [view, setView] = useState<View>('dashboard');
+
 
   const [embalagens, setEmbalagens] = useState<any[]>([]);
   const [configuracoes, setConfiguracoes] = useState<any[]>([]);
@@ -65,19 +96,19 @@ function App() {
   const gerenciarFormulario = async (e: React.FormEvent<HTMLFormElement>, rota: string, sucessoMsg: string) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
+    const payload: Record<string, any> = Object.fromEntries(formData.entries());
 
     // Tratamento de conversão
-    Object.keys(data).forEach(key => {
+    Object.keys(payload).forEach(key => {
         if (['custo_pacote', 'valor_pacote', 'preco_venda', 'custo_produto'].includes(key)) {
-            data[key] = parseFloat(String(data[key]).replace(',', '.'));
+            payload[key] = parseFloat(String(payload[key]).replace(',', '.'));
         } else if (['qtd_unidades', 'quantidade_estoque', 'embalagem_id'].includes(key)) {
-            data[key] = Number(data[key]);
+            payload[key] = Number(payload[key]);
         }
     });
 
     try {
-        await api.post(rota, data);
+        await api.post(rota, payload);
         mostrarMensagem(`✅ ${sucessoMsg}`);
         e.currentTarget.reset();
         carregarInsumos();
@@ -195,12 +226,27 @@ function App() {
     );
   };
 
+  if (!token) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div style={layoutStyle} className="app-layout">
       <div style={sidebarStyle} className="app-sidebar">
         <div style={{ marginBottom: '20px', textAlign: 'center' }} className="app-sidebar-brand">
-          <img src="/logo.png" alt="Logo" style={{ width: '140px', marginBottom: '12px' }} />
-          <h1 style={{ fontSize: '16px', color: colors.textPrimary, fontWeight: 600, margin: 0 }}>Estoque Compra Certa</h1>
+          <img src="/logo.png" alt="Skold Stock Logo" style={{ width: '140px', marginBottom: '12px' }} />
+          <h1
+            className="brand-title"
+            style={{
+              fontSize: '22px',
+              color: colors.textPrimary,
+              fontWeight: 600,
+              margin: 0,
+              fontFamily: "'Rostex-Regular', 'Inter', sans-serif"
+            }}
+          >
+            Skold Stock
+          </h1>
         </div>
 
         <button
@@ -222,7 +268,30 @@ function App() {
           <MenuItem icon="🏪" label="Plataformas de Venda" target="plataformas" />
           <MenuItem icon="⚙️" label="Cadastros e Config." target="cadastros" />
         </div>
+
+        {/* Rodapé com Informações do Usuário Logado & Logout */}
+        <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: `1px solid ${colors.border}` }}>
+          <div style={{ fontSize: '13px', color: colors.textPrimary, fontWeight: 600, marginBottom: '2px' }}>
+            👤 {usuario?.nome || 'Usuário'}
+          </div>
+          <div style={{ fontSize: '11.5px', color: colors.textMuted, marginBottom: '12px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {usuario?.email || ''}
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              ...btnNeutralStyle,
+              width: '100%',
+              backgroundColor: colors.dangerBg,
+              color: colors.dangerText,
+              border: `1px solid ${colors.dangerBorder}`
+            }}
+          >
+            🚪 Sair da Conta
+          </button>
+        </div>
       </div>
+
 
       <div style={contentStyle} className="app-content">
         {view === 'dashboard' && <Dashboard />}
@@ -633,10 +702,6 @@ function App() {
                   </thead>
                   <tbody>
                     {produtosFiltrados.map(item => {
-                      const analisePrincipal = (item.analises_plataformas && item.analises_plataformas.length > 0)
-                                               ? item.analises_plataformas[0]
-                                               : null;
-
                       return (
                         <React.Fragment key={item.sku}>
                           <tr style={{ backgroundColor: linhaExpandida === item.sku ? colors.bgCardAlt : 'transparent', transition: '0.2s' }}>
@@ -669,10 +734,6 @@ function App() {
                             <tr>
                               <td colSpan={6} style={{ padding: '0', borderBottom: `1px solid ${colors.border}` }}>
                                 <div style={{ padding: '22px', backgroundColor: colors.bgCardAlt }}>
-                                  <div style={{ marginBottom: '16px', color: colors.textSecondary, fontSize: '14px' }}>
-                                      <strong>Valor Total do SKU em Estoque: </strong> <span style={{ color: colors.textPrimary, fontWeight: 'bold' }}>R$ {item.valor_estoque ? item.valor_estoque.toFixed(2) : '0.00'}</span>
-                                  </div>
-
                                   {!item.analises_plataformas || item.analises_plataformas.length === 0 ? (
                                      <p style={{ color: '#f87171' }}>Nenhuma plataforma vinculada a este produto.</p>
                                   ) : (
