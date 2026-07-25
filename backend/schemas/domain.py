@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 class EmbalagemCreate(BaseModel):
     nome: str
@@ -24,8 +24,7 @@ class ProdutoCreate(BaseModel):
     preco_venda: float = Field(..., gt=0)
     custo_produto: float = Field(..., gt=0)
     quantidade_estoque: int = Field(..., ge=0)
-    embalagem_id: int
-    # O segredo está aqui: permitindo que a API receba a lista de Checkboxes
+    embalagem_id: Optional[int] = None
     plataformas_ids: List[int] = []
 
 class UsuarioCreate(BaseModel):
@@ -56,4 +55,29 @@ class EsqueciSenhaRequest(BaseModel):
 class RedefinirSenhaRequest(BaseModel):
     email: str
     token: str
-    nova_senha: str
+    nova_senha: str
+
+class ProdutoUpdate(BaseModel):
+    nome: str
+    preco_venda: float = Field(..., gt=0)
+    custo_produto: float = Field(..., gt=0)
+    quantidade_estoque: int = Field(..., ge=0)
+    embalagem_id: Optional[int] = None
+    plataformas_ids: List[int] = []
+    motivo_ajuste: str = "Edição de produto/custo/estoque"
+
+class MovimentacaoEstoqueResponse(BaseModel):
+    id: int
+    produto_id: int
+    produto_sku: str
+    produto_nome: str
+    tipo: str
+    quantidade_alterada: int
+    estoque_anterior: int
+    estoque_novo: int
+    motivo: str
+    usuario_nome: str
+
+    class Config:
+        from_attributes = True
+

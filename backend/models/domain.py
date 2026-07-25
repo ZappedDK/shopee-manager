@@ -45,7 +45,7 @@ class Produto(Base):
     custo_produto = Column(Float, nullable=False)
     quantidade_estoque = Column(Integer, nullable=False, default=0)
     
-    embalagem_id = Column(Integer, ForeignKey("embalagens.id"), nullable=False)
+    embalagem_id = Column(Integer, ForeignKey("embalagens.id"), nullable=True)
     embalagem = relationship("Embalagem", back_populates="produtos")
     
     # A mágica da ligação multicanal acontece aqui
@@ -62,4 +62,21 @@ class Usuario(Base):
     senha_hash = Column(String(255), nullable=False)
     reset_token = Column(String(255), nullable=True)
     reset_token_expira = Column(DateTime, nullable=True)
-    criado_em = Column(DateTime, default=datetime.utcnow)
+    criado_em = Column(DateTime, default=datetime.utcnow)
+
+class MovimentacaoEstoque(Base):
+    __tablename__ = "movimentacoes_estoque"
+    id = Column(Integer, primary_key=True, index=True)
+    produto_id = Column(Integer, ForeignKey("produtos.id", ondelete="CASCADE"), nullable=False)
+    produto_sku = Column(String(50), nullable=False)
+    produto_nome = Column(String(255), nullable=False)
+    tipo = Column(String(30), nullable=False) # "ENTRADA", "SAIDA", "AJUSTE", "VENDA_WEBHOOK"
+    quantidade_alterada = Column(Integer, nullable=False)
+    estoque_anterior = Column(Integer, nullable=False)
+    estoque_novo = Column(Integer, nullable=False)
+    motivo = Column(String(255), nullable=False)
+    usuario_nome = Column(String(100), nullable=True, default="Sistema")
+    criado_em = Column(DateTime, default=datetime.utcnow)
+    
+    produto = relationship("Produto", backref="movimentacoes")
+

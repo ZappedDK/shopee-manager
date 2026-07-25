@@ -1,10 +1,14 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import uvicorn
 from sqlalchemy.exc import IntegrityError
-from typing import List
+from typing import List, Optional
+import io
+import csv
+import openpyxl
 
 from core.database import engine, get_db, Base
 from models import domain as models_domain
@@ -13,6 +17,27 @@ from services.financeiro import calcular_metricas_plataforma, calcular_preco_por
 
 # Cria as tabelas no banco de dados fisicamente
 Base.metadata.create_all(bind=engine)
+
+# Auto-migração do SQLite para permitir NULL em produtos.embalagem_id
+try:
+    with engine.connect() as conn:
+        info = conn.exec_driver_sql("PRAGMA table_info(produtos)").fetchall()
+        col = next((c for c in info if c[1] == 'embalagem_id'), None)
+        if col and col[3] == 1:
+            conn.exec_driver_sql("PRAGMA foreign_keys=OFF;")
+            conn.exec_driver_sql("CREATE TABLE produtos_migration_tmp AS SELECT * FROM produtos;")
+            conn.exec_driver_sql("DROP TABLE produtos;")
+            conn.commit()
+            Base.metadata.create_all(bind=engine)
+            conn.exec_driver_sql("""
+                INSERT INTO produtos (id, sku, nome, preco_venda, custo_produto, quantidade_estoque, embalagem_id, criado_em, atualizado_em)
+                SELECT id, sku, nome, preco_venda, custo_produto, quantidade_estoque, embalagem_id, criado_em, atualizado_em FROM produtos_migration_tmp;
+            """)
+            conn.exec_driver_sql("DROP TABLE produtos_migration_tmp;")
+            conn.exec_driver_sql("PRAGMA foreign_keys=ON;")
+            conn.commit()
+except Exception as e:
+    print(f"Aviso ao verificar migração de banco: {e}")
 
 app = FastAPI(title="Skold Stock API")
 
@@ -143,6 +168,17 @@ def cadastrar_embalagem(embalagem: schemas_domain.EmbalagemCreate, db: Session =
 def listar_embalagens(db: Session = Depends(get_db)):
     return db.query(models_domain.Embalagem).all()
 
+@app.put("/embalagens/{id}", tags=["Cadastros"])
+def editar_embalagem(id: int, dados: schemas_domain.EmbalagemCreate, db: Session = Depends(get_db)):
+    emb = db.query(models_domain.Embalagem).filter_by(id=id).first()
+    if not emb:
+        raise HTTPException(status_code=404, detail="Embalagem não encontrada.")
+    emb.nome = dados.nome
+    emb.custo_pacote = dados.custo_pacote
+    emb.qtd_unidades = dados.qtd_unidades
+    db.commit()
+    return {"status": "sucesso", "embalagem": emb.nome}
+
 @app.post("/configuracoes/", tags=["Cadastros"])
 def salvar_configuracao_global(config: schemas_domain.ConfiguracaoGlobalCreate, db: Session = Depends(get_db)):
     item = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave=config.chave).first()
@@ -164,36 +200,136 @@ def deletar_embalagem(id: int, db: Session = Depends(get_db)):
     embalagem = db.query(models_domain.Embalagem).filter_by(id=id).first()
     if not embalagem: 
         raise HTTPException(status_code=404, detail="Não encontrada")
-    if db.query(models_domain.Produto).filter_by(embalagem_id=id).count() > 0:
-        raise HTTPException(status_code=400, detail="Há produtos usando esta embalagem.")
+    # Desvincula produtos sem deletar os produtos (assumem Caixa Propria / Sem Embalagem)
+    db.query(models_domain.Produto).filter_by(embalagem_id=id).update({"embalagem_id": None})
     db.delete(embalagem)
     db.commit()
     return {"status": "sucesso"}
 
+# --- HELPER DE AUDITORIA DE ESTOQUE ---
+def registrar_movimentacao(
+    db: Session,
+    produto_id: int,
+    produto_sku: str,
+    produto_nome: str,
+    tipo: str,
+    qtd_alterada: int,
+    estoque_ant: int,
+    estoque_novo: int,
+    motivo: str,
+    usuario_nome: str = "Administrador"
+):
+    mov = models_domain.MovimentacaoEstoque(
+        produto_id=produto_id,
+        produto_sku=produto_sku,
+        produto_nome=produto_nome,
+        tipo=tipo,
+        quantidade_alterada=qtd_alterada,
+        estoque_anterior=estoque_ant,
+        estoque_novo=estoque_novo,
+        motivo=motivo,
+        usuario_nome=usuario_nome
+    )
+    db.add(mov)
+
 # --- ROTAS DE PRODUTOS E ESTOQUE ---
 @app.post("/produtos/", tags=["Estoque"])
 def cadastrar_produto(produto_data: schemas_domain.ProdutoCreate, db: Session = Depends(get_db)):
-    # 1. Valida a embalagem
-    if not db.query(models_domain.Embalagem).filter_by(id=produto_data.embalagem_id).first():
-        raise HTTPException(status_code=404, detail="Embalagem não encontrada.")
+    if produto_data.embalagem_id:
+        if not db.query(models_domain.Embalagem).filter_by(id=produto_data.embalagem_id).first():
+            raise HTTPException(status_code=404, detail="Embalagem não encontrada.")
+    else:
+        produto_data.embalagem_id = None
         
-    # 2. Busca as plataformas que o usuário marcou no Checkbox
     plataformas_selecionadas = db.query(models_domain.Plataforma).filter(models_domain.Plataforma.id.in_(produto_data.plataformas_ids)).all()
 
     try:
-        # Extrai os dados sem a lista de IDs para o SQLAlchemy não reclamar
         dados_dict = produto_data.model_dump(exclude={"plataformas_ids"})
         novo_produto = models_domain.Produto(**dados_dict)
-        
-        # Faz a ligação das plataformas marcadas (A mágica do Muitos-para-Muitos)
         novo_produto.plataformas = plataformas_selecionadas
         
         db.add(novo_produto)
         db.commit()
+        db.refresh(novo_produto)
+
+        # Grava o histórico inicial
+        if novo_produto.quantidade_estoque > 0:
+            registrar_movimentacao(
+                db=db,
+                produto_id=novo_produto.id,
+                produto_sku=novo_produto.sku,
+                produto_nome=novo_produto.nome,
+                tipo="ENTRADA",
+                qtd_alterada=novo_produto.quantidade_estoque,
+                estoque_ant=0,
+                estoque_novo=novo_produto.quantidade_estoque,
+                motivo="Cadastro inicial do produto",
+                usuario_nome="Administrador"
+            )
+            db.commit()
+
         return {"status": "sucesso"}
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail=f"O SKU '{produto_data.sku}' já existe.")
+
+@app.put("/produtos/{sku}", tags=["Estoque"])
+def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = Depends(get_db)):
+    produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado.")
+
+    if dados.embalagem_id:
+        if not db.query(models_domain.Embalagem).filter_by(id=dados.embalagem_id).first():
+            raise HTTPException(status_code=404, detail="Embalagem informada não existe.")
+    else:
+        dados.embalagem_id = None
+
+    plataformas_selecionadas = db.query(models_domain.Plataforma).filter(models_domain.Plataforma.id.in_(dados.plataformas_ids)).all()
+
+    estoque_ant = produto.quantidade_estoque
+    estoque_novo = dados.quantidade_estoque
+    custo_ant = produto.custo_produto
+
+    produto.nome = dados.nome
+    produto.preco_venda = dados.preco_venda
+    produto.custo_produto = dados.custo_produto
+    produto.quantidade_estoque = dados.quantidade_estoque
+    produto.embalagem_id = dados.embalagem_id
+    produto.plataformas = plataformas_selecionadas
+
+    if estoque_ant != estoque_novo:
+        diferenca = estoque_novo - estoque_ant
+        tipo_mov = "ENTRADA" if diferenca > 0 else "SAIDA"
+        motivo_str = dados.motivo_ajuste or "Edição manual de estoque/custo"
+        registrar_movimentacao(
+            db=db,
+            produto_id=produto.id,
+            produto_sku=produto.sku,
+            produto_nome=produto.nome,
+            tipo=tipo_mov,
+            qtd_alterada=abs(diferenca),
+            estoque_ant=estoque_ant,
+            estoque_novo=estoque_novo,
+            motivo=motivo_str,
+            usuario_nome="Administrador"
+        )
+    elif custo_ant != dados.custo_produto:
+        registrar_movimentacao(
+            db=db,
+            produto_id=produto.id,
+            produto_sku=produto.sku,
+            produto_nome=produto.nome,
+            tipo="AJUSTE",
+            qtd_alterada=0,
+            estoque_ant=estoque_ant,
+            estoque_novo=estoque_novo,
+            motivo=f"Reajuste de Custo (R$ {custo_ant:.2f} -> R$ {dados.custo_produto:.2f})",
+            usuario_nome="Administrador"
+        )
+
+    db.commit()
+    return {"status": "sucesso", "produto": produto.nome}
 
 @app.delete("/produtos/{sku}", tags=["Estoque"])
 def deletar_produto(sku: str, db: Session = Depends(get_db)):
@@ -206,6 +342,211 @@ def deletar_produto(sku: str, db: Session = Depends(get_db)):
 
 class AjusteEstoque(BaseModel):
     novo_estoque: int
+    motivo: Optional[str] = "Ajuste manual de estoque"
+
+# --- PROCESSAMENTO E IMPORTAÇÃO EM MASSA DE PRODUTOS ---
+def processar_linhas_planilha(linhas: List[dict], modo_duplicados: str, db: Session):
+    total = len(linhas)
+    criados = 0
+    atualizados = 0
+    pulados = 0
+    erros = []
+
+    embalagem_padrao = db.query(models_domain.Embalagem).first()
+    if not embalagem_padrao:
+        raise HTTPException(status_code=400, detail="Cadastre ao menos uma Embalagem no sistema antes de importar produtos.")
+
+    todas_embalagens = db.query(models_domain.Embalagem).all()
+    todas_plataformas = db.query(models_domain.Plataforma).all()
+
+    for idx, row in enumerate(linhas, start=2):
+        sku = str(row.get("sku") or row.get("SKU") or "").strip()
+        nome = str(row.get("nome") or row.get("NOME") or row.get("Nome") or "").strip()
+        preco_raw = str(row.get("preco_venda") or row.get("preco") or row.get("PRECO_VENDA") or row.get("Preço Venda") or "0").strip()
+        custo_raw = str(row.get("custo_produto") or row.get("custo") or row.get("CUSTO_PRODUTO") or row.get("Custo Produto") or "0").strip()
+        estoque_raw = str(row.get("quantidade_estoque") or row.get("estoque") or row.get("QUANTIDADE_ESTOQUE") or row.get("Estoque") or "0").strip()
+        emb_raw = str(row.get("embalagem") or row.get("EMBALAGEM") or row.get("Embalagem") or "").strip()
+        plat_raw = str(row.get("plataformas") or row.get("PLATAFORMAS") or row.get("Plataformas") or "").strip()
+
+        if not sku or not nome:
+            erros.append(f"Linha {idx}: SKU e Nome são obrigatórios.")
+            continue
+
+        try:
+            preco_venda = float(preco_raw.replace('R$', '').replace(' ', '').replace(',', '.'))
+            custo_produto = float(custo_raw.replace('R$', '').replace(' ', '').replace(',', '.'))
+            quantidade_estoque = int(float(estoque_raw.replace(',', '.')))
+        except ValueError:
+            erros.append(f"Linha {idx} (SKU: {sku}): Valores numéricos inválidos para Preço, Custo ou Estoque.")
+            continue
+
+        if preco_venda <= 0 or custo_produto <= 0:
+            erros.append(f"Linha {idx} (SKU: {sku}): Preço de Venda e Custo devem ser maiores que zero.")
+            continue
+
+        embalagem_target = embalagem_padrao
+        if emb_raw:
+            encontrada = next((e for e in todas_embalagens if e.nome.lower() == emb_raw.lower()), None)
+            if encontrada:
+                embalagem_target = encontrada
+
+        plataformas_target = todas_plataformas
+        if plat_raw:
+            nomes_plats = [p.strip().lower() for p in plat_raw.split(',') if p.strip()]
+            encontradas = [p for p in todas_plataformas if p.nome.lower() in nomes_plats]
+            if encontradas:
+                plataformas_target = encontradas
+
+        produto_existente = db.query(models_domain.Produto).filter_by(sku=sku).first()
+
+        if produto_existente:
+            if modo_duplicados == "pular":
+                pulados += 1
+                continue
+            
+            est_ant = produto_existente.quantidade_estoque
+            custo_ant = produto_existente.custo_produto
+
+            produto_existente.nome = nome
+            produto_existente.preco_venda = preco_venda
+            produto_existente.custo_produto = custo_produto
+            produto_existente.quantidade_estoque = quantidade_estoque
+            produto_existente.embalagem_id = embalagem_target.id
+            produto_existente.plataformas = plataformas_target
+
+            if est_ant != quantidade_estoque:
+                dif = quantidade_estoque - est_ant
+                registrar_movimentacao(
+                    db=db,
+                    produto_id=produto_existente.id,
+                    produto_sku=sku,
+                    produto_nome=nome,
+                    tipo="ENTRADA" if dif > 0 else "SAIDA",
+                    qtd_alterada=abs(dif),
+                    estoque_ant=est_ant,
+                    estoque_novo=quantidade_estoque,
+                    motivo="Importação via Planilha (Atualização)",
+                    usuario_nome="Administrador (Planilha)"
+                )
+            elif custo_ant != custo_produto:
+                registrar_movimentacao(
+                    db=db,
+                    produto_id=produto_existente.id,
+                    produto_sku=sku,
+                    produto_nome=nome,
+                    tipo="AJUSTE",
+                    qtd_alterada=0,
+                    estoque_ant=est_ant,
+                    estoque_novo=quantidade_estoque,
+                    motivo=f"Reajuste de Custo via Planilha (R$ {custo_ant:.2f} -> R$ {custo_produto:.2f})",
+                    usuario_nome="Administrador (Planilha)"
+                )
+            atualizados += 1
+        else:
+            novo_prod = models_domain.Produto(
+                sku=sku,
+                nome=nome,
+                preco_venda=preco_venda,
+                custo_produto=custo_produto,
+                quantidade_estoque=quantidade_estoque,
+                embalagem_id=embalagem_target.id
+            )
+            novo_prod.plataformas = plataformas_target
+            db.add(novo_prod)
+            db.commit()
+            db.refresh(novo_prod)
+
+            if quantidade_estoque > 0:
+                registrar_movimentacao(
+                    db=db,
+                    produto_id=novo_prod.id,
+                    produto_sku=sku,
+                    produto_nome=nome,
+                    tipo="ENTRADA",
+                    qtd_alterada=quantidade_estoque,
+                    estoque_ant=0,
+                    estoque_novo=quantidade_estoque,
+                    motivo="Importação via Planilha (Novo Produto)",
+                    usuario_nome="Administrador (Planilha)"
+                )
+            criados += 1
+
+    db.commit()
+
+    return {
+        "sucesso": True,
+        "total_processados": total,
+        "criados": criados,
+        "atualizados": atualizados,
+        "pulados": pulados,
+        "erros": erros
+    }
+
+@app.get("/produtos/modelo-importacao", tags=["Estoque"])
+def baixar_modelo_importacao():
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(["sku", "nome", "preco_venda", "custo_produto", "quantidade_estoque", "embalagem", "plataformas"])
+    writer.writerow(["CAM-PRETA-01", "Camiseta Algodão Premium Preta", "49,90", "22,50", "50", "Caixa P", "Shopee, Mercado Livre"])
+    writer.writerow(["BONE-ABA-CURVA", "Boné Strapback Sarja Preto", "39,90", "15,00", "30", "Caixa P", "Shopee"])
+    
+    output.seek(0)
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode('utf-8-sig')),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=modelo_importacao_produtos.csv"}
+    )
+
+@app.post("/produtos/importar", tags=["Estoque"])
+async def importar_produtos_planilha(
+    file: UploadFile = File(...),
+    modo_duplicados: str = Form("atualizar"),
+    db: Session = Depends(get_db)
+):
+    filename = file.filename.lower()
+    content = await file.read()
+
+    linhas = []
+
+    if filename.endswith(".xlsx") or filename.endswith(".xls"):
+        wb = openpyxl.load_workbook(filename=io.BytesIO(content), data_only=True)
+        sheet = wb.active
+        rows = list(sheet.iter_rows(values_only=True))
+        if not rows or len(rows) < 2:
+            raise HTTPException(status_code=400, detail="A planilha informada está vazia ou sem dados de produtos.")
+
+        headers = [str(cell).strip().lower() if cell is not None else "" for cell in rows[0]]
+        for row in rows[1:]:
+            if not any(row):
+                continue
+            row_dict = {}
+            for h, val in zip(headers, row):
+                if h:
+                    row_dict[h] = val
+            linhas.append(row_dict)
+
+    elif filename.endswith(".csv") or filename.endswith(".txt"):
+        try:
+            text = content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = content.decode("latin-1")
+
+        lines = [l for l in text.splitlines() if l.strip()]
+        if not lines:
+            raise HTTPException(status_code=400, detail="O arquivo CSV está vazio.")
+
+        delimiter = ';' if ';' in lines[0] else ','
+        reader = csv.DictReader(lines, delimiter=delimiter)
+        for row in reader:
+            row_normalized = {str(k).strip().lower(): v for k, v in row.items() if k}
+            linhas.append(row_normalized)
+    else:
+        raise HTTPException(status_code=400, detail="Formato de arquivo inválido. Formatos suportados: .xlsx, .xls, .csv")
+
+    if not linhas:
+        raise HTTPException(status_code=400, detail="Nenhum produto válido encontrado no arquivo enviado.")
+
+    return processar_linhas_planilha(linhas, modo_duplicados, db)
 
 @app.patch("/produtos/{sku}/estoque", tags=["Estoque"])
 def ajustar_estoque_manual(sku: str, ajuste: AjusteEstoque, db: Session = Depends(get_db)):
@@ -213,9 +554,60 @@ def ajustar_estoque_manual(sku: str, ajuste: AjusteEstoque, db: Session = Depend
     if not produto:
         raise HTTPException(status_code=404, detail="SKU não encontrado no sistema.")
     
-    produto.quantidade_estoque = ajuste.novo_estoque
+    estoque_ant = produto.quantidade_estoque
+    estoque_novo = ajuste.novo_estoque
+    diferenca = estoque_novo - estoque_ant
+    produto.quantidade_estoque = estoque_novo
+
+    if diferenca != 0:
+        tipo_mov = "ENTRADA" if diferenca > 0 else "SAIDA"
+        registrar_movimentacao(
+            db=db,
+            produto_id=produto.id,
+            produto_sku=produto.sku,
+            produto_nome=produto.nome,
+            tipo=tipo_mov,
+            qtd_alterada=abs(diferenca),
+            estoque_ant=estoque_ant,
+            estoque_novo=estoque_novo,
+            motivo=ajuste.motivo or "Ajuste manual de estoque",
+            usuario_nome="Administrador"
+        )
+
     db.commit()
     return {"status": "sucesso", "novo_estoque": produto.quantidade_estoque, "produto": produto.nome}
+
+@app.get("/produtos/movimentacoes", tags=["Estoque"])
+def listar_movimentacoes_estoque(
+    sku: Optional[str] = None,
+    tipo: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models_domain.MovimentacaoEstoque)
+    if sku:
+        query = query.filter(models_domain.MovimentacaoEstoque.produto_sku == sku)
+    if tipo:
+        query = query.filter(models_domain.MovimentacaoEstoque.tipo == tipo)
+
+    movs = query.order_by(models_domain.MovimentacaoEstoque.criado_em.desc()).limit(250).all()
+    
+    resultados = []
+    for m in movs:
+        resultados.append({
+            "id": m.id,
+            "produto_id": m.produto_id,
+            "produto_sku": m.produto_sku,
+            "produto_nome": m.produto_nome,
+            "tipo": m.tipo,
+            "quantidade_alterada": m.quantidade_alterada,
+            "estoque_anterior": m.estoque_anterior,
+            "estoque_novo": m.estoque_novo,
+            "motivo": m.motivo,
+            "usuario_nome": m.usuario_nome or "Sistema",
+            "criado_em": m.criado_em.strftime("%d/%m/%Y %H:%M") if m.criado_em else ""
+        })
+    return resultados
+
 
 @app.get("/produtos/alertas", tags=["Dashboard"])
 def alertas_de_estoque(limite: int = 10, db: Session = Depends(get_db)):
@@ -236,7 +628,7 @@ def listar_produtos_detalhados(db: Session = Depends(get_db)):
     custo_etiq = etiqueta.valor_pacote / etiqueta.qtd_unidades
 
     for p in produtos:
-        custo_emb = p.embalagem.custo_pacote / p.embalagem.qtd_unidades
+        custo_emb = (p.embalagem.custo_pacote / p.embalagem.qtd_unidades) if p.embalagem else 0.0
         metricas_multiplas = []
         
         # Calcula as métricas para CADA plataforma vinculada ao produto
@@ -257,6 +649,8 @@ def listar_produtos_detalhados(db: Session = Depends(get_db)):
             "quantidade_estoque": p.quantidade_estoque,
             "preco_venda": p.preco_venda,
             "custo_produto": p.custo_produto,
+            "embalagem_id": p.embalagem_id,
+            "embalagem_nome": p.embalagem.nome if p.embalagem else "Caixa Própria",
             "valor_estoque": p.quantidade_estoque * p.custo_produto,
             "analises_plataformas": metricas_multiplas
         })
@@ -274,7 +668,7 @@ def relatorio_financeiro_produto(sku: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Você precisa cadastrar a 'etiqueta_padrao'.")
 
     custo_etiq = etiqueta.valor_pacote / etiqueta.qtd_unidades
-    custo_emb = produto.embalagem.custo_pacote / produto.embalagem.qtd_unidades
+    custo_emb = (produto.embalagem.custo_pacote / produto.embalagem.qtd_unidades) if produto.embalagem else 0.0
 
     metricas_multiplas = []
     for plat in produto.plataformas:
@@ -383,7 +777,23 @@ async def receber_venda_shopee(payload: dict, db: Session = Depends(get_db)):
         
         produto = db.query(models_domain.Produto).filter_by(sku=sku_simulado).first()
         if produto:
+            estoque_ant = produto.quantidade_estoque
             produto.quantidade_estoque -= qtd_simulada
+            estoque_novo = produto.quantidade_estoque
+
+            registrar_movimentacao(
+                db=db,
+                produto_id=produto.id,
+                produto_sku=produto.sku,
+                produto_nome=produto.nome,
+                tipo="SAIDA",
+                qtd_alterada=qtd_simulada,
+                estoque_ant=estoque_ant,
+                estoque_novo=estoque_novo,
+                motivo=f"Baixa automática Venda Shopee #{order_sn}",
+                usuario_nome="Shopee Webhook"
+            )
+
             db.commit()
             return {"status": "sucesso", "estoque_restante": produto.quantidade_estoque}
         else:

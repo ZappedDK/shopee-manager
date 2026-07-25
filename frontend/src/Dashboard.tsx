@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { PageHeader } from './ui';
-import { colors, cardStyle, cardTitleStyle, cardDescStyle } from './theme';
+import { colors, cardStyle, cardTitleStyle, cardDescStyle, formatarMoeda } from './theme';
 
 export function Dashboard() {
   const [alertas, setAlertas] = useState<any[]>([]);
@@ -54,7 +54,7 @@ export function Dashboard() {
         <div style={{ ...statCardStyle, borderLeft: `4px solid ${colors.success}` }}>
           <p style={{ margin: '0 0 6px 0', color: colors.textSecondary, fontSize: '13px' }}>Valor Total em Estoque</p>
           <strong style={{ color: colors.textPrimary, fontSize: '28px' }}>
-            {valorTotalEstoque === null ? '...' : `R$ ${valorTotalEstoque.toFixed(2)}`}
+            {valorTotalEstoque === null ? '...' : formatarMoeda(valorTotalEstoque)}
           </strong>
         </div>
         <div style={{ ...statCardStyle, borderLeft: `4px solid ${alertas.length > 0 ? colors.danger : colors.success}` }}>

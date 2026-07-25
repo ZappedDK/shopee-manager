@@ -187,7 +187,7 @@ export const hoverIn = (bg: string) => (e: React.MouseEvent<HTMLButtonElement>) 
 
 // --- TABLE ---
 export const tableHeaderStyle: CSSProperties = {
-  padding: '12px 14px',
+  padding: '9px 12px',
   textAlign: 'left',
   borderBottom: `2px solid ${colors.border}`,
   color: colors.textMuted,
@@ -198,10 +198,10 @@ export const tableHeaderStyle: CSSProperties = {
 };
 
 export const tableCellStyle: CSSProperties = {
-  padding: '14px',
+  padding: '9px 12px',
   borderBottom: `1px solid ${colors.border}`,
   color: colors.textPrimary,
-  fontSize: '14px',
+  fontSize: '13.5px',
 };
 
 // --- MESSAGE BANNER ---
@@ -215,3 +215,37 @@ export const messageBannerStyle = (isError: boolean): CSSProperties => ({
   fontSize: '14px',
   fontWeight: 500,
 });
+
+/**
+ * Formata um valor numérico para Moeda em Real Brasileiro (BRL)
+ * Exemplo: 1234.56 -> "R$ 1.234,56"
+ * Exemplo (semSimbolo = true): 1234.56 -> "1.234,56"
+ */
+export function formatarMoeda(valor: number | null | undefined, semSimbolo: boolean = false): string {
+  if (valor === null || valor === undefined || isNaN(valor)) {
+    return semSimbolo ? '0,00' : 'R$ 0,00';
+  }
+
+  const formatado = valor.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  return semSimbolo ? formatado : `R$ ${formatado}`;
+}
+
+/**
+ * Formata um número decimal com pontuação brasileira
+ * Exemplo: 12.3456 -> "12,35"
+ */
+export function formatarNumero(valor: number | null | undefined, casasDecimais: number = 2): string {
+  if (valor === null || valor === undefined || isNaN(valor)) {
+    return '0,00';
+  }
+
+  return valor.toLocaleString('pt-BR', {
+    minimumFractionDigits: casasDecimais,
+    maximumFractionDigits: casasDecimais,
+  });
+}
+

@@ -5,7 +5,8 @@ import { PlatformIcon } from './PlatformIcon';
 import {
   colors, cardStyle, cardTitleStyle, cardDescStyle,
   inputStyle, btnStyle, btnNeutralStyle,
-  tableHeaderStyle, tableCellStyle
+  tableHeaderStyle, tableCellStyle,
+  formatarMoeda, formatarNumero
 } from './theme';
 
 interface SeletorProdutoComBuscaProps {
@@ -57,7 +58,7 @@ function SeletorProdutoComBusca({ produtos, skuSelecionado, onSelectSku }: Selet
         }}
       >
         <span style={{ color: produtoAtual ? colors.textPrimary : colors.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {produtoAtual ? `📦 ${produtoAtual.sku} — ${produtoAtual.nome} (R$ ${produtoAtual.custo_produto.toFixed(2)})` : 'Selecione um produto...'}
+          {produtoAtual ? `📦 ${produtoAtual.sku} — ${produtoAtual.nome} (${formatarMoeda(produtoAtual.custo_produto)})` : 'Selecione um produto...'}
         </span>
         <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px' }}>
           {aberto ? '▲' : '▼'}
@@ -139,7 +140,7 @@ function SeletorProdutoComBusca({ produtos, skuSelecionado, onSelectSku }: Selet
                       <strong style={{ color: colors.accent }}>{p.sku}</strong> — {p.nome}
                     </span>
                     <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px' }}>
-                      Custo: R$ {p.custo_produto.toFixed(2)}
+                      Custo: {formatarMoeda(p.custo_produto)}
                     </span>
                   </div>
                 );
@@ -307,10 +308,10 @@ export function SimuladorPreco() {
                   onChange={(e) => setEmbalagemIdLivre(e.target.value)}
                   style={{ ...inputStyle, width: '100%', maxWidth: 'none', margin: 0 }}
                 >
-                  <option value="">-- Sem Embalagem (R$ 0.00) --</option>
+                  <option value="">-- Sem Embalagem (Caixa Própria - {formatarMoeda(0)}) --</option>
                   {embalagens.map((emb) => (
                     <option key={emb.id} value={emb.id}>
-                      {emb.nome} (R$ {(emb.custo_pacote / emb.qtd_unidades).toFixed(2)}/un)
+                      {emb.nome} ({formatarMoeda(emb.custo_pacote / emb.qtd_unidades)}/un)
                     </option>
                   ))}
                 </select>
@@ -376,7 +377,7 @@ export function SimuladorPreco() {
                   {modo === 'existente' ? `SKU: ${resultado.sku} — ${resultado.nome}` : 'Simulação de Produto Livre'}
                 </h4>
                 <p style={{ margin: 0, color: colors.textSecondary, fontSize: '13px' }}>
-                  Custo Produto: <strong>R$ {resultado.custo_produto?.toFixed(2)}</strong> | Embalagem: <strong>R$ {resultado.custo_embalagem?.toFixed(2)}</strong> | Etiqueta: <strong>R$ {resultado.custo_etiqueta?.toFixed(2)}</strong>
+                  Custo Produto: <strong>{formatarMoeda(resultado.custo_produto)}</strong> | Embalagem: <strong>{formatarMoeda(resultado.custo_embalagem)}</strong> | Etiqueta: <strong>{formatarMoeda(resultado.custo_etiqueta)}</strong>
                 </p>
               </div>
 
@@ -421,7 +422,7 @@ export function SimuladorPreco() {
                           <span style={{ color: colors.dangerText }}>—</span>
                         ) : (
                           <strong style={{ color: colors.accent, fontSize: '18px' }}>
-                            R$ {sim.preco_sugerido.toFixed(2)}
+                            {formatarMoeda(sim.preco_sugerido)}
                           </strong>
                         )}
                       </td>
@@ -431,7 +432,7 @@ export function SimuladorPreco() {
                           <span style={{ color: colors.dangerText }}>—</span>
                         ) : (
                           <strong style={{ color: colors.successText, fontSize: '15px' }}>
-                            R$ {sim.lucro_liquido.toFixed(2)}
+                            {formatarMoeda(sim.lucro_liquido)}
                           </strong>
                         )}
                       </td>
@@ -441,13 +442,13 @@ export function SimuladorPreco() {
                           <span style={{ color: colors.dangerText }}>—</span>
                         ) : (
                           <span style={{ color: colors.danger }}>
-                            R$ {(sim.taxa_plataforma_real + sim.taxa_fixa).toFixed(2)}
+                            {formatarMoeda(sim.taxa_plataforma_real + sim.taxa_fixa)}
                           </span>
                         )}
                       </td>
 
                       <td style={tableCellStyle}>
-                        {sim.inviavel ? '—' : sim.roas_minimo?.toFixed(2)}
+                        {sim.inviavel ? '—' : formatarNumero(sim.roas_minimo)}
                       </td>
 
                       <td style={tableCellStyle}>
