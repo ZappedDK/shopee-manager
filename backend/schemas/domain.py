@@ -31,6 +31,7 @@ class ProdutoCreate(BaseModel):
     preco_venda: float = Field(..., gt=0)
     custo_produto: float = Field(..., gt=0)
     quantidade_estoque: int = Field(..., ge=0)
+    ativo: Optional[bool] = True
     embalagem_id: Optional[int] = None
     plataformas_ids: List[int] = []
 
@@ -69,6 +70,7 @@ class ProdutoUpdate(BaseModel):
     preco_venda: float = Field(..., gt=0)
     custo_produto: float = Field(..., gt=0)
     quantidade_estoque: int = Field(..., ge=0)
+    ativo: Optional[bool] = True
     embalagem_id: Optional[int] = None
     plataformas_ids: List[int] = []
     motivo_ajuste: str = "Edição de produto/custo/estoque"

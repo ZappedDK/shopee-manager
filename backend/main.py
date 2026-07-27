@@ -45,6 +45,14 @@ try:
             conn.exec_driver_sql("ALTER TABLE plataformas ADD COLUMN faixas_json VARCHAR(2000);")
             conn.commit()
             print("✅ Coluna faixas_json adicionada à tabela plataformas!")
+
+        # Garante que ativo existe em produtos
+        info_prod = conn.exec_driver_sql("PRAGMA table_info(produtos)").fetchall()
+        cols_prod = [c[1] for c in info_prod]
+        if "ativo" not in cols_prod:
+            conn.exec_driver_sql("ALTER TABLE produtos ADD COLUMN ativo BOOLEAN DEFAULT 1;")
+            conn.commit()
+            print("✅ Coluna ativo adicionada à tabela produtos!")
 except Exception as e:
     print(f"Aviso ao verificar migração de banco: {e}")
 
@@ -348,6 +356,7 @@ def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = 
     produto.preco_venda = dados.preco_venda
     produto.custo_produto = dados.custo_produto
     produto.quantidade_estoque = dados.quantidade_estoque
+    produto.ativo = dados.ativo if dados.ativo is not None else True
     produto.embalagem_id = dados.embalagem_id
     produto.plataformas = plataformas_selecionadas
 
@@ -392,6 +401,16 @@ def deletar_produto(sku: str, db: Session = Depends(get_db)):
     db.delete(produto)
     db.commit()
     return {"status": "sucesso"}
+
+@app.patch("/produtos/{sku}/status", tags=["Estoque"])
+def alterar_status_produto(sku: str, db: Session = Depends(get_db)):
+    produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado.")
+
+    produto.ativo = not produto.ativo if produto.ativo is not None else False
+    db.commit()
+    return {"status": "sucesso", "ativo": produto.ativo, "produto": produto.nome}
 
 class AjusteEstoque(BaseModel):
     novo_estoque: int
@@ -702,6 +721,7 @@ def listar_produtos_detalhados(db: Session = Depends(get_db)):
             "quantidade_estoque": p.quantidade_estoque,
             "preco_venda": p.preco_venda,
             "custo_produto": p.custo_produto,
+            "ativo": p.ativo if p.ativo is not None else True,
             "embalagem_id": p.embalagem_id,
             "embalagem_nome": p.embalagem.nome if p.embalagem else "Caixa Própria",
             "valor_estoque": p.quantidade_estoque * p.custo_produto,

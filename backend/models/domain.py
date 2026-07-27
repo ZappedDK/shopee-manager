@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Table
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Table, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from core.database import Base
@@ -45,6 +45,7 @@ class Produto(Base):
     preco_venda = Column(Float, nullable=False)
     custo_produto = Column(Float, nullable=False)
     quantidade_estoque = Column(Integer, nullable=False, default=0)
+    ativo = Column(Boolean, nullable=False, default=True)
     
     embalagem_id = Column(Integer, ForeignKey("embalagens.id"), nullable=True)
     embalagem = relationship("Embalagem", back_populates="produtos")

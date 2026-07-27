@@ -80,18 +80,31 @@ function App() {
 
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <span style={{ opacity: 0.35, marginLeft: '5px', fontSize: '10px' }}>↕</span>;
+      return <span style={{ opacity: 0.4, marginLeft: '6px', fontSize: '11px', display: 'inline-block', lineHeight: 1 }}>↕</span>;
     }
     return (
-      <span style={{ color: colors.accent, marginLeft: '5px', fontSize: '11px', fontWeight: 'bold' }}>
+      <span style={{ color: colors.accent, marginLeft: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-block', lineHeight: 1 }}>
         {sortDirection === 'asc' ? '▲' : '▼'}
       </span>
     );
   };
 
-  // Ajuste manual de estoque (antes ficava na Visão Geral)
-  const [skuAjuste, setSkuAjuste] = useState('');
-  const [novoEstoque, setNovoEstoque] = useState('');
+  // Filtro de status de produtos (ativos / inativos / todos)
+  const [filtroStatus, setFiltroStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos');
+
+  // Menu Dropdown de Ações por produto
+  const [menuAcoesAberto, setMenuAcoesAberto] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickFora = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-acoes-container')) {
+        setMenuAcoesAberto(null);
+      }
+    };
+    document.addEventListener('click', handleClickFora);
+    return () => document.removeEventListener('click', handleClickFora);
+  }, []);
 
   // Edição de plataforma e embalagem
   const [editandoPlataformaModal, setEditandoPlataformaModal] = useState<any | null>(null);
@@ -187,22 +200,6 @@ function App() {
     }
   };
 
-  // --- AJUSTE MANUAL DE ESTOQUE (movido da Visão Geral) ---
-  const ajustarEstoque = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await api.patch(`/produtos/${skuAjuste}/estoque`, {
-        novo_estoque: Number(novoEstoque)
-      });
-      mostrarMensagem(`✅ Estoque do SKU ${skuAjuste} atualizado para ${res.data.novo_estoque} un.`);
-      setSkuAjuste('');
-      setNovoEstoque('');
-      carregarEstoque();
-    } catch (err) {
-      mostrarMensagem('❌ Erro: SKU não encontrado.', 7000);
-    }
-  };
-
   // --- EXCLUSÕES ---
   const excluirProduto = async (sku: string) => {
     if (!window.confirm(`⚠️ Tem certeza que deseja excluir o produto SKU: ${sku}?`)) return;
@@ -257,6 +254,16 @@ function App() {
     }
   };
 
+  const toggleStatusProduto = async (sku: string) => {
+    try {
+      const res = await api.patch(`/produtos/${sku}/status`);
+      mostrarMensagem(`✅ Status do produto ${res.data.produto} alterado para ${res.data.ativo ? 'Ativo' : 'Desativado'}!`);
+      carregarEstoque();
+    } catch (err: any) {
+      mostrarMensagem('❌ Erro ao alterar status do produto: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000);
+    }
+  };
+
   const toggleExpandir = (sku: string) => {
     setLinhaExpandida(linhaExpandida === sku ? null : sku);
   };
@@ -265,6 +272,10 @@ function App() {
 
   const produtosFiltrados = [...produtosDetalhados]
     .filter(item => {
+      // Filtro de Ativos / Inativos
+      if (filtroStatus === 'ativos' && item.ativo === false) return false;
+      if (filtroStatus === 'inativos' && item.ativo !== false) return false;
+
       const termo = buscaProduto.trim().toLowerCase();
       if (!termo) return true;
       return item.nome?.toLowerCase().includes(termo) || item.sku?.toLowerCase().includes(termo);
@@ -944,41 +955,98 @@ function App() {
             <PageHeader title="Controle de Estoque" subtitle={`Consulte quantidades, custos e margem por plataforma (${produtosDetalhados.length} ${produtosDetalhados.length === 1 ? 'SKU cadastrado' : 'SKUs cadastrados'}).`} />
             <MessageBanner mensagem={mensagem} />
 
-            <CollapsibleCard
-              icon="⚙️"
-              title="Ajuste Manual de Estoque"
-              description="Corrija o inventário de um SKU após uma contagem física."
-              buttonLabel="+ Ajuste de Estoque"
-              style={sectionGapStyle}
-            >
-              <form onSubmit={ajustarEstoque} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <input value={skuAjuste} onChange={e => setSkuAjuste(e.target.value)} placeholder="SKU" required style={{ ...inputStyle, flex: 2, minWidth: '160px', marginBottom: 0 }} />
-                <input value={novoEstoque} onChange={e => setNovoEstoque(e.target.value)} type="number" placeholder="Qtd Real" required style={{ ...inputStyle, flex: 1, minWidth: '120px', marginBottom: 0 }} />
-                <button
-                  type="submit"
-                  style={btnNeutralStyle}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
-                >
-                  Atualizar
-                </button>
-              </form>
-            </CollapsibleCard>
-
             <div style={cardStyle}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', gap: '16px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <h3 style={{ ...cardTitleStyle, marginBottom: 0 }}>Produtos Cadastrados</h3>
-                  <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: colors.accent, border: `1px solid ${colors.borderStrong}`, padding: '3px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 600 }}>
-                    📦 {produtosFiltrados.length} {produtosFiltrados.length === 1 ? 'SKU' : 'SKUs'} {buscaProduto ? `(filtrado de ${produtosDetalhados.length})` : ''}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                  <h3 style={{ ...cardTitleStyle, marginBottom: 0, fontSize: '16px' }}>Produtos Cadastrados</h3>
+                  <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: colors.accent, border: `1px solid ${colors.borderStrong}`, padding: '2px 8px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 600 }}>
+                    📦 {produtosFiltrados.length} {produtosFiltrados.length === 1 ? 'SKU' : 'SKUs'} {buscaProduto || filtroStatus !== 'ativos' ? `(filtrado de ${produtosDetalhados.length})` : ''}
                   </span>
                 </div>
-                <input
-                  value={buscaProduto}
-                  onChange={e => setBuscaProduto(e.target.value)}
-                  placeholder="🔎 Buscar por nome ou SKU..."
-                  style={{ ...inputStyle, marginBottom: 0, maxWidth: '280px' }}
-                />
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginLeft: 'auto', justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', height: '28px', backgroundColor: colors.bgApp, padding: '2px', borderRadius: '6px', border: `1px solid ${colors.border}`, boxSizing: 'border-box' }}>
+                    <button
+                      type="button"
+                      onClick={() => setFiltroStatus('ativos')}
+                      style={{
+                        height: '22px',
+                        padding: '0 9px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: filtroStatus === 'ativos' ? colors.accent : 'transparent',
+                        color: filtroStatus === 'ativos' ? '#fff' : colors.textMuted,
+                        transition: '0.15s'
+                      }}
+                    >
+                      🟢 Ativos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFiltroStatus('inativos')}
+                      style={{
+                        height: '22px',
+                        padding: '0 9px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: filtroStatus === 'inativos' ? colors.amber : 'transparent',
+                        color: filtroStatus === 'inativos' ? '#000' : colors.textMuted,
+                        transition: '0.15s'
+                      }}
+                    >
+                      ⏸️ Pausados
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFiltroStatus('todos')}
+                      style={{
+                        height: '22px',
+                        padding: '0 9px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: filtroStatus === 'todos' ? colors.slate : 'transparent',
+                        color: filtroStatus === 'todos' ? '#fff' : colors.textMuted,
+                        transition: '0.15s'
+                      }}
+                    >
+                      📋 Todos
+                    </button>
+                  </div>
+
+                  <input
+                    value={buscaProduto}
+                    onChange={e => setBuscaProduto(e.target.value)}
+                    placeholder="🔎 Buscar por nome ou SKU..."
+                    style={{
+                      ...inputStyle,
+                      height: '28px',
+                      marginBottom: 0,
+                      maxWidth: '280px',
+                      padding: '0 10px',
+                      fontSize: '12px',
+                      borderRadius: '6px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="table-scroll">
@@ -986,78 +1054,220 @@ function App() {
                   <thead>
                     <tr>
                       <th
-                        style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}
+                        style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
                         onClick={() => handleSort('sku')}
                         title="Clique para ordenar por SKU"
                       >
-                        SKU {renderSortIcon('sku')}
+                        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                          SKU {renderSortIcon('sku')}
+                        </span>
                       </th>
                       <th
-                        style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}
+                        style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
                         onClick={() => handleSort('nome')}
                         title="Clique para ordenar de A-Z ou Z-A por Nome do Produto"
                       >
-                        Produto (A-Z) {renderSortIcon('nome')}
+                        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                          Produto (A-Z) {renderSortIcon('nome')}
+                        </span>
                       </th>
                       <th
-                        style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}
+                        style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
                         onClick={() => handleSort('custo_produto')}
                         title="Clique para ordenar por Custo Unitário (menor para o maior)"
                       >
-                        Custo Unit. {renderSortIcon('custo_produto')}
+                        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                          Custo Unit. {renderSortIcon('custo_produto')}
+                        </span>
                       </th>
                       <th
-                        style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}
+                        style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
                         onClick={() => handleSort('quantidade_estoque')}
                         title="Clique para ordenar por Quantidade de Estoque"
                       >
-                        Estoque {renderSortIcon('quantidade_estoque')}
+                        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                          Estoque {renderSortIcon('quantidade_estoque')}
+                        </span>
                       </th>
                       <th
-                        style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}
+                        style={{ ...tableHeaderStyle, width: '95px', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
                         onClick={() => handleSort('valor_estoque')}
                         title="Clique para ordenar por Valor do Estoque"
                       >
-                        Valor do Estoque {renderSortIcon('valor_estoque')}
+                        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                          Valor do Estoque {renderSortIcon('valor_estoque')}
+                        </span>
                       </th>
-                      <th style={tableHeaderStyle}>Ações</th>
+                      <th style={{ ...tableHeaderStyle, whiteSpace: 'nowrap' }}>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {produtosFiltrados.map(item => {
+                      const isMenuAberto = menuAcoesAberto === item.sku;
+
                       return (
                         <React.Fragment key={item.sku}>
-                          <tr style={{ backgroundColor: linhaExpandida === item.sku ? colors.bgCardAlt : 'transparent', transition: '0.2s' }}>
-                            <td style={tableCellStyle}><strong>{item.sku}</strong></td>
-                            <td style={tableCellStyle}>{item.nome}</td>
-                            <td style={tableCellStyle}>{formatarMoeda(item.custo_produto)}</td>
-                            <td style={{ ...tableCellStyle, color: item.quantidade_estoque <= 10 ? '#f87171' : colors.textPrimary, fontWeight: 'bold' }}>{item.quantidade_estoque} un.</td>
-                            <td style={tableCellStyle}>{formatarMoeda(item.valor_estoque)}</td>
-                            <td style={{ ...tableCellStyle, display: 'flex', gap: '6px' }}>
-                              <button
-                                onClick={() => setProdutoParaEditar(item)}
-                                style={{ ...btnNeutralStyle, backgroundColor: colors.accent, color: '#fff', padding: '5px 10px', fontSize: '12px' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.accentHover}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.accent}
-                              >
-                                ✏️ Editar
-                              </button>
-                              <button
-                                onClick={() => toggleExpandir(item.sku)}
-                                style={{ ...btnNeutralStyle, padding: '5px 10px', fontSize: '12px' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
-                              >
-                                {linhaExpandida === item.sku ? 'Ocultar' : '+ Info'}
-                              </button>
-                              <button
-                                onClick={() => excluirProduto(item.sku)}
-                                style={{ ...btnDangerStyle, padding: '5px 10px', fontSize: '12px' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerHover}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.danger}
-                              >
-                                Excluir
-                              </button>
+                          <tr style={{
+                            backgroundColor: linhaExpandida === item.sku ? colors.bgCardAlt : 'transparent',
+                            position: 'relative',
+                            zIndex: isMenuAberto ? 100 : 1,
+                            transition: '0.2s'
+                          }}>
+                            <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {item.ativo === false ? (
+                                  <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.2)', color: colors.amber, padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>PAUSADO</span>
+                                ) : null}
+                                <strong>{item.sku}</strong>
+                              </div>
+                            </td>
+                            <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{item.nome}</td>
+                            <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{formatarMoeda(item.custo_produto)}</td>
+                            <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1, color: item.quantidade_estoque <= 10 ? '#f87171' : colors.textPrimary, fontWeight: 'bold' }}>{item.quantidade_estoque} un.</td>
+                            <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{formatarMoeda(item.valor_estoque)}</td>
+                            <td style={{ ...tableCellStyle, position: 'relative', zIndex: isMenuAberto ? 100 : 1 }}>
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <div className="dropdown-acoes-container" style={{ position: 'relative', zIndex: isMenuAberto ? 100 : 1 }}>
+                                  <button
+                                    onClick={() => setMenuAcoesAberto(isMenuAberto ? null : item.sku)}
+                                    style={{
+                                      padding: '5px 12px',
+                                      fontSize: '12px',
+                                      fontWeight: 600,
+                                      borderRadius: '6px',
+                                      border: `1px solid ${colors.borderStrong}`,
+                                      cursor: 'pointer',
+                                      whiteSpace: 'nowrap',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      height: '28px',
+                                      lineHeight: 1,
+                                      backgroundColor: isMenuAberto ? colors.slateHover : colors.bgCardAlt,
+                                      color: colors.textPrimary,
+                                      transition: '0.15s'
+                                    }}
+                                  >
+                                    ⚙️ Ações ▾
+                                  </button>
+
+                                  {isMenuAberto && (
+                                    <div
+                                      style={{
+                                        position: 'absolute',
+                                        right: 0,
+                                        top: '100%',
+                                        marginTop: '4px',
+                                        backgroundColor: colors.bgCard,
+                                        border: `1px solid ${colors.borderStrong}`,
+                                        borderRadius: '8px',
+                                        boxShadow: '0 10px 30px rgba(0,0,0,0.85)',
+                                        zIndex: 1000,
+                                        minWidth: '160px',
+                                        padding: '4px 0',
+                                        display: 'flex',
+                                        flexDirection: 'column'
+                                      }}
+                                    >
+                                      <button
+                                        onClick={() => { setProdutoParaEditar(item); setMenuAcoesAberto(null); }}
+                                        style={{
+                                          padding: '8px 14px',
+                                          backgroundColor: 'transparent',
+                                          border: 'none',
+                                          color: colors.textPrimary,
+                                          fontSize: '12.5px',
+                                          fontWeight: 500,
+                                          textAlign: 'left',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '8px',
+                                          width: '100%',
+                                          transition: '0.15s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)'}
+                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                      >
+                                        ✏️ Editar
+                                      </button>
+
+                                      <button
+                                        onClick={() => { toggleStatusProduto(item.sku); setMenuAcoesAberto(null); }}
+                                        style={{
+                                          padding: '8px 14px',
+                                          backgroundColor: 'transparent',
+                                          border: 'none',
+                                          color: item.ativo === false ? colors.successText : colors.amber,
+                                          fontSize: '12.5px',
+                                          fontWeight: 500,
+                                          textAlign: 'left',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '8px',
+                                          width: '100%',
+                                          transition: '0.15s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.15)'}
+                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                      >
+                                        {item.ativo === false ? '▶️ Ativar Produto' : '⏸️ Pausar Produto'}
+                                      </button>
+
+                                      <div style={{ height: '1px', backgroundColor: colors.border, margin: '4px 0' }} />
+
+                                      <button
+                                        onClick={() => { setMenuAcoesAberto(null); excluirProduto(item.sku); }}
+                                        style={{
+                                          padding: '8px 14px',
+                                          backgroundColor: 'transparent',
+                                          border: 'none',
+                                          color: '#f87171',
+                                          fontSize: '12.5px',
+                                          fontWeight: 500,
+                                          textAlign: 'left',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '8px',
+                                          width: '100%',
+                                          transition: '0.15s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerBg}
+                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                      >
+                                        🗑️ Excluir
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <button
+                                  onClick={() => toggleExpandir(item.sku)}
+                                  style={{
+                                    padding: '5px 10px',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    borderRadius: '6px',
+                                    border: `1px solid ${colors.borderStrong}`,
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    height: '28px',
+                                    lineHeight: 1,
+                                    backgroundColor: colors.slate,
+                                    color: '#fff',
+                                    transition: '0.15s'
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
+                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
+                                >
+                                  {linhaExpandida === item.sku ? 'Ocultar' : '+ Info'}
+                                </button>
+                              </div>
                             </td>
                           </tr>
 

@@ -16,6 +16,7 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
   const [precoVenda, setPrecoVenda] = useState(produto.preco_venda ? String(produto.preco_venda) : '');
   const [custoProduto, setCustoProduto] = useState(produto.custo_produto ? String(produto.custo_produto) : '');
   const [quantidadeEstoque, setQuantidadeEstoque] = useState(produto.quantidade_estoque ? String(produto.quantidade_estoque) : '0');
+  const [ativo, setAtivo] = useState(produto.ativo !== false);
   const [embalagemId, setEmbalagemId] = useState(produto.embalagem_id ? String(produto.embalagem_id) : (produto.embalagem?.id ? String(produto.embalagem.id) : ''));
   const [plataformasIds, setPlataformasIds] = useState<number[]>([]);
   const [motivoAjuste, setMotivoAjuste] = useState('Reajuste de custo/preço/estoque');
@@ -46,7 +47,7 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
     e.preventDefault();
     setErro('');
 
-    if (!nome || !precoVenda || !custoProduto) {
+    if (!nome.trim() || !precoVenda || !custoProduto || quantidadeEstoque === '') {
       setErro('Preencha todos os campos obrigatórios.');
       return;
     }
@@ -58,6 +59,7 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
         preco_venda: parseFloat(precoVenda.replace(',', '.')),
         custo_produto: parseFloat(custoProduto.replace(',', '.')),
         quantidade_estoque: Number(quantidadeEstoque),
+        ativo,
         embalagem_id: embalagemId ? Number(embalagemId) : null,
         plataformas_ids: plataformasIds,
         motivo_ajuste: motivoAjuste
@@ -102,22 +104,46 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
           padding: '32px'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
           <h3 style={{ ...cardTitleStyle, margin: 0, fontSize: '18px' }}>
             ✏️ Editar Produto (SKU: {produto.sku})
           </h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: colors.textSecondary,
-              fontSize: '20px',
-              cursor: 'pointer'
-            }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => setAtivo(!ativo)}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '20px',
+                border: `1px solid ${ativo ? colors.successBorder : colors.dangerBorder}`,
+                backgroundColor: ativo ? colors.successBg : colors.dangerBg,
+                color: ativo ? colors.successText : colors.dangerText,
+                fontWeight: 600,
+                fontSize: '12px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: '0.2s'
+              }}
+              title="Clique para alternar o status do produto (Ativo / Desativado)"
+            >
+              <span style={{ fontSize: '10px' }}>{ativo ? '🟢' : '🔴'}</span>
+              <span>{ativo ? 'Ativo' : 'Desativado'}</span>
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: colors.textSecondary,
+                fontSize: '20px',
+                cursor: 'pointer'
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
         <p style={cardDescStyle}>Atualize os preços, custos, quantidade em estoque ou insumos vinculados a este SKU.</p>
 

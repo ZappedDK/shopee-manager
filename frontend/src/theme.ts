@@ -187,7 +187,7 @@ export const hoverIn = (bg: string) => (e: React.MouseEvent<HTMLButtonElement>) 
 
 // --- TABLE ---
 export const tableHeaderStyle: CSSProperties = {
-  padding: '9px 12px',
+  padding: '6px 10px',
   textAlign: 'left',
   borderBottom: `2px solid ${colors.border}`,
   color: colors.textMuted,
@@ -195,13 +195,14 @@ export const tableHeaderStyle: CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
   fontWeight: 600,
+  whiteSpace: 'nowrap',
 };
 
 export const tableCellStyle: CSSProperties = {
-  padding: '9px 12px',
+  padding: '6px 10px',
   borderBottom: `1px solid ${colors.border}`,
   color: colors.textPrimary,
-  fontSize: '13.5px',
+  fontSize: '13px',
 };
 
 // --- MESSAGE BANNER ---
