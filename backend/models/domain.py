@@ -34,6 +34,7 @@ class Plataforma(Base):
     taxa_plataforma = Column(Float, nullable=False) # Ex: 0.14
     taxa_fixa = Column(Float, nullable=False) # Ex: 4.00
     taxa_extra = Column(Float, nullable=False, default=0.00) # Ex: 0.06 (Frete Grátis)
+    faixas_json = Column(String(2000), nullable=True) # Serializado JSON das faixas de preço/taxa
     produtos = relationship("Produto", secondary=produto_plataforma, back_populates="plataformas")
 
 class Produto(Base):

@@ -11,12 +11,19 @@ class ConfiguracaoGlobalCreate(BaseModel):
     valor_pacote: float = Field(..., gt=0)
     qtd_unidades: int = Field(..., gt=0)
 
+class FaixaTaxaSchema(BaseModel):
+    de_valor: float = 0.0
+    ate_valor: Optional[float] = None
+    taxa_percentual: float
+    taxa_fixa: float
+
 class PlataformaCreate(BaseModel):
     nome: str
     icone: str
-    taxa_plataforma: float
-    taxa_fixa: float
+    taxa_plataforma: float = 0.0
+    taxa_fixa: float = 0.0
     taxa_extra: float = 0.0
+    faixas: List[FaixaTaxaSchema] = []
 
 class ProdutoCreate(BaseModel):
     sku: str

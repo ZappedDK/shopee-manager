@@ -9,6 +9,7 @@ from typing import List, Optional
 import io
 import csv
 import openpyxl
+import json
 
 from core.database import engine, get_db, Base
 from models import domain as models_domain
@@ -36,6 +37,14 @@ try:
             conn.exec_driver_sql("DROP TABLE produtos_migration_tmp;")
             conn.exec_driver_sql("PRAGMA foreign_keys=ON;")
             conn.commit()
+
+        # Garante que faixas_json existe em plataformas
+        info_plat = conn.exec_driver_sql("PRAGMA table_info(plataformas)").fetchall()
+        cols_plat = [c[1] for c in info_plat]
+        if "faixas_json" not in cols_plat:
+            conn.exec_driver_sql("ALTER TABLE plataformas ADD COLUMN faixas_json VARCHAR(2000);")
+            conn.commit()
+            print("✅ Coluna faixas_json adicionada à tabela plataformas!")
 except Exception as e:
     print(f"Aviso ao verificar migração de banco: {e}")
 
@@ -134,14 +143,37 @@ def redefinir_senha(dados: schemas_domain.RedefinirSenhaRequest, db: Session = D
 # --- ROTAS DE PLATAFORMAS (NOVAS) ---
 @app.post("/plataformas/", tags=["Cadastros"])
 def cadastrar_plataforma(plat: schemas_domain.PlataformaCreate, db: Session = Depends(get_db)):
-    nova = models_domain.Plataforma(**plat.model_dump())
+    dados = plat.model_dump()
+    faixas_lista = dados.pop("faixas", [])
+    
+    if faixas_lista and len(faixas_lista) > 0:
+        dados["faixas_json"] = json.dumps(faixas_lista)
+        dados["taxa_plataforma"] = faixas_lista[0].get("taxa_percentual", 0.0)
+        if dados["taxa_plataforma"] > 1.0: dados["taxa_plataforma"] /= 100.0
+        dados["taxa_fixa"] = faixas_lista[0].get("taxa_fixa", 0.0)
+
+    nova = models_domain.Plataforma(**dados)
     db.add(nova)
     db.commit()
     return {"status": "sucesso"}
 
 @app.get("/plataformas/", tags=["Cadastros"])
 def listar_plataformas(db: Session = Depends(get_db)):
-    return db.query(models_domain.Plataforma).all()
+    plataformas = db.query(models_domain.Plataforma).all()
+    resultado = []
+    for p in plataformas:
+        p_dict = {
+            "id": p.id,
+            "nome": p.nome,
+            "icone": p.icone,
+            "taxa_plataforma": p.taxa_plataforma,
+            "taxa_fixa": p.taxa_fixa,
+            "taxa_extra": p.taxa_extra,
+            "faixas_json": p.faixas_json,
+            "faixas": json.loads(p.faixas_json) if p.faixas_json else []
+        }
+        resultado.append(p_dict)
+    return resultado
 
 @app.put("/plataformas/{id}", tags=["Cadastros"])
 def editar_plataforma(id: int, plat: schemas_domain.PlataformaCreate, db: Session = Depends(get_db)):
@@ -150,11 +182,32 @@ def editar_plataforma(id: int, plat: schemas_domain.PlataformaCreate, db: Sessio
         raise HTTPException(status_code=404, detail="Plataforma não encontrada.")
 
     dados = plat.model_dump()
+    faixas_lista = dados.pop("faixas", [])
+    
+    if faixas_lista and len(faixas_lista) > 0:
+        dados["faixas_json"] = json.dumps(faixas_lista)
+        dados["taxa_plataforma"] = faixas_lista[0].get("taxa_percentual", 0.0)
+        if dados["taxa_plataforma"] > 1.0: dados["taxa_plataforma"] /= 100.0
+        dados["taxa_fixa"] = faixas_lista[0].get("taxa_fixa", 0.0)
+    else:
+        dados["faixas_json"] = None
+
     for campo, valor in dados.items():
         setattr(plataforma, campo, valor)
 
     db.commit()
     return {"status": "sucesso"}
+
+@app.delete("/plataformas/{id}", tags=["Cadastros"])
+def deletar_plataforma(id: int, db: Session = Depends(get_db)):
+    plataforma = db.query(models_domain.Plataforma).filter_by(id=id).first()
+    if not plataforma:
+        raise HTTPException(status_code=404, detail="Plataforma não encontrada.")
+
+    plataforma.produtos = []
+    db.delete(plataforma)
+    db.commit()
+    return {"status": "sucesso", "mensagem": "Plataforma excluída com sucesso!"}
 
 # --- ROTAS DE INSUMOS E CONFIGURAÇÕES ---
 @app.post("/embalagens/", tags=["Cadastros"])

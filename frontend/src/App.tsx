@@ -5,6 +5,7 @@ import { Dashboard } from './Dashboard';
 import { Login } from './Login';
 import { SimuladorPreco } from './SimuladorPreco';
 import { ModalEditarProduto } from './ModalEditarProduto';
+import { ModalEditarPlataforma } from './ModalEditarPlataforma';
 import { HistoricoEstoque } from './HistoricoEstoque';
 import { ImportarProdutosModal } from './ImportarProdutosModal';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
@@ -93,8 +94,34 @@ function App() {
   const [novoEstoque, setNovoEstoque] = useState('');
 
   // Edição de plataforma e embalagem
-  const [editandoPlataforma, setEditandoPlataforma] = useState<any | null>(null);
+  const [editandoPlataformaModal, setEditandoPlataformaModal] = useState<any | null>(null);
   const [editandoEmbalagem, setEditandoEmbalagem] = useState<any | null>(null);
+
+  // Faixas dinâmicas para cadastro de nova plataforma
+  const [novasFaixas, setNovasFaixas] = useState<any[]>([
+    { de_valor: '0', ate_valor: '', taxa_percentual: '', taxa_fixa: '' }
+  ]);
+
+  const adicionarFaixaNova = () => {
+    setNovasFaixas(prev => {
+      const ultima = prev[prev.length - 1];
+      const deVal = ultima && ultima.ate_valor ? String(Number(ultima.ate_valor) + 0.01) : '0';
+      return [...prev, { de_valor: deVal, ate_valor: '', taxa_percentual: '', taxa_fixa: '' }];
+    });
+  };
+
+  const removerFaixaNova = (index: number) => {
+    if (novasFaixas.length <= 1) return;
+    setNovasFaixas(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const atualizarFaixaNova = (index: number, campo: string, valor: string) => {
+    setNovasFaixas(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [campo]: valor };
+      return copy;
+    });
+  };
 
   // Menu mobile (hambúrguer) — só é usado em telas estreitas via CSS
   const [menuAberto, setMenuAberto] = useState(false);
@@ -227,39 +254,6 @@ function App() {
       carregarInsumos();
     } catch (err: any) {
       mostrarMensagem('❌ Erro ao editar embalagem: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000);
-    }
-  };
-
-  const iniciarEdicaoPlataforma = (plat: any) => {
-    setEditandoPlataforma({
-      id: plat.id,
-      nome: plat.nome,
-      icone: plat.icone,
-      taxa_plataforma: plat.taxa_plataforma,
-      taxa_fixa: plat.taxa_fixa,
-      taxa_extra: plat.taxa_extra ?? 0,
-    });
-  };
-
-  const cancelarEdicaoPlataforma = () => setEditandoPlataforma(null);
-
-  const salvarEdicaoPlataforma = async () => {
-    if (!editandoPlataforma) return;
-    try {
-      const payload = {
-        nome: editandoPlataforma.nome,
-        icone: editandoPlataforma.icone,
-        taxa_plataforma: Number(String(editandoPlataforma.taxa_plataforma).replace(',', '.')),
-        taxa_fixa: Number(String(editandoPlataforma.taxa_fixa).replace(',', '.')),
-        taxa_extra: Number(String(editandoPlataforma.taxa_extra).replace(',', '.')) || 0,
-      };
-      await api.put(`/plataformas/${editandoPlataforma.id}`, payload);
-      mostrarMensagem('✅ Plataforma atualizada com sucesso!');
-      setEditandoPlataforma(null);
-      carregarInsumos();
-      carregarEstoque();
-    } catch (err: any) {
-      mostrarMensagem('❌ ' + (err.response?.data?.detail || 'Erro ao atualizar plataforma.'), 7000);
     }
   };
 
@@ -531,12 +525,22 @@ function App() {
                   const formData = new FormData(formElement);
                   const data: any = Object.fromEntries(formData.entries());
 
+                  const faixasPayload = novasFaixas
+                    .filter(f => f.taxa_percentual !== '' || f.taxa_fixa !== '')
+                    .map(f => ({
+                      de_valor: parseFloat(String(f.de_valor).replace(',', '.')) || 0,
+                      ate_valor: f.ate_valor !== '' && f.ate_valor !== null ? parseFloat(String(f.ate_valor).replace(',', '.')) : null,
+                      taxa_percentual: parseFloat(String(f.taxa_percentual).replace(',', '.')) || 0,
+                      taxa_fixa: parseFloat(String(f.taxa_fixa).replace(',', '.')) || 0,
+                    }));
+
                   const payload = {
                     nome: data.nome,
                     icone: data.icone,
-                    taxa_plataforma: parseFloat(data.taxa_plataforma.replace(',', '.')),
-                    taxa_fixa: parseFloat(data.taxa_fixa.replace(',', '.')),
-                    taxa_extra: parseFloat(data.taxa_extra.replace(',', '.')) || 0.0
+                    taxa_plataforma: faixasPayload.length > 0 ? faixasPayload[0].taxa_percentual / 100 : 0,
+                    taxa_fixa: faixasPayload.length > 0 ? faixasPayload[0].taxa_fixa : 0,
+                    taxa_extra: (parseFloat(data.taxa_extra ? data.taxa_extra.replace(',', '.') : '0') || 0) / 100,
+                    faixas: faixasPayload
                   };
 
                   api.post('/plataformas/', payload)
@@ -544,18 +548,97 @@ function App() {
                       mostrarMensagem('✅ Plataforma cadastrada com sucesso!');
                       carregarInsumos();
                       formElement.reset();
+                      setNovasFaixas([{ de_valor: '0', ate_valor: '', taxa_percentual: '', taxa_fixa: '' }]);
                     })
                     .catch(err => mostrarMensagem('❌ Erro: ' + (err.response?.data?.detail || 'Erro ao cadastrar'), 7000));
               }}>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                  <input name="nome" placeholder="Nome (Ex: Mercado Livre)" required style={{ ...inputStyle, flex: 2, marginBottom: 0, maxWidth: '100%', minWidth: '160px' }} />
-                  <input name="icone" placeholder="Emoji (Ex: 🟨)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '100px' }} />
+                  <input name="nome" placeholder="Nome da Plataforma (Ex: Shopee, TikTok, Mercado Livre)" required style={{ ...inputStyle, flex: 2, marginBottom: 0, maxWidth: '100%', minWidth: '180px' }} />
+                  <input name="icone" placeholder="Emoji (Ex: 🟧, 🎵, 🟨)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '100px' }} />
+                  <input name="taxa_extra" type="number" step="0.1" placeholder="Taxa Extra % (Ex: 6 para Frete Grátis)" defaultValue="0" style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '140px' }} />
                 </div>
 
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '20px' }}>
-                  <input name="taxa_plataforma" type="number" step="0.001" placeholder="Taxa Padrão (Ex: 0.14 = 14%)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '160px' }} />
-                  <input name="taxa_fixa" type="number" step="0.01" placeholder="Taxa Fixa (R$)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '160px' }} />
-                  <input name="taxa_extra" type="number" step="0.001" placeholder="Taxa Extra (Ex: 0.06 = 6%)" defaultValue="0" style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '160px' }} />
+                <div style={{ backgroundColor: colors.bgCardAlt, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div>
+                      <label style={{ color: colors.accent, fontWeight: 700, fontSize: '13px' }}>
+                        📊 Faixas de Taxas Progressivas (De X até X ➔ % + Taxa Fixa)
+                      </label>
+                      <span style={{ display: 'block', fontSize: '11px', color: colors.textMuted }}>
+                        No TikTok adicione 2 linhas, na Shopee 4 linhas, Mercado Livre 1 linha. Deixe "Até R$" em branco na última faixa.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={adicionarFaixaNova}
+                      style={{ ...btnNeutralStyle, padding: '4px 10px', fontSize: '12px', color: colors.accent, borderColor: colors.borderStrong }}
+                    >
+                      + Adicionar Linha
+                    </button>
+                  </div>
+
+                  {novasFaixas.map((faixa, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: colors.textMuted, width: '45px' }}>Linha {idx + 1}:</span>
+                      
+                      <div style={{ flex: 1, minWidth: '90px' }}>
+                        <input
+                          type="number" step="0.01"
+                          placeholder="De R$ (0)"
+                          value={faixa.de_valor}
+                          onChange={e => atualizarFaixaNova(idx, 'de_valor', e.target.value)}
+                          style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      <span style={{ fontSize: '12px', color: colors.textMuted }}>até</span>
+
+                      <div style={{ flex: 1, minWidth: '110px' }}>
+                        <input
+                          type="number" step="0.01"
+                          placeholder="Até (Sem limite)"
+                          value={faixa.ate_valor}
+                          onChange={e => atualizarFaixaNova(idx, 'ate_valor', e.target.value)}
+                          style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      <span style={{ fontSize: '12px', color: colors.textMuted }}>➔ Taxa %:</span>
+
+                      <div style={{ flex: 1, minWidth: '90px' }}>
+                        <input
+                          type="number" step="0.1"
+                          placeholder="Ex: 20"
+                          value={faixa.taxa_percentual}
+                          onChange={e => atualizarFaixaNova(idx, 'taxa_percentual', e.target.value)}
+                          style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      <span style={{ fontSize: '12px', color: colors.textMuted }}>+ R$ Fixo:</span>
+
+                      <div style={{ flex: 1, minWidth: '90px' }}>
+                        <input
+                          type="number" step="0.01"
+                          placeholder="Ex: 4.00"
+                          value={faixa.taxa_fixa}
+                          onChange={e => atualizarFaixaNova(idx, 'taxa_fixa', e.target.value)}
+                          style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      {novasFaixas.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removerFaixaNova(idx)}
+                          style={{ ...btnDangerStyle, padding: '4px 8px', fontSize: '12px' }}
+                          title="Remover linha"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
 
                 <button
@@ -577,97 +660,96 @@ function App() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      <th style={tableHeaderStyle}>Plataforma</th>
-                      <th style={tableHeaderStyle}>Taxa Padrão</th>
-                      <th style={tableHeaderStyle}>Taxa Fixa</th>
-                      <th style={tableHeaderStyle}>Taxa Extra</th>
-                      <th style={tableHeaderStyle}>Ações</th>
+                      <th style={{ ...tableHeaderStyle, width: '24%' }}>Plataforma</th>
+                      <th style={{ ...tableHeaderStyle, width: '24%' }}>Taxa Padrão</th>
+                      <th style={{ ...tableHeaderStyle, width: '22%' }}>Taxa Fixa</th>
+                      <th style={{ ...tableHeaderStyle, width: '12%' }}>Taxa Extra</th>
+                      <th style={{ ...tableHeaderStyle, width: '18%', minWidth: '180px' }}>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {plataformas.map(plat => {
-                      const editando = editandoPlataforma && editandoPlataforma.id === plat.id;
-
-                      if (editando) {
-                        return (
-                          <tr key={plat.id} style={{ backgroundColor: colors.bgCardAlt }}>
-                            <td style={tableCellStyle}>
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                <input
-                                  value={editandoPlataforma.icone}
-                                  onChange={e => setEditandoPlataforma({ ...editandoPlataforma, icone: e.target.value })}
-                                  style={{ ...inputStyle, width: '54px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
-                                />
-                                <input
-                                  value={editandoPlataforma.nome}
-                                  onChange={e => setEditandoPlataforma({ ...editandoPlataforma, nome: e.target.value })}
-                                  style={{ ...inputStyle, marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
-                                />
-                              </div>
-                            </td>
-                            <td style={tableCellStyle}>
-                              <input
-                                type="number" step="0.001"
-                                value={editandoPlataforma.taxa_plataforma}
-                                onChange={e => setEditandoPlataforma({ ...editandoPlataforma, taxa_plataforma: e.target.value })}
-                                style={{ ...inputStyle, width: '90px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
-                              />
-                            </td>
-                            <td style={tableCellStyle}>
-                              <input
-                                type="number" step="0.01"
-                                value={editandoPlataforma.taxa_fixa}
-                                onChange={e => setEditandoPlataforma({ ...editandoPlataforma, taxa_fixa: e.target.value })}
-                                style={{ ...inputStyle, width: '90px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
-                              />
-                            </td>
-                            <td style={tableCellStyle}>
-                              <input
-                                type="number" step="0.001"
-                                value={editandoPlataforma.taxa_extra}
-                                onChange={e => setEditandoPlataforma({ ...editandoPlataforma, taxa_extra: e.target.value })}
-                                style={{ ...inputStyle, width: '90px', marginBottom: 0, padding: '8px 10px', maxWidth: 'none' }}
-                              />
-                            </td>
-                            <td style={{ ...tableCellStyle, display: 'flex', gap: '8px' }}>
-                              <button
-                                onClick={salvarEdicaoPlataforma}
-                                style={btnSuccessStyle}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0d9668'}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.success}
-                              >
-                                Salvar
-                              </button>
-                              <button
-                                onClick={cancelarEdicaoPlataforma}
-                                style={btnNeutralStyle}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
-                              >
-                                Cancelar
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      }
+                      const faixas = plat.faixas || [];
+                      const temFaixas = faixas.length > 0;
+                      const eShopee = plat.nome.toLowerCase().includes('shopee');
+                      const eTikTok = plat.nome.toLowerCase().includes('tiktok') || plat.nome.toLowerCase().includes('tik tok');
+                      const eDinamico = temFaixas || eShopee || eTikTok;
 
                       return (
                         <tr key={plat.id}>
                           <td style={tableCellStyle}>
                             <PlatformIcon nome={plat.nome} icone={plat.icone} size={22} /> <strong>{plat.nome}</strong>
+                            {eDinamico && (
+                              <div style={{ fontSize: '11px', color: colors.accent, marginTop: '2px', fontWeight: 500 }}>
+                                ⚡ {temFaixas ? `${faixas.length} ${faixas.length === 1 ? 'faixa cadastrada' : 'faixas cadastradas'}` : 'Faixas dinâmicas ativas'}
+                              </div>
+                            )}
                           </td>
-                          <td style={tableCellStyle}>{(plat.taxa_plataforma * 100).toFixed(1)}%</td>
-                          <td style={tableCellStyle}>{formatarMoeda(plat.taxa_fixa)}</td>
+                          <td style={tableCellStyle}>
+                            {temFaixas ? (
+                              <span style={{ color: colors.accent, fontWeight: 600, fontSize: '12.5px' }}>
+                                {faixas.map((f: any) => `${(f.taxa_percentual > 1 ? f.taxa_percentual : f.taxa_percentual * 100).toFixed(0)}%`).join(' / ')}
+                              </span>
+                            ) : eShopee ? (
+                              <span title="Até R$ 79,99: 20% | Acima de R$ 80,00: 14%" style={{ color: colors.accent, fontWeight: 600, fontSize: '12.5px' }}>
+                                20% / 14%
+                              </span>
+                            ) : eTikTok ? (
+                              <span title="Até R$ 50,00: 10% | Acima de R$ 50,00: 6%" style={{ color: colors.accent, fontWeight: 600, fontSize: '12.5px' }}>
+                                10% / 6%
+                              </span>
+                            ) : (
+                              `${(plat.taxa_plataforma * 100).toFixed(1)}%`
+                            )}
+                          </td>
+                          <td style={tableCellStyle}>
+                            {temFaixas ? (
+                              <span style={{ color: colors.accent, fontWeight: 600, fontSize: '12.5px' }}>
+                                {faixas.map((f: any) => formatarMoeda(f.taxa_fixa)).join(' / ')}
+                              </span>
+                            ) : eShopee ? (
+                              <span title="Até 79,99: R$4 | 80 a 99,99: R$16 | 100 a 199,99: R$20 | 200+: R$26" style={{ color: colors.accent, fontWeight: 600, fontSize: '12.5px' }}>
+                                R$ 4,00 a R$ 26,00
+                              </span>
+                            ) : eTikTok ? (
+                              <span title="Até 50,00: R$4,00 | Acima de 50,00: R$6,00" style={{ color: colors.accent, fontWeight: 600, fontSize: '12.5px' }}>
+                                R$ 4,00 / R$ 6,00
+                              </span>
+                            ) : (
+                              formatarMoeda(plat.taxa_fixa)
+                            )}
+                          </td>
                           <td style={tableCellStyle}>{((plat.taxa_extra || 0) * 100).toFixed(1)}%</td>
                           <td style={tableCellStyle}>
-                            <button
-                              onClick={() => iniciarEdicaoPlataforma(plat)}
-                              style={btnNeutralStyle}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
-                            >
-                              Editar
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <button
+                                onClick={() => setEditandoPlataformaModal(plat)}
+                                style={{ ...btnNeutralStyle, padding: '6px 14px', fontSize: '12px', color: colors.accent, borderColor: colors.borderStrong, whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
+                              >
+                                ✏️ Editar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Tem certeza que deseja excluir a plataforma "${plat.nome}"?`)) {
+                                    api.delete(`/plataformas/${plat.id}`)
+                                      .then(() => {
+                                        mostrarMensagem('✅ Plataforma excluída com sucesso!');
+                                        carregarInsumos();
+                                        carregarEstoque();
+                                      })
+                                      .catch(err => mostrarMensagem('❌ Erro ao excluir plataforma: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000));
+                                  }
+                                }}
+                                style={{ ...btnDangerStyle, padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerHover}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.danger}
+                                title="Excluir plataforma"
+                              >
+                                🗑️ Excluir
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1062,6 +1144,18 @@ function App() {
           onClose={() => setModalImportarAberto(false)}
           onSuccess={(msg) => {
             mostrarMensagem(msg);
+            carregarEstoque();
+          }}
+        />
+      )}
+
+      {editandoPlataformaModal && (
+        <ModalEditarPlataforma
+          plataforma={editandoPlataformaModal}
+          onClose={() => setEditandoPlataformaModal(null)}
+          onSuccess={(msg) => {
+            mostrarMensagem(msg);
+            carregarInsumos();
             carregarEstoque();
           }}
         />
