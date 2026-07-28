@@ -43,6 +43,7 @@ function App() {
     localStorage.setItem('usuario', JSON.stringify(novoUsuario));
     setToken(newToken);
     setUsuario(novoUsuario);
+    setView('dashboard');
   };
 
   const handleLogout = () => {
@@ -50,6 +51,7 @@ function App() {
     localStorage.removeItem('usuario');
     setToken(null);
     setUsuario(null);
+    setView('dashboard');
   };
 
   const [plataformas, setPlataformas] = useState<any[]>([]);
