@@ -55,10 +55,11 @@ def get_current_user(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: Optional[int] = payload.get("sub")
-        if user_id is None:
+        user_id_raw = payload.get("sub")
+        if user_id_raw is None:
             raise credenciais_exception
-    except jwt.PyJWTError:
+        user_id = int(user_id_raw)
+    except (jwt.PyJWTError, ValueError, TypeError):
         raise credenciais_exception
 
     usuario = db.query(Usuario).filter(Usuario.id == user_id).first()
