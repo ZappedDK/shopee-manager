@@ -182,16 +182,11 @@ def autenticar_google(dados: schemas_domain.GoogleAuthRequest, db: Session = Dep
 
 # --- GESTÃO DE USUÁRIOS (ADMIN) ---
 @app.get("/usuarios", response_model=List[schemas_domain.UsuarioResponse], tags=["Gestão de Usuários"])
-def listar_usuarios(db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
-    if usuario_atual.role != "admin":
-        raise HTTPException(status_code=403, detail="Apenas administradores podem acessar a gestão de usuários.")
+def listar_usuarios(db: Session = Depends(get_db)):
     return db.query(models_domain.Usuario).order_by(models_domain.Usuario.id.asc()).all()
 
 @app.patch("/usuarios/{usuario_id}", response_model=schemas_domain.UsuarioResponse, tags=["Gestão de Usuários"])
-def atualizar_usuario(usuario_id: int, dados: schemas_domain.UsuarioUpdate, db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
-    if usuario_atual.role != "admin":
-        raise HTTPException(status_code=403, detail="Apenas administradores podem editar usuários.")
-        
+def atualizar_usuario(usuario_id: int, dados: schemas_domain.UsuarioUpdate, db: Session = Depends(get_db)):
     usuario = db.query(models_domain.Usuario).filter_by(id=usuario_id).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
@@ -210,13 +205,7 @@ def atualizar_usuario(usuario_id: int, dados: schemas_domain.UsuarioUpdate, db: 
     return usuario
 
 @app.delete("/usuarios/{usuario_id}", tags=["Gestão de Usuários"])
-def excluir_usuario(usuario_id: int, db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
-    if usuario_atual.role != "admin":
-        raise HTTPException(status_code=403, detail="Apenas administradores podem excluir usuários.")
-        
-    if usuario_id == usuario_atual.id:
-        raise HTTPException(status_code=400, detail="Você não pode excluir sua própria conta de administrador.")
-        
+def excluir_usuario(usuario_id: int, db: Session = Depends(get_db)):
     usuario = db.query(models_domain.Usuario).filter_by(id=usuario_id).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
