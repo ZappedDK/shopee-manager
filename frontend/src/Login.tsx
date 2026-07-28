@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { colors, btnStyle, inputStyle } from './theme';
 
@@ -31,7 +31,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
   };
 
   // Efeito para detectar retorno da autenticação do Google via Supabase
-  useState(() => {
+  useEffect(() => {
     import('./services/supabase').then(({ supabase }) => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
@@ -48,7 +48,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
         }
       });
     });
-  });
+  }, []);
 
   const handleGoogleLogin = async () => {
     limparMensagens();

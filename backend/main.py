@@ -10,6 +10,7 @@ from typing import List, Optional
 import io
 import csv
 import openpyxl
+import json
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -18,6 +19,19 @@ from core.database import engine, get_db, Base
 from models import domain as models_domain
 from schemas import domain as schemas_domain
 from services.financeiro import calcular_metricas_plataforma, calcular_preco_por_margem
+
+def obter_ou_criar_etiqueta_padrao(db: Session):
+    etiqueta = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave="etiqueta_padrao").first()
+    if not etiqueta:
+        etiqueta = models_domain.ConfiguracaoGlobal(
+            chave="etiqueta_padrao",
+            valor_pacote=4.0,
+            qtd_unidades=100
+        )
+        db.add(etiqueta)
+        db.commit()
+        db.refresh(etiqueta)
+    return etiqueta
 
 # Cria as tabelas no banco de dados fisicamente se não existirem
 try:
@@ -793,10 +807,7 @@ def alertas_de_estoque(limite: int = 10, db: Session = Depends(get_db)):
 @app.get("/produtos/detalhados", tags=["Estoque"])
 def listar_produtos_detalhados(db: Session = Depends(get_db)):
     produtos = db.query(models_domain.Produto).all()
-    etiqueta = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave="etiqueta_padrao").first()
-    
-    if not etiqueta:
-        raise HTTPException(status_code=400, detail="Etiqueta padrão não configurada.")
+    etiqueta = obter_ou_criar_etiqueta_padrao(db)
 
     resultados = []
     custo_etiq = etiqueta.valor_pacote / etiqueta.qtd_unidades
@@ -838,9 +849,7 @@ def relatorio_financeiro_produto(sku: str, db: Session = Depends(get_db)):
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado.")
     
-    etiqueta = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave="etiqueta_padrao").first()
-    if not etiqueta:
-        raise HTTPException(status_code=400, detail="Você precisa cadastrar a 'etiqueta_padrao'.")
+    etiqueta = obter_ou_criar_etiqueta_padrao(db)
 
     custo_etiq = etiqueta.valor_pacote / etiqueta.qtd_unidades
     custo_emb = (produto.embalagem.custo_pacote / produto.embalagem.qtd_unidades) if produto.embalagem else 0.0

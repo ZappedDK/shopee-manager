@@ -19,6 +19,9 @@ DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL)
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+if DATABASE_URL.startswith("postgresql://") and "sslmode" not in DATABASE_URL:
+    DATABASE_URL += "?sslmode=require" if "?" not in DATABASE_URL else "&sslmode=require"
+
 # Se for SQLite com caminho relativo tipo sqlite:///./estoque_shopee.db, garante o caminho absoluto na pasta backend
 if DATABASE_URL.startswith("sqlite:///./"):
     db_name = DATABASE_URL.replace("sqlite:///./", "")
