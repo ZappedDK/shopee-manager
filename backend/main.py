@@ -283,6 +283,12 @@ def listar_plataformas(db: Session = Depends(get_db)):
     plataformas = db.query(models_domain.Plataforma).all()
     resultado = []
     for p in plataformas:
+        faixas = []
+        if p.faixas_json:
+            try:
+                faixas = json.loads(p.faixas_json)
+            except Exception:
+                faixas = []
         p_dict = {
             "id": p.id,
             "nome": p.nome,
@@ -291,7 +297,7 @@ def listar_plataformas(db: Session = Depends(get_db)):
             "taxa_fixa": p.taxa_fixa,
             "taxa_extra": p.taxa_extra,
             "faixas_json": p.faixas_json,
-            "faixas": json.loads(p.faixas_json) if p.faixas_json else []
+            "faixas": faixas
         }
         resultado.append(p_dict)
     return resultado
