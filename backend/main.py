@@ -125,7 +125,10 @@ def registrar_usuario(dados: schemas_domain.UsuarioCreate, db: Session = Depends
     novo_usuario = models_domain.Usuario(
         nome=dados.nome,
         email=dados.email.lower(),
-        senha_hash=gerar_hash_senha(dados.senha)
+        senha_hash=gerar_hash_senha(dados.senha),
+        role="admin",
+        abas_permitidas="dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios",
+        ativo=True
     )
     db.add(novo_usuario)
     db.commit()
@@ -136,7 +139,7 @@ def registrar_usuario(dados: schemas_domain.UsuarioCreate, db: Session = Depends
 def login(dados: schemas_domain.LoginRequest, db: Session = Depends(get_db)):
     usuario = db.query(models_domain.Usuario).filter_by(email=dados.email.lower()).first()
     if not usuario or not verificar_senha(dados.senha, usuario.senha_hash):
-        raise HTTPException(status_code=401, detail="E-mail ou senha incorretos.")
+        raise HTTPException(status_code=400, detail="E-mail ou senha incorretos.")
     
     token = criar_token_acesso(dados={"sub": usuario.id})
     return {
@@ -150,17 +153,12 @@ def autenticar_google(dados: schemas_domain.GoogleAuthRequest, db: Session = Dep
     usuario = db.query(models_domain.Usuario).filter_by(email=dados.email.lower()).first()
     
     if not usuario:
-        # Se for o primeiro usuario do sistema, torna-o admin. Caso contrario, viewer/editor
-        qtd_usuarios = db.query(models_domain.Usuario).count()
-        role = "admin" if qtd_usuarios == 0 else "viewer"
-        abas = "dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios" if role == "admin" else "dashboard,estoque,calculadora"
-        
         usuario = models_domain.Usuario(
             nome=dados.nome,
             email=dados.email.lower(),
             supabase_uid=dados.supabase_uid,
-            role=role,
-            abas_permitidas=abas,
+            role="admin",
+            abas_permitidas="dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios",
             ativo=True
         )
         db.add(usuario)
