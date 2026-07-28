@@ -149,36 +149,77 @@ export const inputStyle: CSSProperties = {
 };
 
 export const btnBase: CSSProperties = {
-  padding: '10px 20px',
-  color: '#fff',
-  border: 'none',
+  padding: '9px 18px',
   borderRadius: '8px',
   fontWeight: 600,
-  fontSize: '14px',
-  cursor: 'pointer',
-  transition: 'background-color 0.15s, transform 0.05s',
-};
-
-export const btnStyle: CSSProperties = { ...btnBase, backgroundColor: colors.accent };
-export const btnSuccessStyle: CSSProperties = { ...btnBase, backgroundColor: colors.success };
-export const btnPurpleStyle: CSSProperties = { ...btnBase, backgroundColor: colors.purple };
-export const btnDangerStyle: CSSProperties = { ...btnBase, padding: '7px 14px', fontSize: '13px', backgroundColor: colors.danger };
-export const btnNeutralStyle: CSSProperties = { ...btnBase, padding: '7px 14px', fontSize: '13px', backgroundColor: colors.slate };
-
-// Botão "fantasma" usado nos cards recolhíveis (fechado = contorno, aberto = preenchido)
-export const btnToggleClosedStyle: CSSProperties = {
-  padding: '9px 16px',
   fontSize: '13.5px',
-  fontWeight: 600,
-  borderRadius: '8px',
   cursor: 'pointer',
-  border: `1px solid ${colors.accent}`,
-  backgroundColor: 'transparent',
-  color: colors.accent,
+  transition: 'all 0.15s ease-in-out',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '6px',
   whiteSpace: 'nowrap',
-  transition: 'background-color 0.15s, color 0.15s',
+  boxSizing: 'border-box',
 };
-export const btnToggleOpenStyle: CSSProperties = { ...btnBase, padding: '9px 16px', fontSize: '13.5px', backgroundColor: colors.slate, whiteSpace: 'nowrap' };
+
+export const btnStyle: CSSProperties = {
+  ...btnBase,
+  backgroundColor: 'rgba(59, 130, 246, 0.16)',
+  color: '#60a5fa',
+  border: '1px solid rgba(59, 130, 246, 0.35)',
+};
+
+export const btnSuccessStyle: CSSProperties = {
+  ...btnBase,
+  backgroundColor: 'rgba(16, 185, 129, 0.16)',
+  color: '#34d399',
+  border: '1px solid rgba(16, 185, 129, 0.35)',
+};
+
+export const btnPurpleStyle: CSSProperties = {
+  ...btnBase,
+  backgroundColor: 'rgba(139, 92, 246, 0.16)',
+  color: '#c084fc',
+  border: '1px solid rgba(139, 92, 246, 0.35)',
+};
+
+export const btnDangerStyle: CSSProperties = {
+  ...btnBase,
+  padding: '7px 14px',
+  fontSize: '13px',
+  backgroundColor: 'rgba(239, 68, 68, 0.14)',
+  color: '#fca5a5',
+  border: '1px solid rgba(239, 68, 68, 0.35)',
+};
+
+export const btnNeutralStyle: CSSProperties = {
+  ...btnBase,
+  padding: '7px 14px',
+  fontSize: '13px',
+  backgroundColor: 'rgba(30, 41, 59, 0.75)',
+  color: '#cbd5e1',
+  border: '1px solid #334155',
+};
+
+// Botões para cards recolhíveis
+export const btnToggleClosedStyle: CSSProperties = {
+  ...btnBase,
+  padding: '8px 16px',
+  fontSize: '13px',
+  backgroundColor: 'rgba(59, 130, 246, 0.14)',
+  color: '#60a5fa',
+  border: '1px solid rgba(59, 130, 246, 0.35)',
+};
+
+export const btnToggleOpenStyle: CSSProperties = {
+  ...btnBase,
+  padding: '8px 16px',
+  fontSize: '13px',
+  backgroundColor: 'rgba(30, 41, 59, 0.75)',
+  color: '#cbd5e1',
+  border: '1px solid #334155',
+};
 
 // Hover helpers (inline styles don't support :hover, so we mutate on mouse events)
 export const hoverIn = (bg: string) => (e: React.MouseEvent<HTMLButtonElement>) => {

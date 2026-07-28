@@ -64,7 +64,7 @@ function App() {
   const [buscaProduto, setBuscaProduto] = useState('');
 
   // Ordenação de colunas da tabela de estoque
-  type SortField = 'sku' | 'nome' | 'custo_produto' | 'quantidade_estoque' | 'valor_estoque';
+  type SortField = 'sku' | 'nome' | 'custo_produto' | 'quantidade_estoque' | 'valor_estoque' | 'margem_shopee';
   type SortDirection = 'asc' | 'desc';
   const [sortField, setSortField] = useState<SortField>('sku');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -281,6 +281,17 @@ function App() {
       return item.nome?.toLowerCase().includes(termo) || item.sku?.toLowerCase().includes(termo);
     })
     .sort((a, b) => {
+      if (sortField === 'margem_shopee') {
+        const getShopeeMargem = (item: any) => {
+          const shopee = item.analises_plataformas?.find((plat: any) => plat.plataforma_nome?.toLowerCase().includes('shopee'));
+          return shopee ? (shopee.margem_final * 100) : -999;
+        };
+        const valA = getShopeeMargem(a);
+        const valB = getShopeeMargem(b);
+        const res = valA - valB;
+        return sortDirection === 'asc' ? res : -res;
+      }
+
       let valA = a[sortField];
       let valB = b[sortField];
 
@@ -462,16 +473,16 @@ function App() {
                               <button
                                 onClick={salvarEdicaoEmbalagem}
                                 style={{ ...btnSuccessStyle, padding: '5px 10px', fontSize: '12px' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0d9668'}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.success}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.28)'}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.16)'}
                               >
                                 Salvar
                               </button>
                               <button
                                 onClick={cancelarEdicaoEmbalagem}
                                 style={{ ...btnNeutralStyle, padding: '5px 10px', fontSize: '12px' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
                               >
                                 Cancelar
                               </button>
@@ -490,17 +501,17 @@ function App() {
                           <td style={{ ...tableCellStyle, display: 'flex', gap: '6px' }}>
                             <button
                               onClick={() => iniciarEdicaoEmbalagem(emb)}
-                              style={{ ...btnNeutralStyle, backgroundColor: colors.accent, color: '#fff', padding: '5px 10px', fontSize: '12px' }}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.accentHover}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.accent}
+                              style={{ ...btnNeutralStyle, padding: '5px 10px', fontSize: '12px' }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
                             >
                               ✏️ Editar
                             </button>
                             <button
                               onClick={() => excluirEmbalagem(emb.id, emb.nome)}
                               style={{ ...btnDangerStyle, padding: '5px 10px', fontSize: '12px' }}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerHover}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.danger}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.28)'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.14)'}
                             >
                               Excluir
                             </button>
@@ -735,9 +746,9 @@ function App() {
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               <button
                                 onClick={() => setEditandoPlataformaModal(plat)}
-                                style={{ ...btnNeutralStyle, padding: '6px 14px', fontSize: '12px', color: colors.accent, borderColor: colors.borderStrong, whiteSpace: 'nowrap' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
+                                style={{ ...btnNeutralStyle, padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
                               >
                                 ✏️ Editar
                               </button>
@@ -754,8 +765,8 @@ function App() {
                                   }
                                 }}
                                 style={{ ...btnDangerStyle, padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerHover}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.danger}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.28)'}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.14)'}
                                 title="Excluir plataforma"
                               >
                                 🗑️ Excluir
@@ -793,8 +804,8 @@ function App() {
                   <button
                     type="submit"
                     style={btnStyle}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.accentHover}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.accent}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.28)'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.16)'}
                   >
                     Salvar Embalagem
                   </button>
@@ -813,8 +824,8 @@ function App() {
                   <button
                     type="submit"
                     style={btnSuccessStyle}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0d9668'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.success}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.28)'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.16)'}
                   >
                     Atualizar Custo
                   </button>
@@ -884,7 +895,7 @@ function App() {
 
                 {/* Bloco 2: Custos e Preços */}
                 <div style={{ backgroundColor: colors.bgCardAlt, padding: '18px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '20px' }}>
-                  <h4 style={{ margin: '0 0 12px 0', color: colors.successText, fontSize: '14px', fontWeight: 600 }}>
+                  <h4 style={{ margin: '0 0 12px 0', color: colors.accent, fontSize: '14px', fontWeight: 600 }}>
                     2. 💰 Custos & Preço de Venda
                   </h4>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
@@ -905,7 +916,7 @@ function App() {
 
                 {/* Bloco 3: Insumos & Canais */}
                 <div style={{ backgroundColor: colors.bgCardAlt, padding: '18px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '24px' }}>
-                  <h4 style={{ margin: '0 0 12px 0', color: colors.purple, fontSize: '14px', fontWeight: 600 }}>
+                  <h4 style={{ margin: '0 0 12px 0', color: colors.accent, fontSize: '14px', fontWeight: 600 }}>
                     3. 🧺 Insumos & Canais de Venda
                   </h4>
 
@@ -970,18 +981,18 @@ function App() {
                       type="button"
                       onClick={() => setFiltroStatus('ativos')}
                       style={{
-                        height: '22px',
-                        padding: '0 9px',
+                        height: '24px',
+                        padding: '0 10px',
                         fontSize: '11.5px',
                         fontWeight: 600,
-                        borderRadius: '4px',
-                        border: 'none',
+                        borderRadius: '6px',
+                        border: filtroStatus === 'ativos' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: filtroStatus === 'ativos' ? colors.accent : 'transparent',
-                        color: filtroStatus === 'ativos' ? '#fff' : colors.textMuted,
+                        backgroundColor: filtroStatus === 'ativos' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                        color: filtroStatus === 'ativos' ? '#34d399' : colors.textMuted,
                         transition: '0.15s'
                       }}
                     >
@@ -991,18 +1002,18 @@ function App() {
                       type="button"
                       onClick={() => setFiltroStatus('inativos')}
                       style={{
-                        height: '22px',
-                        padding: '0 9px',
+                        height: '24px',
+                        padding: '0 10px',
                         fontSize: '11.5px',
                         fontWeight: 600,
-                        borderRadius: '4px',
-                        border: 'none',
+                        borderRadius: '6px',
+                        border: filtroStatus === 'inativos' ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid transparent',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: filtroStatus === 'inativos' ? colors.amber : 'transparent',
-                        color: filtroStatus === 'inativos' ? '#000' : colors.textMuted,
+                        backgroundColor: filtroStatus === 'inativos' ? 'rgba(245, 158, 11, 0.18)' : 'transparent',
+                        color: filtroStatus === 'inativos' ? '#fbbf24' : colors.textMuted,
                         transition: '0.15s'
                       }}
                     >
@@ -1012,18 +1023,18 @@ function App() {
                       type="button"
                       onClick={() => setFiltroStatus('todos')}
                       style={{
-                        height: '22px',
-                        padding: '0 9px',
+                        height: '24px',
+                        padding: '0 10px',
                         fontSize: '11.5px',
                         fontWeight: 600,
-                        borderRadius: '4px',
-                        border: 'none',
+                        borderRadius: '6px',
+                        border: filtroStatus === 'todos' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: filtroStatus === 'todos' ? colors.slate : 'transparent',
-                        color: filtroStatus === 'todos' ? '#fff' : colors.textMuted,
+                        backgroundColor: filtroStatus === 'todos' ? 'rgba(59, 130, 246, 0.18)' : 'transparent',
+                        color: filtroStatus === 'todos' ? '#60a5fa' : colors.textMuted,
                         transition: '0.15s'
                       }}
                     >
@@ -1037,7 +1048,7 @@ function App() {
                     placeholder="🔎 Buscar por nome ou SKU..."
                     style={{
                       ...inputStyle,
-                      height: '28px',
+                      height: '35px',
                       marginBottom: 0,
                       maxWidth: '280px',
                       padding: '0 10px',
@@ -1095,7 +1106,16 @@ function App() {
                         title="Clique para ordenar por Valor do Estoque"
                       >
                         <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                          Valor do Estoque {renderSortIcon('valor_estoque')}
+                          Valor do Estq {renderSortIcon('valor_estoque')}
+                        </span>
+                      </th>
+                      <th
+                        style={{ ...tableHeaderStyle, width: '135px', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                        onClick={() => handleSort('margem_shopee')}
+                        title="Clique para ordenar pela Margem de Lucro da Shopee (%)"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                          Margem {renderSortIcon('margem_shopee')}
                         </span>
                       </th>
                       <th style={{ ...tableHeaderStyle, whiteSpace: 'nowrap' }}>Ações</th>
@@ -1125,6 +1145,38 @@ function App() {
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{formatarMoeda(item.custo_produto)}</td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1, color: item.quantidade_estoque <= 10 ? '#f87171' : colors.textPrimary, fontWeight: 'bold' }}>{item.quantidade_estoque} un.</td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{formatarMoeda(item.valor_estoque)}</td>
+                            <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>
+                              {(() => {
+                                const shopee = item.analises_plataformas?.find((plat: any) => plat.plataforma_nome?.toLowerCase().includes('shopee'));
+                                if (!shopee) return <span style={{ color: colors.textMuted, fontSize: '12px' }}>—</span>;
+                                const mPct = shopee.margem_final * 100;
+                                const isAlto = mPct >= 20;
+                                const isMedio = mPct >= 10 && mPct < 20;
+                                const bg = isAlto ? 'rgba(16, 185, 129, 0.18)' : isMedio ? 'rgba(245, 158, 11, 0.18)' : 'rgba(239, 68, 68, 0.18)';
+                                const textCol = isAlto ? '#34d399' : isMedio ? '#fbbf24' : '#f87171';
+                                const borderCol = isAlto ? 'rgba(16, 185, 129, 0.35)' : isMedio ? 'rgba(245, 158, 11, 0.35)' : 'rgba(239, 68, 68, 0.35)';
+
+                                return (
+                                  <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                                    <span style={{
+                                      backgroundColor: bg,
+                                      color: textCol,
+                                      border: `1px solid ${borderCol}`,
+                                      padding: '2px 7px',
+                                      borderRadius: '5px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 700,
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      {formatarNumero(mPct)}%
+                                    </span>
+                                    <span style={{ fontSize: '11px', color: textCol, opacity: 0.95, fontWeight: 500 }}>
+                                      {shopee.lucro_liquido > 0 ? `+${formatarMoeda(shopee.lucro_liquido)}` : formatarMoeda(shopee.lucro_liquido)}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                            </td>
                             <td style={{ ...tableCellStyle, position: 'relative', zIndex: isMenuAberto ? 100 : 1 }}>
                               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                 <div className="dropdown-acoes-container" style={{ position: 'relative', zIndex: isMenuAberto ? 100 : 1 }}>
@@ -1133,9 +1185,9 @@ function App() {
                                     style={{
                                       padding: '5px 12px',
                                       fontSize: '12px',
-                                      fontWeight: 600,
+                                      fontWeight: 500,
                                       borderRadius: '6px',
-                                      border: `1px solid ${colors.borderStrong}`,
+                                      border: '1px solid #334155',
                                       cursor: 'pointer',
                                       whiteSpace: 'nowrap',
                                       display: 'inline-flex',
@@ -1143,9 +1195,21 @@ function App() {
                                       gap: '4px',
                                       height: '28px',
                                       lineHeight: 1,
-                                      backgroundColor: isMenuAberto ? colors.slateHover : colors.bgCardAlt,
-                                      color: colors.textPrimary,
+                                      backgroundColor: isMenuAberto ? '#334155' : 'rgba(30, 41, 59, 0.75)',
+                                      color: isMenuAberto ? '#ffffff' : '#cbd5e1',
                                       transition: '0.15s'
+                                    }}
+                                    onMouseEnter={e => {
+                                      if (!isMenuAberto) {
+                                        e.currentTarget.style.backgroundColor = '#334155';
+                                        e.currentTarget.style.color = '#ffffff';
+                                      }
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (!isMenuAberto) {
+                                        e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)';
+                                        e.currentTarget.style.color = '#cbd5e1';
+                                      }
                                     }}
                                   >
                                     ⚙️ Ações ▾
@@ -1250,7 +1314,7 @@ function App() {
                                     fontSize: '12px',
                                     fontWeight: 600,
                                     borderRadius: '6px',
-                                    border: `1px solid ${colors.borderStrong}`,
+                                    border: '1px solid rgba(59, 130, 246, 0.35)',
                                     cursor: 'pointer',
                                     whiteSpace: 'nowrap',
                                     display: 'inline-flex',
@@ -1258,12 +1322,20 @@ function App() {
                                     gap: '4px',
                                     height: '28px',
                                     lineHeight: 1,
-                                    backgroundColor: colors.slate,
-                                    color: '#fff',
+                                    backgroundColor: linhaExpandida === item.sku ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.14)',
+                                    color: '#60a5fa',
                                     transition: '0.15s'
                                   }}
-                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.slateHover}
-                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.slate}
+                                  onMouseEnter={e => {
+                                    e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.28)';
+                                    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.6)';
+                                    e.currentTarget.style.color = '#93c5fd';
+                                  }}
+                                  onMouseLeave={e => {
+                                    e.currentTarget.style.backgroundColor = linhaExpandida === item.sku ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.14)';
+                                    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.35)';
+                                    e.currentTarget.style.color = '#60a5fa';
+                                  }}
                                 >
                                   {linhaExpandida === item.sku ? 'Ocultar' : '+ Info'}
                                 </button>
@@ -1273,23 +1345,23 @@ function App() {
 
                           {linhaExpandida === item.sku && (
                             <tr>
-                              <td colSpan={6} style={{ padding: '0', borderBottom: `1px solid ${colors.border}` }}>
+                              <td colSpan={7} style={{ padding: '0', borderBottom: `1px solid ${colors.border}` }}>
                                 <div style={{ padding: '22px', backgroundColor: colors.bgCardAlt }}>
                                   {!item.analises_plataformas || item.analises_plataformas.length === 0 ? (
                                      <p style={{ color: '#f87171' }}>Nenhuma plataforma vinculada a este produto.</p>
                                   ) : (
                                       item.analises_plataformas.map((ana: any, index: number) => (
                                         <div key={index} style={{ marginBottom: '16px', borderBottom: `1px solid ${colors.border}`, paddingBottom: '16px' }}>
-                                          <h4 style={{ color: colors.accent, margin: '0 0 16px 0', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <h4 style={{ color: colors.textPrimary, margin: '0 0 16px 0', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <PlatformIcon nome={ana.plataforma_nome} icone={ana.icone} size={20} /> {ana.plataforma_nome}
                                           </h4>
 
                                           <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>ROAS Mín.</p><strong style={{ color: colors.textPrimary }}>{formatarNumero(ana.roas_minimo)}</strong></div>
-                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Plat.</p><strong style={{ color: colors.danger }}>{formatarMoeda(ana.taxa_plataforma_real)}</strong></div>
-                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Fixa</p><strong style={{ color: colors.danger }}>{formatarMoeda(ana.taxa_fixa)}</strong></div>
-                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Emb.</p><strong style={{ color: colors.danger }}>{formatarMoeda(ana.custo_embalagem)}</strong></div>
-                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Etiq.</p><strong style={{ color: colors.danger }}>{formatarMoeda(ana.custo_etiqueta)}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>ROAS Mín.</p><strong style={{ color: '#e2e8f0' }}>{formatarNumero(ana.roas_minimo)}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Plat.</p><strong style={{ color: '#EE6C6D' }}>{formatarMoeda(ana.taxa_plataforma_real)}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Fixa</p><strong style={{ color: '#EE6C6D' }}>{formatarMoeda(ana.taxa_fixa)}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Emb.</p><strong style={{ color: '#EE6C6D' }}>{formatarMoeda(ana.custo_embalagem)}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Etiq.</p><strong style={{ color: '#EE6C6D' }}>{formatarMoeda(ana.custo_etiqueta)}</strong></div>
 
                                             <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
                                                <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custo Total</p>

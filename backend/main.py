@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks, U
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect, text
 from pydantic import BaseModel
 import uvicorn
 from sqlalchemy.exc import IntegrityError
@@ -16,45 +17,47 @@ from models import domain as models_domain
 from schemas import domain as schemas_domain
 from services.financeiro import calcular_metricas_plataforma, calcular_preco_por_margem
 
-# Cria as tabelas no banco de dados fisicamente
+# Cria as tabelas no banco de dados fisicamente se não existirem
 Base.metadata.create_all(bind=engine)
 
-# Auto-migração do SQLite para permitir NULL em produtos.embalagem_id
+# Auto-migração genérica (compatível com SQLite e PostgreSQL)
 try:
-    with engine.connect() as conn:
-        info = conn.exec_driver_sql("PRAGMA table_info(produtos)").fetchall()
-        col = next((c for c in info if c[1] == 'embalagem_id'), None)
-        if col and col[3] == 1:
-            conn.exec_driver_sql("PRAGMA foreign_keys=OFF;")
-            conn.exec_driver_sql("CREATE TABLE produtos_migration_tmp AS SELECT * FROM produtos;")
-            conn.exec_driver_sql("DROP TABLE produtos;")
-            conn.commit()
-            Base.metadata.create_all(bind=engine)
-            conn.exec_driver_sql("""
-                INSERT INTO produtos (id, sku, nome, preco_venda, custo_produto, quantidade_estoque, embalagem_id, criado_em, atualizado_em)
-                SELECT id, sku, nome, preco_venda, custo_produto, quantidade_estoque, embalagem_id, criado_em, atualizado_em FROM produtos_migration_tmp;
-            """)
-            conn.exec_driver_sql("DROP TABLE produtos_migration_tmp;")
-            conn.exec_driver_sql("PRAGMA foreign_keys=ON;")
-            conn.commit()
-
-        # Garante que faixas_json existe em plataformas
-        info_plat = conn.exec_driver_sql("PRAGMA table_info(plataformas)").fetchall()
-        cols_plat = [c[1] for c in info_plat]
-        if "faixas_json" not in cols_plat:
-            conn.exec_driver_sql("ALTER TABLE plataformas ADD COLUMN faixas_json VARCHAR(2000);")
-            conn.commit()
+    inspector = inspect(engine)
+    if inspector.has_table("plataformas"):
+        columns_plat = [col["name"] for col in inspector.get_columns("plataformas")]
+        if "faixas_json" not in columns_plat:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE plataformas ADD COLUMN faixas_json VARCHAR(2000)"))
             print("✅ Coluna faixas_json adicionada à tabela plataformas!")
 
-        # Garante que ativo existe em produtos
-        info_prod = conn.exec_driver_sql("PRAGMA table_info(produtos)").fetchall()
-        cols_prod = [c[1] for c in info_prod]
-        if "ativo" not in cols_prod:
-            conn.exec_driver_sql("ALTER TABLE produtos ADD COLUMN ativo BOOLEAN DEFAULT 1;")
-            conn.commit()
+    if inspector.has_table("produtos"):
+        columns_prod = [col["name"] for col in inspector.get_columns("produtos")]
+        if "ativo" not in columns_prod:
+            with engine.begin() as conn:
+                default_val = "1" if engine.url.drivername.startswith("sqlite") else "TRUE"
+                conn.execute(text(f"ALTER TABLE produtos ADD COLUMN ativo BOOLEAN DEFAULT {default_val}"))
             print("✅ Coluna ativo adicionada à tabela produtos!")
+
+    # Tratamento específico para SQLite legado caso a coluna embalagem_id estivesse marcada como NOT NULL
+    if engine.url.drivername.startswith("sqlite") and inspector.has_table("produtos"):
+        columns_prod_details = inspector.get_columns("produtos")
+        emb_col = next((c for c in columns_prod_details if c["name"] == 'embalagem_id'), None)
+        if emb_col and not emb_col.get("nullable", True):
+            with engine.begin() as conn:
+                conn.execute(text("PRAGMA foreign_keys=OFF;"))
+                conn.execute(text("CREATE TABLE produtos_migration_tmp AS SELECT * FROM produtos;"))
+                conn.execute(text("DROP TABLE produtos;"))
+            Base.metadata.create_all(bind=engine)
+            with engine.begin() as conn:
+                conn.execute(text("""
+                    INSERT INTO produtos (id, sku, nome, preco_venda, custo_produto, quantidade_estoque, embalagem_id, criado_em, atualizado_em)
+                    SELECT id, sku, nome, preco_venda, custo_produto, quantidade_estoque, embalagem_id, criado_em, atualizado_em FROM produtos_migration_tmp;
+                """))
+                conn.execute(text("DROP TABLE produtos_migration_tmp;"))
+                conn.execute(text("PRAGMA foreign_keys=ON;"))
 except Exception as e:
     print(f"Aviso ao verificar migração de banco: {e}")
+
 
 app = FastAPI(title="Skold Stock API")
 
@@ -684,7 +687,8 @@ def listar_movimentacoes_estoque(
 @app.get("/produtos/alertas", tags=["Dashboard"])
 def alertas_de_estoque(limite: int = 10, db: Session = Depends(get_db)):
     produtos_criticos = db.query(models_domain.Produto).filter(
-        models_domain.Produto.quantidade_estoque <= limite
+        models_domain.Produto.quantidade_estoque <= limite,
+        models_domain.Produto.ativo != False
     ).all()
     return produtos_criticos
 
@@ -759,8 +763,10 @@ def relatorio_financeiro_produto(sku: str, db: Session = Depends(get_db)):
 @app.get("/simular-preco", tags=["Inteligência Financeira"])
 def simular_preco_livre(
     custo_produto: float,
+    tipo_calculo: str = "margem",
     margem_desejada: float = 20.0,
-    embalagem_id: int = None,
+    preco_venda: Optional[float] = None,
+    embalagem_id: Optional[int] = None,
     custo_embalagem_custom: float = 0.0,
     db: Session = Depends(get_db)
 ):
@@ -777,27 +783,44 @@ def simular_preco_livre(
     resultados = []
 
     for plat in plataformas:
-        sim = calcular_preco_por_margem(
-            custo_unitario=custo_produto,
-            custo_embalagem_un=custo_emb,
-            custo_etiqueta_un=custo_etiq,
-            plataforma=plat,
-            margem_desejada_pct=margem_desejada
-        )
-        resultados.append(sim)
+        if tipo_calculo == "preco" and preco_venda is not None and preco_venda > 0:
+            res = calcular_metricas_plataforma(
+                preco_venda=preco_venda,
+                custo_unitario=custo_produto,
+                custo_embalagem_un=custo_emb,
+                custo_etiqueta_un=custo_etiq,
+                plataforma=plat
+            )
+            res["inviavel"] = res["lucro_liquido"] <= 0
+            res["preco_sugerido"] = preco_venda
+            res["margem_desejada_pct"] = round(res["margem_final"] * 100, 2)
+            resultados.append(res)
+        else:
+            sim = calcular_preco_por_margem(
+                custo_unitario=custo_produto,
+                custo_embalagem_un=custo_emb,
+                custo_etiqueta_un=custo_etiq,
+                plataforma=plat,
+                margem_desejada_pct=margem_desejada
+            )
+            resultados.append(sim)
 
     return {
         "custo_produto": custo_produto,
         "custo_embalagem": custo_emb,
         "custo_etiqueta": custo_etiq,
-        "margem_desejada_pct": margem_desejada,
+        "tipo_calculo": tipo_calculo,
+        "margem_desejada_pct": margem_desejada if tipo_calculo == "margem" else None,
+        "preco_venda_informado": preco_venda if tipo_calculo == "preco" else None,
         "simulacoes": resultados
     }
 
 @app.get("/produtos/{sku}/simular-preco", tags=["Inteligência Financeira"])
 def simular_preco_produto_existente(
     sku: str,
+    tipo_calculo: str = "margem",
     margem_desejada: float = 20.0,
+    preco_venda: Optional[float] = None,
     db: Session = Depends(get_db)
 ):
     produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
@@ -811,15 +834,30 @@ def simular_preco_produto_existente(
     resultados = []
     plataformas_alvo = produto.plataformas if produto.plataformas else db.query(models_domain.Plataforma).all()
 
+    p_venda = preco_venda if (tipo_calculo == "preco" and preco_venda is not None and preco_venda > 0) else produto.preco_venda
+
     for plat in plataformas_alvo:
-        sim = calcular_preco_por_margem(
-            custo_unitario=produto.custo_produto,
-            custo_embalagem_un=custo_emb,
-            custo_etiqueta_un=custo_etiq,
-            plataforma=plat,
-            margem_desejada_pct=margem_desejada
-        )
-        resultados.append(sim)
+        if tipo_calculo == "preco":
+            res = calcular_metricas_plataforma(
+                preco_venda=p_venda,
+                custo_unitario=produto.custo_produto,
+                custo_embalagem_un=custo_emb,
+                custo_etiqueta_un=custo_etiq,
+                plataforma=plat
+            )
+            res["inviavel"] = res["lucro_liquido"] <= 0
+            res["preco_sugerido"] = p_venda
+            res["margem_desejada_pct"] = round(res["margem_final"] * 100, 2)
+            resultados.append(res)
+        else:
+            sim = calcular_preco_por_margem(
+                custo_unitario=produto.custo_produto,
+                custo_embalagem_un=custo_emb,
+                custo_etiqueta_un=custo_etiq,
+                plataforma=plat,
+                margem_desejada_pct=margem_desejada
+            )
+            resultados.append(sim)
 
     return {
         "sku": produto.sku,
@@ -828,7 +866,9 @@ def simular_preco_produto_existente(
         "custo_produto": produto.custo_produto,
         "custo_embalagem": custo_emb,
         "custo_etiqueta": custo_etiq,
-        "margem_desejada_pct": margem_desejada,
+        "tipo_calculo": tipo_calculo,
+        "margem_desejada_pct": margem_desejada if tipo_calculo == "margem" else None,
+        "preco_venda_informado": p_venda if tipo_calculo == "preco" else None,
         "simulacoes": resultados
     }
 
