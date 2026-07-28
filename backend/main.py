@@ -20,7 +20,12 @@ from schemas import domain as schemas_domain
 from services.financeiro import calcular_metricas_plataforma, calcular_preco_por_margem
 
 # Cria as tabelas no banco de dados fisicamente se não existirem
-Base.metadata.create_all(bind=engine)
+try:
+    print(f"--> [DATABASE STARTUP] Inicializando conexão ({engine.url.drivername})...")
+    Base.metadata.create_all(bind=engine)
+    print("--> [DATABASE STARTUP] Tabelas validadas com sucesso!")
+except Exception as err:
+    print(f"❌ [DATABASE ERROR] Erro na inicialização do banco: {err}")
 
 # Auto-migração genérica (compatível com SQLite e PostgreSQL)
 try:
