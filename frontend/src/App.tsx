@@ -8,6 +8,7 @@ import { ModalEditarProduto } from './ModalEditarProduto';
 import { ModalEditarPlataforma } from './ModalEditarPlataforma';
 import { HistoricoEstoque } from './HistoricoEstoque';
 import { ImportarProdutosModal } from './ImportarProdutosModal';
+import { GestaoUsuarios } from './GestaoUsuarios';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
 import {
   colors, layoutStyle, sidebarStyle, contentStyle, sidebarGroupLabelStyle, menuItemStyle,
@@ -16,7 +17,7 @@ import {
   tableHeaderStyle, tableCellStyle, formatarMoeda, formatarNumero
 } from './theme';
 
-type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas' | 'simulador' | 'historico';
+type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas' | 'simulador' | 'historico' | 'usuarios';
 
 function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
@@ -308,6 +309,17 @@ function App() {
       }
     });
 
+  const abasLiberadas = (usuario?.abas_permitidas || 'dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios')
+    .split(',')
+    .map((a: string) => a.trim().toLowerCase());
+
+  const userRole = usuario?.role || 'admin';
+
+  const temPermissaoAba = (abaId: string) => {
+    if (userRole === 'admin') return true;
+    return abasLiberadas.includes(abaId.toLowerCase());
+  };
+
   // Item de menu com hover sutil (inline styles não têm :hover)
   const MenuItem = ({ icon, label, target }: { icon: string; label: string; target: View }) => {
     const ativo = view === target;
@@ -357,23 +369,42 @@ function App() {
 
         <div className={`app-sidebar-nav${menuAberto ? ' open' : ''}`}>
           <div style={sidebarGroupLabelStyle}>Principal</div>
-          <MenuItem icon="📊" label="Visão Geral" target="dashboard" />
-          <MenuItem icon="📦" label="Controle de Estoque" target="estoque" />
-          <MenuItem icon="🧺" label="Almoxarifado" target="almoxarifado" />
+          {temPermissaoAba('dashboard') && <MenuItem icon="📊" label="Visão Geral" target="dashboard" />}
+          {temPermissaoAba('estoque') && <MenuItem icon="📦" label="Controle de Estoque" target="estoque" />}
+          {(temPermissaoAba('insumos') || temPermissaoAba('almoxarifado')) && <MenuItem icon="🧺" label="Almoxarifado" target="almoxarifado" />}
 
           <div style={sidebarGroupLabelStyle}>Ferramentas</div>
-          <MenuItem icon="🎯" label="Simulador de Preço" target="simulador" />
-          <MenuItem icon="📋" label="Histórico de Estoque" target="historico" />
+          {(temPermissaoAba('calculadora') || temPermissaoAba('simulador')) && <MenuItem icon="🎯" label="Simulador de Preço" target="simulador" />}
+          {temPermissaoAba('historico') && <MenuItem icon="📋" label="Histórico de Estoque" target="historico" />}
 
           <div style={sidebarGroupLabelStyle}>Configurações</div>
-          <MenuItem icon="🏪" label="Plataformas de Venda" target="plataformas" />
-          <MenuItem icon="⚙️" label="Cadastros e Config." target="cadastros" />
+          {temPermissaoAba('plataformas') && <MenuItem icon="🏪" label="Plataformas de Venda" target="plataformas" />}
+          {(temPermissaoAba('insumos') || temPermissaoAba('cadastros')) && <MenuItem icon="⚙️" label="Cadastros e Config." target="cadastros" />}
+          
+          {(userRole === 'admin' || temPermissaoAba('usuarios')) && (
+            <MenuItem icon="👥" label="Gestão de Usuários" target="usuarios" />
+          )}
         </div>
 
         {/* Rodapé com Informações do Usuário Logado & Logout */}
         <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: `1px solid ${colors.border}` }}>
-          <div style={{ fontSize: '13px', color: colors.textPrimary, fontWeight: 600, marginBottom: '2px' }}>
-            👤 {usuario?.nome || 'Usuário'}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <div style={{ fontSize: '13px', color: colors.textPrimary, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              👤 {usuario?.nome || 'Usuário'}
+            </div>
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                padding: '2px 6px',
+                borderRadius: '10px',
+                backgroundColor: userRole === 'admin' ? 'rgba(59, 130, 246, 0.2)' : userRole === 'editor' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(148, 163, 184, 0.2)',
+                color: userRole === 'admin' ? colors.accent : userRole === 'editor' ? colors.successText : colors.textMuted,
+                border: `1px solid ${userRole === 'admin' ? colors.accent : colors.border}`
+              }}
+            >
+              {userRole.toUpperCase()}
+            </span>
           </div>
           <div style={{ fontSize: '11.5px', color: colors.textMuted, marginBottom: '12px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {usuario?.email || ''}
@@ -1405,6 +1436,10 @@ function App() {
               )}
             </div>
           </div>
+        )}
+
+        {view === 'usuarios' && (
+          <GestaoUsuarios />
         )}
       </div>
 

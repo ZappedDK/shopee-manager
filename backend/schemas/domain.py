@@ -39,11 +39,28 @@ class UsuarioCreate(BaseModel):
     nome: str
     email: str
     senha: str
+    role: Optional[str] = "editor"
+    abas_permitidas: Optional[str] = "dashboard,estoque,calculadora,historico,plataformas,insumos"
+
+class UsuarioUpdate(BaseModel):
+    nome: Optional[str] = None
+    role: Optional[str] = None
+    abas_permitidas: Optional[str] = None
+    ativo: Optional[bool] = None
+
+class GoogleAuthRequest(BaseModel):
+    email: str
+    nome: str
+    supabase_uid: str
 
 class UsuarioResponse(BaseModel):
     id: int
     nome: str
     email: str
+    role: str = "admin"
+    abas_permitidas: str = "dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios"
+    ativo: bool = True
+    supabase_uid: Optional[str] = None
 
     class Config:
         from_attributes = True

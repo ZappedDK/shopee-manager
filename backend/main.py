@@ -10,7 +10,9 @@ from typing import List, Optional
 import io
 import csv
 import openpyxl
-import json
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from core.database import engine, get_db, Base
 from models import domain as models_domain
@@ -37,6 +39,19 @@ try:
                 default_val = "1" if engine.url.drivername.startswith("sqlite") else "TRUE"
                 conn.execute(text(f"ALTER TABLE produtos ADD COLUMN ativo BOOLEAN DEFAULT {default_val}"))
             print("✅ Coluna ativo adicionada à tabela produtos!")
+
+    if inspector.has_table("usuarios"):
+        columns_user = [col["name"] for col in inspector.get_columns("usuarios")]
+        with engine.begin() as conn:
+            if "role" not in columns_user:
+                conn.execute(text("ALTER TABLE usuarios ADD COLUMN role VARCHAR(30) DEFAULT 'admin'"))
+            if "abas_permitidas" not in columns_user:
+                conn.execute(text("ALTER TABLE usuarios ADD COLUMN abas_permitidas VARCHAR(500) DEFAULT 'dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios'"))
+            if "ativo" not in columns_user:
+                default_val = "1" if engine.url.drivername.startswith("sqlite") else "TRUE"
+                conn.execute(text(f"ALTER TABLE usuarios ADD COLUMN ativo BOOLEAN DEFAULT {default_val}"))
+            if "supabase_uid" not in columns_user:
+                conn.execute(text("ALTER TABLE usuarios ADD COLUMN supabase_uid VARCHAR(255)"))
 
     # Tratamento específico para SQLite legado caso a coluna embalagem_id estivesse marcada como NOT NULL
     if engine.url.drivername.startswith("sqlite") and inspector.has_table("produtos"):
@@ -111,9 +126,87 @@ def login(dados: schemas_domain.LoginRequest, db: Session = Depends(get_db)):
         "usuario": usuario
     }
 
-@app.get("/auth/me", response_model=schemas_domain.UsuarioResponse, tags=["Autenticação"])
-def obter_usuario_logado(usuario_atual: models_domain.Usuario = Depends(get_current_user)):
-    return usuario_atual
+@app.post("/auth/google", response_model=schemas_domain.TokenResponse, tags=["Autenticação"])
+def autenticar_google(dados: schemas_domain.GoogleAuthRequest, db: Session = Depends(get_db)):
+    usuario = db.query(models_domain.Usuario).filter_by(email=dados.email.lower()).first()
+    
+    if not usuario:
+        # Se for o primeiro usuario do sistema, torna-o admin. Caso contrario, viewer/editor
+        qtd_usuarios = db.query(models_domain.Usuario).count()
+        role = "admin" if qtd_usuarios == 0 else "viewer"
+        abas = "dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios" if role == "admin" else "dashboard,estoque,calculadora"
+        
+        usuario = models_domain.Usuario(
+            nome=dados.nome,
+            email=dados.email.lower(),
+            supabase_uid=dados.supabase_uid,
+            role=role,
+            abas_permitidas=abas,
+            ativo=True
+        )
+        db.add(usuario)
+        db.commit()
+        db.refresh(usuario)
+    else:
+        if not usuario.supabase_uid:
+            usuario.supabase_uid = dados.supabase_uid
+            db.commit()
+            db.refresh(usuario)
+            
+    if not usuario.ativo:
+        raise HTTPException(status_code=403, detail="Sua conta está desativada. Entre em contato com o administrador.")
+        
+    token = criar_token_acesso(dados={"sub": usuario.id})
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "usuario": usuario
+    }
+
+# --- GESTÃO DE USUÁRIOS (ADMIN) ---
+@app.get("/usuarios", response_model=List[schemas_domain.UsuarioResponse], tags=["Gestão de Usuários"])
+def listar_usuarios(db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
+    if usuario_atual.role != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem acessar a gestão de usuários.")
+    return db.query(models_domain.Usuario).order_by(models_domain.Usuario.id.asc()).all()
+
+@app.patch("/usuarios/{usuario_id}", response_model=schemas_domain.UsuarioResponse, tags=["Gestão de Usuários"])
+def atualizar_usuario(usuario_id: int, dados: schemas_domain.UsuarioUpdate, db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
+    if usuario_atual.role != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem editar usuários.")
+        
+    usuario = db.query(models_domain.Usuario).filter_by(id=usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+        
+    if dados.nome is not None:
+        usuario.nome = dados.nome
+    if dados.role is not None:
+        usuario.role = dados.role
+    if dados.abas_permitidas is not None:
+        usuario.abas_permitidas = dados.abas_permitidas
+    if dados.ativo is not None:
+        usuario.ativo = dados.ativo
+        
+    db.commit()
+    db.refresh(usuario)
+    return usuario
+
+@app.delete("/usuarios/{usuario_id}", tags=["Gestão de Usuários"])
+def excluir_usuario(usuario_id: int, db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
+    if usuario_atual.role != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem excluir usuários.")
+        
+    if usuario_id == usuario_atual.id:
+        raise HTTPException(status_code=400, detail="Você não pode excluir sua própria conta de administrador.")
+        
+    usuario = db.query(models_domain.Usuario).filter_by(id=usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+        
+    db.delete(usuario)
+    db.commit()
+    return {"status": "sucesso", "mensagem": "Usuário excluído com sucesso."}
 
 @app.post("/auth/esqueci-senha", tags=["Autenticação"])
 def solicitar_recuperacao_senha(dados: schemas_domain.EsqueciSenhaRequest, db: Session = Depends(get_db)):

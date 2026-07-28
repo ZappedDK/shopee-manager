@@ -10,8 +10,9 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 # Carrega variáveis de ambiente do arquivo .env se existir
 load_dotenv(BACKEND_DIR / ".env")
 
-# URL padrão apontando de forma absoluta para a pasta backend
-DEFAULT_SQLITE_URL = f"sqlite:///{BACKEND_DIR / 'estoque_shopee.db'}"
+# URL padrão apontando de forma absoluta para a pasta backend (usando barras normais para compatibilidade Windows)
+db_path = (BACKEND_DIR / "estoque_shopee.db").as_posix()
+DEFAULT_SQLITE_URL = f"sqlite:///{db_path}"
 DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL)
 
 # Ajusta prefixo legado postgres:// para postgresql:// caso venha de provedores como Render/Heroku/Supabase
@@ -21,7 +22,7 @@ if DATABASE_URL.startswith("postgres://"):
 # Se for SQLite com caminho relativo tipo sqlite:///./estoque_shopee.db, garante o caminho absoluto na pasta backend
 if DATABASE_URL.startswith("sqlite:///./"):
     db_name = DATABASE_URL.replace("sqlite:///./", "")
-    DATABASE_URL = f"sqlite:///{BACKEND_DIR / db_name}"
+    DATABASE_URL = f"sqlite:///{ (BACKEND_DIR / db_name).as_posix() }"
 
 # Configurações do engine de acordo com o banco
 connect_args = {}
