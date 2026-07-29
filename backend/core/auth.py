@@ -47,10 +47,6 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> Usuario:
-    """
-    Exige um token JWT válido. NÃO existe mais fallback para 'admin padrão'.
-    Sem token válido = 401, sempre.
-    """
     credenciais_invalidas = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciais inválidas ou sessão expirada. Faça login novamente.",
@@ -59,25 +55,32 @@ def get_current_user(
 
     token = credentials.credentials if credentials else None
     if not token:
+        print("--> [AUTH DEBUG] Nenhum token recebido.")
         raise credenciais_invalidas
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.PyJWTError:
+    except jwt.PyJWTError as e:
+        print(f"--> [AUTH DEBUG] Falha ao decodificar token: {type(e).__name__}: {e}")
         raise credenciais_invalidas
 
     user_id_raw = payload.get("sub")
     if user_id_raw is None:
+        print(f"--> [AUTH DEBUG] Token decodificado mas sem 'sub'. Payload: {payload}")
         raise credenciais_invalidas
 
     try:
         uid = int(user_id_raw)
     except (ValueError, TypeError):
+        print(f"--> [AUTH DEBUG] 'sub' não é um int válido: {user_id_raw}")
         raise credenciais_invalidas
 
     usuario = db.query(Usuario).filter(Usuario.id == uid).first()
     if not usuario:
+        print(f"--> [AUTH DEBUG] Usuário com id={uid} NÃO encontrado no banco.")
         raise credenciais_invalidas
+
+    print(f"--> [AUTH DEBUG] Sucesso! Usuário encontrado: id={usuario.id}, role={usuario.role}, ativo={usuario.ativo}")
 
     if not usuario.ativo:
         raise HTTPException(
