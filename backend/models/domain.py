@@ -63,8 +63,8 @@ class Usuario(Base):
     email = Column(String(120), unique=True, index=True, nullable=False)
     senha_hash = Column(String(255), nullable=True) # Pode ser None para usuarios cadastrados via Google OAuth
     supabase_uid = Column(String(255), nullable=True, index=True)
-    role = Column(String(30), nullable=False, default="admin") # "admin", "editor", "viewer"
-    abas_permitidas = Column(String(500), nullable=False, default="dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios")
+    role = Column(String(30), nullable=False, default="viewer") # "admin", "editor", "viewer"
+    abas_permitidas = Column(String(500), nullable=False, default="dashboard,estoque,calculadora")
     ativo = Column(Boolean, nullable=False, default=True)
     reset_token = Column(String(255), nullable=True)
     reset_token_expira = Column(DateTime, nullable=True)

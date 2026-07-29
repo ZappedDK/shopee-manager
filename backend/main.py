@@ -123,12 +123,16 @@ def registrar_usuario(dados: schemas_domain.UsuarioCreate, db: Session = Depends
     if db.query(models_domain.Usuario).filter_by(email=dados.email.lower()).first():
         raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado.")
     
+    total_usuarios = db.query(models_domain.Usuario).count()
+    role_inicial = "admin" if total_usuarios == 0 else "viewer"
+    abas_iniciais = "dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios" if total_usuarios == 0 else "dashboard,estoque,calculadora"
+
     novo_usuario = models_domain.Usuario(
         nome=dados.nome,
         email=dados.email.lower(),
         senha_hash=gerar_hash_senha(dados.senha),
-        role="admin",
-        abas_permitidas="dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios",
+        role=role_inicial,
+        abas_permitidas=abas_iniciais,
         ativo=True
     )
     db.add(novo_usuario)
@@ -154,12 +158,16 @@ def autenticar_google(dados: schemas_domain.GoogleAuthRequest, db: Session = Dep
     usuario = db.query(models_domain.Usuario).filter_by(email=dados.email.lower()).first()
     
     if not usuario:
+        total_usuarios = db.query(models_domain.Usuario).count()
+        role_inicial = "admin" if total_usuarios == 0 else "viewer"
+        abas_iniciais = "dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios" if total_usuarios == 0 else "dashboard,estoque,calculadora"
+
         usuario = models_domain.Usuario(
             nome=dados.nome,
             email=dados.email.lower(),
             supabase_uid=dados.supabase_uid,
-            role="admin",
-            abas_permitidas="dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios",
+            role=role_inicial,
+            abas_permitidas=abas_iniciais,
             ativo=True
         )
         db.add(usuario)
