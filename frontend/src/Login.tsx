@@ -33,7 +33,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
   // Efeito para detectar retorno da autenticação do Google via Supabase
   useEffect(() => {
     import('./services/supabase').then(({ supabase }) => {
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      supabase.auth.getSession().then(({ data: { session } }: any) => {
         if (session?.user) {
           const user = session.user;
           api.post('/auth/google', {
