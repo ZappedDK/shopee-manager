@@ -142,7 +142,7 @@ def login(dados: schemas_domain.LoginRequest, db: Session = Depends(get_db)):
     if not usuario or not verificar_senha(dados.senha, usuario.senha_hash):
         raise HTTPException(status_code=400, detail="E-mail ou senha incorretos.")
     
-    token = criar_token_acesso(dados={"sub": usuario.id})
+    token = criar_token_acesso(dados={"sub": str(usuario.id)})
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -174,7 +174,7 @@ def autenticar_google(dados: schemas_domain.GoogleAuthRequest, db: Session = Dep
     if not usuario.ativo:
         raise HTTPException(status_code=403, detail="Sua conta está desativada. Entre em contato com o administrador.")
         
-    token = criar_token_acesso(dados={"sub": usuario.id})
+    token = criar_token_acesso(dados={"sub": str(usuario.id)})
     return {
         "access_token": token,
         "token_type": "bearer",
