@@ -344,15 +344,15 @@ function App() {
   return (
     <div style={layoutStyle} className="app-layout">
       <div style={sidebarStyle} className="app-sidebar">
-        <div style={{ marginBottom: '12px', textAlign: 'center' }} className="app-sidebar-brand">
-          <img src="/logo.png" alt="Skold Stock Logo" style={{ maxWidth: '120px', maxHeight: '100px', objectFit: 'contain', marginBottom: '4px' }} />
+        <div style={{ marginBottom: '16px', textAlign: 'center' }} className="app-sidebar-brand">
+          <img src="/icone.png" alt="Skold Stock Icon" style={{ maxWidth: '90px', maxHeight: '100px', objectFit: 'contain', marginBottom: '12px' }} />
           <h1
             className="brand-title"
             style={{
               fontSize: '20px',
               color: colors.textPrimary,
               fontWeight: 600,
-              margin: 0,
+              margin: '8px 0 0 0',
               fontFamily: "'Rostex-Regular', 'Inter', sans-serif"
             }}
           >

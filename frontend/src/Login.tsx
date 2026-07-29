@@ -187,9 +187,9 @@ export function Login({ onLoginSuccess }: LoginProps) {
         {/* Logotipo / Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <img
-            src="/logo.png"
-            alt="Skold Stock Logo"
-            style={{ maxWidth: '180px', maxHeight: '180px', objectFit: 'contain', marginBottom: '0px' }}
+            src="/icone.png"
+            alt="Skold Stock Icon"
+            style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'contain', marginBottom: '8px' }}
           />
           <h2
             className="brand-title"
