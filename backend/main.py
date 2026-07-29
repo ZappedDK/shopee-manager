@@ -108,7 +108,8 @@ from core.auth import (
     verificar_senha,
     criar_token_acesso,
     gerar_token_recuperacao,
-    get_current_user
+    get_current_user,
+    exigir_admin,
 )
 from datetime import datetime, timedelta
 
@@ -182,11 +183,11 @@ def autenticar_google(dados: schemas_domain.GoogleAuthRequest, db: Session = Dep
 
 # --- GESTÃO DE USUÁRIOS (ADMIN) ---
 @app.get("/usuarios", response_model=List[schemas_domain.UsuarioResponse], tags=["Gestão de Usuários"])
-def listar_usuarios(db: Session = Depends(get_db)):
+def listar_usuarios(db: Session = Depends(get_db), _admin: models_domain.Usuario = Depends(exigir_admin)):
     return db.query(models_domain.Usuario).order_by(models_domain.Usuario.id.asc()).all()
 
 @app.patch("/usuarios/{usuario_id}", response_model=schemas_domain.UsuarioResponse, tags=["Gestão de Usuários"])
-def atualizar_usuario(usuario_id: int, dados: schemas_domain.UsuarioUpdate, db: Session = Depends(get_db)):
+def atualizar_usuario(usuario_id: int, dados: schemas_domain.UsuarioUpdate, db: Session = Depends(get_db), _admin: models_domain.Usuario = Depends(exigir_admin)):
     usuario = db.query(models_domain.Usuario).filter_by(id=usuario_id).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
@@ -205,7 +206,7 @@ def atualizar_usuario(usuario_id: int, dados: schemas_domain.UsuarioUpdate, db: 
     return usuario
 
 @app.delete("/usuarios/{usuario_id}", tags=["Gestão de Usuários"])
-def excluir_usuario(usuario_id: int, db: Session = Depends(get_db)):
+def excluir_usuario(usuario_id: int, db: Session = Depends(get_db), _admin: models_domain.Usuario = Depends(exigir_admin)):
     usuario = db.query(models_domain.Usuario).filter_by(id=usuario_id).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
