@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { PageHeader } from './ui';
 import { colors, cardStyle, cardTitleStyle, cardDescStyle, formatarMoeda } from './theme';
+import { SkeletonBox, SkeletonList } from './Skeleton';
 
 export function Dashboard() {
   const [alertas, setAlertas] = useState<any[]>([]);
@@ -35,22 +36,18 @@ export function Dashboard() {
       const totalCusto = produtos.reduce((soma: number, p: any) => soma + (p.valor_estoque || 0), 0);
       setValorTotalEstoque(totalCusto);
 
-      // Lucro Potencial Estimado
-      const totalLucro = produtos.reduce((soma: number, p: any) => {
-        const qtd = p.quantidade_estoque || 0;
-        let lucroUnitario = 0;
-        if (p.analises_plataformas && p.analises_plataformas.length > 0) {
-          const somaLucros = p.analises_plataformas.reduce((acc: number, item: any) => acc + (item.lucro_liquido || 0), 0);
-          lucroUnitario = somaLucros / p.analises_plataformas.length;
-        } else {
-          lucroUnitario = (p.preco_venda || 0) - (p.custo_produto || 0);
-        }
-        return soma + (qtd * Math.max(0, lucroUnitario));
+      // Lucro Potencial Total (Lucro da Shopee por padrão ou primeira plataforma disponível)
+      const lucroTotal = produtos.reduce((soma: number, p: any) => {
+        if (!p.ativo) return soma; // Ignora inativos
+        const shopee = p.analises_plataformas?.find((plat: any) => plat.plataforma_nome?.toLowerCase().includes('shopee'));
+        const analise = shopee || p.analises_plataformas?.[0];
+        const lucroUn = analise?.lucro_liquido || 0;
+        return soma + (lucroUn * (p.quantidade_estoque || 0));
       }, 0);
 
-      setLucroPotencialTotal(totalLucro);
+      setLucroPotencialTotal(lucroTotal);
     } catch (err) {
-      console.error('Erro ao carregar valor do estoque:', err);
+      console.error('Erro ao calcular valor do estoque:', err);
     }
   };
 
@@ -72,19 +69,21 @@ export function Dashboard() {
       <div style={{ display: 'flex', gap: '20px', marginBottom: '28px', flexWrap: 'wrap' }}>
         <div style={{ ...statCardStyle, borderLeft: `4px solid ${colors.success}` }}>
           <p style={{ margin: '0 0 6px 0', color: colors.textSecondary, fontSize: '13px' }}>Valor Total em Estoque (Custo)</p>
-          <strong style={{ color: colors.successText, fontSize: '28px' }}>
-            {valorTotalEstoque === null ? '...' : formatarMoeda(valorTotalEstoque)}
+          <strong style={{ color: colors.successText, fontSize: '28px', display: 'flex', alignItems: 'center', minHeight: '34px' }}>
+            {valorTotalEstoque === null ? <SkeletonBox width="140px" height="28px" /> : formatarMoeda(valorTotalEstoque)}
           </strong>
         </div>
         <div style={{ ...statCardStyle, borderLeft: `4px solid ${colors.accent}` }}>
           <p style={{ margin: '0 0 6px 0', color: colors.textSecondary, fontSize: '13px' }}>Lucro Potencial Estimado</p>
-          <strong style={{ color: '#60a5fa', fontSize: '28px' }}>
-            {lucroPotencialTotal === null ? '...' : formatarMoeda(lucroPotencialTotal)}
+          <strong style={{ color: '#60a5fa', fontSize: '28px', display: 'flex', alignItems: 'center', minHeight: '34px' }}>
+            {lucroPotencialTotal === null ? <SkeletonBox width="140px" height="28px" /> : formatarMoeda(lucroPotencialTotal)}
           </strong>
         </div>
         <div style={{ ...statCardStyle, borderLeft: `4px solid ${alertas.length > 0 ? colors.danger : colors.success}` }}>
           <p style={{ margin: '0 0 6px 0', color: colors.textSecondary, fontSize: '13px' }}>Produtos com Estoque Baixo</p>
-          <strong style={{ color: alertas.length > 0 ? colors.dangerText : colors.successText, fontSize: '28px' }}>{alertas.length}</strong>
+          <strong style={{ color: alertas.length > 0 ? colors.dangerText : colors.successText, fontSize: '28px', display: 'flex', alignItems: 'center', minHeight: '34px' }}>
+            {carregando ? <SkeletonBox width="50px" height="28px" /> : alertas.length}
+          </strong>
         </div>
       </div>
 
@@ -94,7 +93,7 @@ export function Dashboard() {
         <p style={cardDescStyle}>Produtos com 10 ou menos unidades em estoque.</p>
 
         {carregando ? (
-          <p style={{ color: colors.textSecondary }}>Carregando...</p>
+          <SkeletonList count={3} />
         ) : alertas.length === 0 ? (
           <p style={{ color: colors.successText, fontWeight: 500 }}>✅ Todos os produtos com estoque saudável.</p>
         ) : (

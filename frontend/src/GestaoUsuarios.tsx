@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { colors, cardStyle, cardTitleStyle, btnStyle } from './theme';
+import { SkeletonList } from './Skeleton';
 
 interface Usuario {
   id: number;
@@ -122,7 +123,7 @@ export function GestaoUsuarios() {
         </div>
 
         {carregando ? (
-          <p style={{ color: colors.textSecondary }}>Carregando usuários...</p>
+          <SkeletonList count={3} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {usuarios.map(user => {

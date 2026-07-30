@@ -8,6 +8,7 @@ import {
   tableHeaderStyle, tableCellStyle,
   formatarMoeda, formatarNumero
 } from './theme';
+import { SkeletonTable } from './Skeleton';
 
 interface SeletorProdutoComBuscaProps {
   produtos: any[];
@@ -479,7 +480,9 @@ export function SimuladorPreco() {
 
       {/* Resultados da Simulação */}
       {carregando ? (
-        <p style={{ color: colors.textSecondary }}>Calculando métricas financeiras...</p>
+        <div style={{ ...cardStyle, marginTop: '24px' }}>
+          <SkeletonTable rows={4} cols={7} />
+        </div>
       ) : resultado && resultado.simulacoes ? (
         <div>
           {/* Card Resumo do Produto / Custo */}

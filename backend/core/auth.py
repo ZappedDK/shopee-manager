@@ -99,3 +99,16 @@ def exigir_admin(usuario: Usuario = Depends(get_current_user)) -> Usuario:
             detail="Apenas administradores podem acessar este recurso."
         )
     return usuario
+
+
+def exigir_editor_ou_admin(usuario: Usuario = Depends(get_current_user)) -> Usuario:
+    """
+    Exige que o usuário seja 'admin' ou 'editor'.
+    Usuários 'viewer' (Leitor / Visualizador) têm permissão apenas para leitura/consulta.
+    """
+    if usuario.role not in ("admin", "editor"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: usuários com perfil Leitor (Visualizador) não têm permissão para editar ou alterar dados."
+        )
+    return usuario

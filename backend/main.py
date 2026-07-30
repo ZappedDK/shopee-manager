@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core.database import engine, get_db, Base
 from models import domain as models_domain
 from schemas import domain as schemas_domain
-from services.financeiro import calcular_metricas_plataforma, calcular_preco_por_margem
+from services.financeiro import calcular_metricas_plataforma, calcular_preco_por_margem, limpar_cache_financeiro
 
 def obter_ou_criar_etiqueta_padrao(db: Session):
     etiqueta = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave="etiqueta_padrao").first()
@@ -110,6 +110,7 @@ from core.auth import (
     gerar_token_recuperacao,
     get_current_user,
     exigir_admin,
+    exigir_editor_ou_admin,
 )
 from datetime import datetime, timedelta
 
@@ -261,7 +262,7 @@ def redefinir_senha(dados: schemas_domain.RedefinirSenhaRequest, db: Session = D
 
 # --- ROTAS DE PLATAFORMAS (NOVAS) ---
 @app.post("/plataformas/", tags=["Cadastros"])
-def cadastrar_plataforma(plat: schemas_domain.PlataformaCreate, db: Session = Depends(get_db)):
+def cadastrar_plataforma(plat: schemas_domain.PlataformaCreate, db: Session = Depends(get_db), _admin: models_domain.Usuario = Depends(exigir_admin)):
     dados = plat.model_dump()
     faixas_lista = dados.pop("faixas", [])
     
@@ -274,6 +275,7 @@ def cadastrar_plataforma(plat: schemas_domain.PlataformaCreate, db: Session = De
     nova = models_domain.Plataforma(**dados)
     db.add(nova)
     db.commit()
+    limpar_cache_financeiro()
     return {"status": "sucesso"}
 
 @app.get("/plataformas/", tags=["Cadastros"])
@@ -301,7 +303,7 @@ def listar_plataformas(db: Session = Depends(get_db)):
     return resultado
 
 @app.put("/plataformas/{id}", tags=["Cadastros"])
-def editar_plataforma(id: int, plat: schemas_domain.PlataformaCreate, db: Session = Depends(get_db)):
+def editar_plataforma(id: int, plat: schemas_domain.PlataformaCreate, db: Session = Depends(get_db), _admin: models_domain.Usuario = Depends(exigir_admin)):
     plataforma = db.query(models_domain.Plataforma).filter_by(id=id).first()
     if not plataforma:
         raise HTTPException(status_code=404, detail="Plataforma não encontrada.")
@@ -321,10 +323,11 @@ def editar_plataforma(id: int, plat: schemas_domain.PlataformaCreate, db: Sessio
         setattr(plataforma, campo, valor)
 
     db.commit()
+    limpar_cache_financeiro()
     return {"status": "sucesso"}
 
 @app.delete("/plataformas/{id}", tags=["Cadastros"])
-def deletar_plataforma(id: int, db: Session = Depends(get_db)):
+def deletar_plataforma(id: int, db: Session = Depends(get_db), _admin: models_domain.Usuario = Depends(exigir_admin)):
     plataforma = db.query(models_domain.Plataforma).filter_by(id=id).first()
     if not plataforma:
         raise HTTPException(status_code=404, detail="Plataforma não encontrada.")
@@ -332,14 +335,16 @@ def deletar_plataforma(id: int, db: Session = Depends(get_db)):
     plataforma.produtos = []
     db.delete(plataforma)
     db.commit()
+    limpar_cache_financeiro()
     return {"status": "sucesso", "mensagem": "Plataforma excluída com sucesso!"}
 
 # --- ROTAS DE INSUMOS E CONFIGURAÇÕES ---
 @app.post("/embalagens/", tags=["Cadastros"])
-def cadastrar_embalagem(embalagem: schemas_domain.EmbalagemCreate, db: Session = Depends(get_db)):
+def cadastrar_embalagem(embalagem: schemas_domain.EmbalagemCreate, db: Session = Depends(get_db), _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     nova_embalagem = models_domain.Embalagem(**embalagem.model_dump())
     db.add(nova_embalagem)
     db.commit()
+    limpar_cache_financeiro()
     return {"status": "sucesso"}
 
 @app.get("/embalagens/", tags=["Cadastros"])
@@ -347,7 +352,7 @@ def listar_embalagens(db: Session = Depends(get_db)):
     return db.query(models_domain.Embalagem).all()
 
 @app.put("/embalagens/{id}", tags=["Cadastros"])
-def editar_embalagem(id: int, dados: schemas_domain.EmbalagemCreate, db: Session = Depends(get_db)):
+def editar_embalagem(id: int, dados: schemas_domain.EmbalagemCreate, db: Session = Depends(get_db), _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     emb = db.query(models_domain.Embalagem).filter_by(id=id).first()
     if not emb:
         raise HTTPException(status_code=404, detail="Embalagem não encontrada.")
@@ -355,10 +360,11 @@ def editar_embalagem(id: int, dados: schemas_domain.EmbalagemCreate, db: Session
     emb.custo_pacote = dados.custo_pacote
     emb.qtd_unidades = dados.qtd_unidades
     db.commit()
+    limpar_cache_financeiro()
     return {"status": "sucesso", "embalagem": emb.nome}
 
 @app.post("/configuracoes/", tags=["Cadastros"])
-def salvar_configuracao_global(config: schemas_domain.ConfiguracaoGlobalCreate, db: Session = Depends(get_db)):
+def salvar_configuracao_global(config: schemas_domain.ConfiguracaoGlobalCreate, db: Session = Depends(get_db), _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     item = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave=config.chave).first()
     if item:
         item.valor_pacote = config.valor_pacote
@@ -367,6 +373,7 @@ def salvar_configuracao_global(config: schemas_domain.ConfiguracaoGlobalCreate, 
         item = models_domain.ConfiguracaoGlobal(**config.model_dump())
         db.add(item)
     db.commit()
+    limpar_cache_financeiro()
     return {"status": "sucesso"}
 
 @app.get("/configuracoes/", tags=["Cadastros"])
@@ -374,7 +381,7 @@ def listar_configuracoes(db: Session = Depends(get_db)):
     return db.query(models_domain.ConfiguracaoGlobal).all()
 
 @app.delete("/embalagens/{id}", tags=["Cadastros"])
-def deletar_embalagem(id: int, db: Session = Depends(get_db)):
+def deletar_embalagem(id: int, db: Session = Depends(get_db), _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     embalagem = db.query(models_domain.Embalagem).filter_by(id=id).first()
     if not embalagem: 
         raise HTTPException(status_code=404, detail="Não encontrada")
@@ -412,7 +419,7 @@ def registrar_movimentacao(
 
 # --- ROTAS DE PRODUTOS E ESTOQUE ---
 @app.post("/produtos/", tags=["Estoque"])
-def cadastrar_produto(produto_data: schemas_domain.ProdutoCreate, db: Session = Depends(get_db)):
+def cadastrar_produto(produto_data: schemas_domain.ProdutoCreate, db: Session = Depends(get_db), current_user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     if produto_data.embalagem_id:
         if not db.query(models_domain.Embalagem).filter_by(id=produto_data.embalagem_id).first():
             raise HTTPException(status_code=404, detail="Embalagem não encontrada.")
@@ -442,7 +449,7 @@ def cadastrar_produto(produto_data: schemas_domain.ProdutoCreate, db: Session = 
                 estoque_ant=0,
                 estoque_novo=novo_produto.quantidade_estoque,
                 motivo="Cadastro inicial do produto",
-                usuario_nome="Administrador"
+                usuario_nome=current_user.nome
             )
             db.commit()
 
@@ -452,7 +459,7 @@ def cadastrar_produto(produto_data: schemas_domain.ProdutoCreate, db: Session = 
         raise HTTPException(status_code=400, detail=f"O SKU '{produto_data.sku}' já existe.")
 
 @app.put("/produtos/{sku}", tags=["Estoque"])
-def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = Depends(get_db)):
+def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = Depends(get_db), current_user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado.")
@@ -491,7 +498,7 @@ def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = 
             estoque_ant=estoque_ant,
             estoque_novo=estoque_novo,
             motivo=motivo_str,
-            usuario_nome="Administrador"
+            usuario_nome=current_user.nome
         )
     elif custo_ant != dados.custo_produto:
         registrar_movimentacao(
@@ -504,14 +511,14 @@ def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = 
             estoque_ant=estoque_ant,
             estoque_novo=estoque_novo,
             motivo=f"Reajuste de Custo (R$ {custo_ant:.2f} -> R$ {dados.custo_produto:.2f})",
-            usuario_nome="Administrador"
+            usuario_nome=current_user.nome
         )
 
     db.commit()
     return {"status": "sucesso", "produto": produto.nome}
 
 @app.delete("/produtos/{sku}", tags=["Estoque"])
-def deletar_produto(sku: str, db: Session = Depends(get_db)):
+def deletar_produto(sku: str, db: Session = Depends(get_db), _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
     if not produto: 
         raise HTTPException(status_code=404, detail="Produto não encontrado")
@@ -520,7 +527,7 @@ def deletar_produto(sku: str, db: Session = Depends(get_db)):
     return {"status": "sucesso"}
 
 @app.patch("/produtos/{sku}/status", tags=["Estoque"])
-def alterar_status_produto(sku: str, db: Session = Depends(get_db)):
+def alterar_status_produto(sku: str, db: Session = Depends(get_db), _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado.")
@@ -690,7 +697,8 @@ def baixar_modelo_importacao():
 async def importar_produtos_planilha(
     file: UploadFile = File(...),
     modo_duplicados: str = Form("atualizar"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)
 ):
     filename = file.filename.lower()
     content = await file.read()
@@ -738,7 +746,7 @@ async def importar_produtos_planilha(
     return processar_linhas_planilha(linhas, modo_duplicados, db)
 
 @app.patch("/produtos/{sku}/estoque", tags=["Estoque"])
-def ajustar_estoque_manual(sku: str, ajuste: AjusteEstoque, db: Session = Depends(get_db)):
+def ajustar_estoque_manual(sku: str, ajuste: AjusteEstoque, db: Session = Depends(get_db), current_user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
     if not produto:
         raise HTTPException(status_code=404, detail="SKU não encontrado no sistema.")
@@ -760,7 +768,7 @@ def ajustar_estoque_manual(sku: str, ajuste: AjusteEstoque, db: Session = Depend
             estoque_ant=estoque_ant,
             estoque_novo=estoque_novo,
             motivo=ajuste.motivo or "Ajuste manual de estoque",
-            usuario_nome="Administrador"
+            usuario_nome=current_user.nome
         )
 
     db.commit()
@@ -807,10 +815,40 @@ def alertas_de_estoque(limite: int = 10, db: Session = Depends(get_db)):
     return produtos_criticos
 
 @app.get("/produtos/detalhados", tags=["Estoque"])
-def listar_produtos_detalhados(db: Session = Depends(get_db)):
-    produtos = db.query(models_domain.Produto).all()
-    etiqueta = obter_ou_criar_etiqueta_padrao(db)
+def listar_produtos_detalhados(
+    page: int = 1,
+    limit: Optional[int] = None,
+    busca: Optional[str] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models_domain.Produto)
 
+    if status == "ativos":
+        query = query.filter(models_domain.Produto.ativo != False)
+    elif status == "inativos":
+        query = query.filter(models_domain.Produto.ativo == False)
+
+    if busca:
+        termo = f"%{busca.strip()}%"
+        query = query.filter(
+            (models_domain.Produto.sku.ilike(termo)) |
+            (models_domain.Produto.nome.ilike(termo))
+        )
+
+    total_registros = query.count()
+
+    if limit and limit > 0:
+        page_val = max(1, page)
+        offset = (page_val - 1) * limit
+        produtos = query.order_by(models_domain.Produto.id.desc()).offset(offset).limit(limit).all()
+        total_paginas = (total_registros + limit - 1) // limit
+    else:
+        produtos = query.order_by(models_domain.Produto.id.desc()).all()
+        page_val = 1
+        total_paginas = 1
+
+    etiqueta = obter_ou_criar_etiqueta_padrao(db)
     resultados = []
     custo_etiq = etiqueta.valor_pacote / etiqueta.qtd_unidades
 
@@ -818,7 +856,7 @@ def listar_produtos_detalhados(db: Session = Depends(get_db)):
         custo_emb = (p.embalagem.custo_pacote / p.embalagem.qtd_unidades) if p.embalagem else 0.0
         metricas_multiplas = []
         
-        # Calcula as métricas para CADA plataforma vinculada ao produto
+        # Calcula as métricas apenas para a página de produtos retornada
         for plat in p.plataformas:
             res_plat = calcular_metricas_plataforma(
                 preco_venda=p.preco_venda,
@@ -843,6 +881,15 @@ def listar_produtos_detalhados(db: Session = Depends(get_db)):
             "analises_plataformas": metricas_multiplas
         })
         
+    if limit and limit > 0:
+        return {
+            "total": total_registros,
+            "page": page_val,
+            "limit": limit,
+            "total_pages": total_paginas,
+            "produtos": resultados
+        }
+
     return resultados
 
 @app.get("/produtos/{sku}/financeiro", tags=["Inteligência Financeira"])

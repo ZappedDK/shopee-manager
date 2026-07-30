@@ -79,13 +79,35 @@ def obter_taxas_da_plataforma(preco_venda: float, plataforma: Any):
     tf = getattr(plataforma, "taxa_fixa", 0.0) or 0.0
     return tp, tf
 
-def calcular_metricas_plataforma(
+import json
+import functools
+from typing import Dict, Any, Optional
+
+@functools.lru_cache(maxsize=8192)
+def _calcular_metricas_cached(
     preco_venda: float,
     custo_unitario: float,
     custo_embalagem_un: float,
     custo_etiqueta_un: float,
-    plataforma: Any
+    plat_id: Optional[int],
+    plat_nome: str,
+    plat_icone: str,
+    plat_taxa_plataforma: float,
+    plat_taxa_fixa: float,
+    plat_taxa_extra: float,
+    plat_faixas_json: Optional[str]
 ) -> Dict[str, Any]:
+    class DummyPlataforma:
+        def __init__(self):
+            self.id = plat_id
+            self.nome = plat_nome
+            self.icone = plat_icone
+            self.taxa_plataforma = plat_taxa_plataforma
+            self.taxa_fixa = plat_taxa_fixa
+            self.taxa_extra = plat_taxa_extra
+            self.faixas_json = plat_faixas_json
+
+    plataforma = DummyPlataforma()
     taxa_pct, taxa_fixa = obter_taxas_da_plataforma(preco_venda, plataforma)
     taxa_percentual_total = preco_venda * taxa_pct
     
@@ -103,9 +125,9 @@ def calcular_metricas_plataforma(
     roas_minimo = preco_venda / custo_unitario if custo_unitario > 0 else 0
 
     return {
-        "plataforma_id": getattr(plataforma, "id", None),
-        "plataforma_nome": getattr(plataforma, "nome", ""),
-        "icone": getattr(plataforma, "icone", ""),
+        "plataforma_id": plat_id,
+        "plataforma_nome": plat_nome,
+        "icone": plat_icone,
         "lucro_liquido": lucro,
         "margem_final": margem_final,
         "taxa_plataforma_real": taxa_percentual_total,
@@ -116,6 +138,31 @@ def calcular_metricas_plataforma(
         "custo_total": custo_total,
         "roas_minimo": roas_minimo
     }
+
+def limpar_cache_financeiro():
+    """Limpa o cache LRU em memória das métricas financeiras."""
+    _calcular_metricas_cached.cache_clear()
+
+def calcular_metricas_plataforma(
+    preco_venda: float,
+    custo_unitario: float,
+    custo_embalagem_un: float,
+    custo_etiqueta_un: float,
+    plataforma: Any
+) -> Dict[str, Any]:
+    return _calcular_metricas_cached(
+        round(float(preco_venda or 0.0), 4),
+        round(float(custo_unitario or 0.0), 4),
+        round(float(custo_embalagem_un or 0.0), 4),
+        round(float(custo_etiqueta_un or 0.0), 4),
+        getattr(plataforma, "id", None),
+        getattr(plataforma, "nome", "") or "",
+        getattr(plataforma, "icone", "") or "",
+        float(getattr(plataforma, "taxa_plataforma", 0.0) or 0.0),
+        float(getattr(plataforma, "taxa_fixa", 0.0) or 0.0),
+        float(getattr(plataforma, "taxa_extra", 0.0) or 0.0),
+        str(getattr(plataforma, "faixas_json", "") or "")
+    )
 
 def calcular_preco_por_margem(
     custo_unitario: float,

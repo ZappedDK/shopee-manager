@@ -6,6 +6,7 @@ import {
   inputStyle, btnNeutralStyle,
   tableHeaderStyle, tableCellStyle
 } from './theme';
+import { SkeletonTable } from './Skeleton';
 
 export function HistoricoEstoque() {
   const [movimentacoes, setMovimentacoes] = useState<any[]>([]);
@@ -133,7 +134,7 @@ export function HistoricoEstoque() {
         </div>
 
         {carregando ? (
-          <p style={{ color: colors.textSecondary }}>Carregando histórico...</p>
+          <SkeletonTable rows={6} cols={8} />
         ) : (
           <div className="table-scroll">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

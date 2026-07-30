@@ -10,6 +10,7 @@ import { HistoricoEstoque } from './HistoricoEstoque';
 import { ImportarProdutosModal } from './ImportarProdutosModal';
 import { GestaoUsuarios } from './GestaoUsuarios';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
+import { SkeletonTable } from './Skeleton';
 import {
   colors, layoutStyle, sidebarStyle, contentStyle, sidebarGroupLabelStyle, menuItemStyle,
   cardStyle, sectionGapStyle, cardTitleStyle, cardDescStyle,
@@ -153,17 +154,54 @@ function App() {
     carregarInsumos();
   }, []);
 
-  useEffect(() => {
-    carregarEstoque();
-  }, [view]);
+  const [carregandoEstoque, setCarregandoEstoque] = useState<boolean>(true);
+  const [paginaAtual, setPaginaAtual] = useState<number>(1);
+  const [itensPorPagina, setItensPorPagina] = useState<number>(20);
+  const [totalProdutos, setTotalProdutos] = useState<number>(0);
+  const [totalPaginas, setTotalPaginas] = useState<number>(1);
 
-  const carregarEstoque = () => {
+  const carregarEstoque = (
+    page = paginaAtual,
+    limit = itensPorPagina,
+    busca = buscaProduto,
+    status = filtroStatus
+  ) => {
     if (view === 'estoque') {
-      api.get('/produtos/detalhados')
-         .then(res => setProdutosDetalhados(res.data))
-         .catch(err => console.error("Erro ao carregar estoque:", err));
+      setCarregandoEstoque(true);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      if (busca) params.append('busca', busca);
+      if (status) params.append('status', status);
+
+      api.get(`/produtos/detalhados?${params.toString()}`)
+         .then(res => {
+           if (res.data && typeof res.data === 'object' && 'produtos' in res.data) {
+             setProdutosDetalhados(res.data.produtos);
+             setTotalProdutos(res.data.total);
+             setTotalPaginas(res.data.total_pages);
+             setPaginaAtual(res.data.page);
+           } else {
+             setProdutosDetalhados(res.data || []);
+             setTotalProdutos(res.data ? res.data.length : 0);
+             setTotalPaginas(1);
+             setPaginaAtual(1);
+           }
+         })
+         .catch(err => console.error("Erro ao carregar estoque:", err))
+         .finally(() => setCarregandoEstoque(false));
     }
   };
+
+  useEffect(() => {
+    if (view === 'estoque') {
+      const timer = setTimeout(() => {
+        carregarEstoque(1, itensPorPagina, buscaProduto, filtroStatus);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [buscaProduto, filtroStatus, itensPorPagina, view]);
 
   const mostrarMensagem = (texto: string, duracaoMs = 5000) => {
     setMensagem(texto);
@@ -315,10 +353,12 @@ function App() {
     .split(',')
     .map((a: string) => a.trim().toLowerCase());
 
-  const userRole = usuario?.role || 'admin';
+  const userRole = usuario?.role || 'viewer';
+  const podeEditar = userRole === 'admin' || userRole === 'editor';
+  const isAdmin = userRole === 'admin';
 
   const temPermissaoAba = (abaId: string) => {
-    if (userRole === 'admin') return true;
+    if (isAdmin) return true;
     return abasLiberadas.includes(abaId.toLowerCase());
   };
 
@@ -532,22 +572,28 @@ function App() {
                           <td style={tableCellStyle}>{emb.qtd_unidades} un.</td>
                           <td style={{ ...tableCellStyle, color: colors.cyan, fontWeight: 'bold' }}>{formatarMoeda(emb.custo_pacote / emb.qtd_unidades)}</td>
                           <td style={{ ...tableCellStyle, display: 'flex', gap: '6px' }}>
-                            <button
-                              onClick={() => iniciarEdicaoEmbalagem(emb)}
-                              style={{ ...btnNeutralStyle, padding: '5px 10px', fontSize: '12px' }}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
-                            >
-                              ✏️ Editar
-                            </button>
-                            <button
-                              onClick={() => excluirEmbalagem(emb.id, emb.nome)}
-                              style={{ ...btnDangerStyle, padding: '5px 10px', fontSize: '12px' }}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.28)'}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.14)'}
-                            >
-                              Excluir
-                            </button>
+                            {podeEditar ? (
+                              <>
+                                <button
+                                  onClick={() => iniciarEdicaoEmbalagem(emb)}
+                                  style={{ ...btnNeutralStyle, padding: '5px 10px', fontSize: '12px' }}
+                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
+                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
+                                >
+                                  ✏️ Editar
+                                </button>
+                                <button
+                                  onClick={() => excluirEmbalagem(emb.id, emb.nome)}
+                                  style={{ ...btnDangerStyle, padding: '5px 10px', fontSize: '12px' }}
+                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.28)'}
+                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.14)'}
+                                >
+                                  Excluir
+                                </button>
+                              </>
+                            ) : (
+                              <span style={{ color: colors.textMuted, fontSize: '12px' }}>🔒 Somente Leitura</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -567,145 +613,147 @@ function App() {
             <PageHeader title="Plataformas de Venda" subtitle="Cadastre os marketplaces e as taxas cobradas por cada um." />
             <MessageBanner mensagem={mensagem} />
 
-            <CollapsibleCard
-              icon="🏪"
-              title="Nova Plataforma"
-              description="Ex: Shopee, Mercado Livre, Shein — informe as taxas praticadas."
-              buttonLabel="+ Nova Plataforma"
-              style={sectionGapStyle}
-            >
-              <form onSubmit={(e) => {
-                  e.preventDefault();
-                  const formElement = e.currentTarget;
-                  const formData = new FormData(formElement);
-                  const data: any = Object.fromEntries(formData.entries());
+            {isAdmin && (
+              <CollapsibleCard
+                icon="🏪"
+                title="Nova Plataforma"
+                description="Ex: Shopee, Mercado Livre, Shein — informe as taxas praticadas."
+                buttonLabel="+ Nova Plataforma"
+                style={sectionGapStyle}
+              >
+                <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const formElement = e.currentTarget;
+                    const formData = new FormData(formElement);
+                    const data: any = Object.fromEntries(formData.entries());
 
-                  const faixasPayload = novasFaixas
-                    .filter(f => f.taxa_percentual !== '' || f.taxa_fixa !== '')
-                    .map(f => ({
-                      de_valor: parseFloat(String(f.de_valor).replace(',', '.')) || 0,
-                      ate_valor: f.ate_valor !== '' && f.ate_valor !== null ? parseFloat(String(f.ate_valor).replace(',', '.')) : null,
-                      taxa_percentual: parseFloat(String(f.taxa_percentual).replace(',', '.')) || 0,
-                      taxa_fixa: parseFloat(String(f.taxa_fixa).replace(',', '.')) || 0,
-                    }));
+                    const faixasPayload = novasFaixas
+                      .filter(f => f.taxa_percentual !== '' || f.taxa_fixa !== '')
+                      .map(f => ({
+                        de_valor: parseFloat(String(f.de_valor).replace(',', '.')) || 0,
+                        ate_valor: f.ate_valor !== '' && f.ate_valor !== null ? parseFloat(String(f.ate_valor).replace(',', '.')) : null,
+                        taxa_percentual: parseFloat(String(f.taxa_percentual).replace(',', '.')) || 0,
+                        taxa_fixa: parseFloat(String(f.taxa_fixa).replace(',', '.')) || 0,
+                      }));
 
-                  const payload = {
-                    nome: data.nome,
-                    icone: data.icone,
-                    taxa_plataforma: faixasPayload.length > 0 ? faixasPayload[0].taxa_percentual / 100 : 0,
-                    taxa_fixa: faixasPayload.length > 0 ? faixasPayload[0].taxa_fixa : 0,
-                    taxa_extra: (parseFloat(data.taxa_extra ? data.taxa_extra.replace(',', '.') : '0') || 0) / 100,
-                    faixas: faixasPayload
-                  };
+                    const payload = {
+                      nome: data.nome,
+                      icone: data.icone,
+                      taxa_plataforma: faixasPayload.length > 0 ? faixasPayload[0].taxa_percentual / 100 : 0,
+                      taxa_fixa: faixasPayload.length > 0 ? faixasPayload[0].taxa_fixa : 0,
+                      taxa_extra: (parseFloat(data.taxa_extra ? data.taxa_extra.replace(',', '.') : '0') || 0) / 100,
+                      faixas: faixasPayload
+                    };
 
-                  api.post('/plataformas/', payload)
-                    .then(() => {
-                      mostrarMensagem('✅ Plataforma cadastrada com sucesso!');
-                      carregarInsumos();
-                      formElement.reset();
-                      setNovasFaixas([{ de_valor: '0', ate_valor: '', taxa_percentual: '', taxa_fixa: '' }]);
-                    })
-                    .catch(err => mostrarMensagem('❌ Erro: ' + (err.response?.data?.detail || 'Erro ao cadastrar'), 7000));
-              }}>
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                  <input name="nome" placeholder="Nome da Plataforma (Ex: Shopee, TikTok, Mercado Livre)" required style={{ ...inputStyle, flex: 2, marginBottom: 0, maxWidth: '100%', minWidth: '180px' }} />
-                  <input name="icone" placeholder="Emoji (Ex: 🟧, 🎵, 🟨)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '100px' }} />
-                  <input name="taxa_extra" type="number" step="0.1" placeholder="Taxa Extra % (Ex: 6 para Frete Grátis)" defaultValue="0" style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '140px' }} />
-                </div>
-
-                <div style={{ backgroundColor: colors.bgCardAlt, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <div>
-                      <label style={{ color: colors.accent, fontWeight: 700, fontSize: '13px' }}>
-                        📊 Faixas de Taxas Progressivas (De X até X ➔ % + Taxa Fixa)
-                      </label>
-                      <span style={{ display: 'block', fontSize: '11px', color: colors.textMuted }}>
-                        No TikTok adicione 2 linhas, na Shopee 4 linhas, Mercado Livre 1 linha. Deixe "Até R$" em branco na última faixa.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={adicionarFaixaNova}
-                      style={{ ...btnNeutralStyle, padding: '4px 10px', fontSize: '12px', color: colors.accent, borderColor: colors.borderStrong }}
-                    >
-                      + Adicionar Linha
-                    </button>
+                    api.post('/plataformas/', payload)
+                      .then(() => {
+                        mostrarMensagem('✅ Plataforma cadastrada com sucesso!');
+                        carregarInsumos();
+                        formElement.reset();
+                        setNovasFaixas([{ de_valor: '0', ate_valor: '', taxa_percentual: '', taxa_fixa: '' }]);
+                      })
+                      .catch(err => mostrarMensagem('❌ Erro: ' + (err.response?.data?.detail || 'Erro ao cadastrar'), 7000));
+                }}>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                    <input name="nome" placeholder="Nome da Plataforma (Ex: Shopee, TikTok, Mercado Livre)" required style={{ ...inputStyle, flex: 2, marginBottom: 0, maxWidth: '100%', minWidth: '180px' }} />
+                    <input name="icone" placeholder="Emoji (Ex: 🟧, 🎵, 🟨)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '100px' }} />
+                    <input name="taxa_extra" type="number" step="0.1" placeholder="Taxa Extra % (Ex: 6 para Frete Grátis)" defaultValue="0" style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '140px' }} />
                   </div>
 
-                  {novasFaixas.map((faixa, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: colors.textMuted, width: '45px' }}>Linha {idx + 1}:</span>
-                      
-                      <div style={{ flex: 1, minWidth: '90px' }}>
-                        <input
-                          type="number" step="0.01"
-                          placeholder="De R$ (0)"
-                          value={faixa.de_valor}
-                          onChange={e => atualizarFaixaNova(idx, 'de_valor', e.target.value)}
-                          style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
-                        />
+                  <div style={{ backgroundColor: colors.bgCardAlt, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div>
+                        <label style={{ color: colors.accent, fontWeight: 700, fontSize: '13px' }}>
+                          📊 Faixas de Taxas Progressivas (De X até X ➔ % + Taxa Fixa)
+                        </label>
+                        <span style={{ display: 'block', fontSize: '11px', color: colors.textMuted }}>
+                          No TikTok adicione 2 linhas, na Shopee 4 linhas, Mercado Livre 1 linha. Deixe "Até R$" em branco na última faixa.
+                        </span>
                       </div>
-
-                      <span style={{ fontSize: '12px', color: colors.textMuted }}>até</span>
-
-                      <div style={{ flex: 1, minWidth: '110px' }}>
-                        <input
-                          type="number" step="0.01"
-                          placeholder="Até (Sem limite)"
-                          value={faixa.ate_valor}
-                          onChange={e => atualizarFaixaNova(idx, 'ate_valor', e.target.value)}
-                          style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
-                        />
-                      </div>
-
-                      <span style={{ fontSize: '12px', color: colors.textMuted }}>➔ Taxa %:</span>
-
-                      <div style={{ flex: 1, minWidth: '90px' }}>
-                        <input
-                          type="number" step="0.1"
-                          placeholder="Ex: 20"
-                          value={faixa.taxa_percentual}
-                          onChange={e => atualizarFaixaNova(idx, 'taxa_percentual', e.target.value)}
-                          style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
-                        />
-                      </div>
-
-                      <span style={{ fontSize: '12px', color: colors.textMuted }}>+ R$ Fixo:</span>
-
-                      <div style={{ flex: 1, minWidth: '90px' }}>
-                        <input
-                          type="number" step="0.01"
-                          placeholder="Ex: 4.00"
-                          value={faixa.taxa_fixa}
-                          onChange={e => atualizarFaixaNova(idx, 'taxa_fixa', e.target.value)}
-                          style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
-                        />
-                      </div>
-
-                      {novasFaixas.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removerFaixaNova(idx)}
-                          style={{ ...btnDangerStyle, padding: '4px 8px', fontSize: '12px' }}
-                          title="Remover linha"
-                        >
-                          🗑️
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={adicionarFaixaNova}
+                        style={{ ...btnNeutralStyle, padding: '4px 10px', fontSize: '12px', color: colors.accent, borderColor: colors.borderStrong }}
+                      >
+                        + Adicionar Linha
+                      </button>
                     </div>
-                  ))}
-                </div>
 
-                <button
-                  type="submit"
-                  style={btnPurpleStyle}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.purpleHover}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.purple}
-                >
-                  Salvar Plataforma
-                </button>
-              </form>
-            </CollapsibleCard>
+                    {novasFaixas.map((faixa, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: colors.textMuted, width: '45px' }}>Linha {idx + 1}:</span>
+                        
+                        <div style={{ flex: 1, minWidth: '90px' }}>
+                          <input
+                            type="number" step="0.01"
+                            placeholder="De R$ (0)"
+                            value={faixa.de_valor}
+                            onChange={e => atualizarFaixaNova(idx, 'de_valor', e.target.value)}
+                            style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
+                          />
+                        </div>
+
+                        <span style={{ fontSize: '12px', color: colors.textMuted }}>até</span>
+
+                        <div style={{ flex: 1, minWidth: '110px' }}>
+                          <input
+                            type="number" step="0.01"
+                            placeholder="Até (Sem limite)"
+                            value={faixa.ate_valor}
+                            onChange={e => atualizarFaixaNova(idx, 'ate_valor', e.target.value)}
+                            style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
+                          />
+                        </div>
+
+                        <span style={{ fontSize: '12px', color: colors.textMuted }}>➔ Taxa %:</span>
+
+                        <div style={{ flex: 1, minWidth: '90px' }}>
+                          <input
+                            type="number" step="0.1"
+                            placeholder="Ex: 20"
+                            value={faixa.taxa_percentual}
+                            onChange={e => atualizarFaixaNova(idx, 'taxa_percentual', e.target.value)}
+                            style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
+                          />
+                        </div>
+
+                        <span style={{ fontSize: '12px', color: colors.textMuted }}>+ R$ Fixo:</span>
+
+                        <div style={{ flex: 1, minWidth: '90px' }}>
+                          <input
+                            type="number" step="0.01"
+                            placeholder="Ex: 4.00"
+                            value={faixa.taxa_fixa}
+                            onChange={e => atualizarFaixaNova(idx, 'taxa_fixa', e.target.value)}
+                            style={{ ...inputStyle, marginBottom: 0, padding: '6px 8px', fontSize: '12px' }}
+                          />
+                        </div>
+
+                        {novasFaixas.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removerFaixaNova(idx)}
+                            style={{ ...btnDangerStyle, padding: '4px 8px', fontSize: '12px' }}
+                            title="Remover linha"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="submit"
+                    style={btnPurpleStyle}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.purpleHover}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.purple}
+                  >
+                    Salvar Plataforma
+                  </button>
+                </form>
+              </CollapsibleCard>
+            )}
 
             <div style={cardStyle}>
               <h3 style={cardTitleStyle}>Plataformas Ativas no Sistema</h3>
@@ -776,35 +824,38 @@ function App() {
                           </td>
                           <td style={tableCellStyle}>{((plat.taxa_extra || 0) * 100).toFixed(1)}%</td>
                           <td style={tableCellStyle}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <button
-                                onClick={() => setEditandoPlataformaModal(plat)}
-                                style={{ ...btnNeutralStyle, padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
-                              >
-                                ✏️ Editar
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (window.confirm(`Tem certeza que deseja excluir a plataforma "${plat.nome}"?`)) {
-                                    api.delete(`/plataformas/${plat.id}`)
-                                      .then(() => {
-                                        mostrarMensagem('✅ Plataforma excluída com sucesso!');
-                                        carregarInsumos();
-                                        carregarEstoque();
-                                      })
-                                      .catch(err => mostrarMensagem('❌ Erro ao excluir plataforma: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000));
-                                  }
-                                }}
-                                style={{ ...btnDangerStyle, padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.28)'}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.14)'}
-                                title="Excluir plataforma"
-                              >
-                                🗑️ Excluir
-                              </button>
-                            </div>
+                            {isAdmin ? (
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <button
+                                  onClick={() => setEditandoPlataformaModal(plat)}
+                                  style={{ ...btnNeutralStyle, padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
+                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
+                                >
+                                  ✏️ Editar
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (window.confirm(`Tem certeza que deseja excluir a plataforma "${plat.nome}"?`)) {
+                                      api.delete(`/plataformas/${plat.id}`)
+                                        .then(() => {
+                                          mostrarMensagem('✅ Plataforma excluída com sucesso!');
+                                          carregarInsumos();
+                                          carregarEstoque();
+                                        })
+                                        .catch(err => mostrarMensagem('❌ Erro ao excluir plataforma: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000));
+                                    }
+                                  }}
+                                  style={{ ...btnDangerStyle, padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.28)'}
+                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.14)'}
+                                >
+                                  Excluir
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ color: colors.textMuted, fontSize: '12px' }}>🔒 Somente Leitura</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -824,7 +875,16 @@ function App() {
             <PageHeader title="Cadastros do Sistema" subtitle="Embalagens, etiquetas e produtos." />
             <MessageBanner mensagem={mensagem} />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px', alignItems: 'start' }}>
+            {!podeEditar ? (
+              <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.amber}` }}>
+                <h3 style={cardTitleStyle}>🔒 Acesso Restrito ao Perfil Leitor</h3>
+                <p style={{ color: colors.textSecondary, margin: '8px 0 0 0', fontSize: '14px' }}>
+                  Sua conta possui perfil <strong>Leitor (Visualizador)</strong>. Para cadastrar novas embalagens, alterar custos de etiqueta ou cadastrar produtos, solicite autorização a um Administrador.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px', alignItems: 'start' }}>
               <CollapsibleCard
                 title="Nova Embalagem"
                 description="Caixas, sacos ou envelopes usados para enviar os produtos."
@@ -991,6 +1051,8 @@ function App() {
                 </button>
               </form>
             </div>
+            </div>
+            )}
           </div>
         )}
 
@@ -1093,8 +1155,12 @@ function App() {
                 </div>
               </div>
 
-              <div className="table-scroll">
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              {carregandoEstoque ? (
+                <SkeletonTable rows={6} cols={7} />
+              ) : (
+                <React.Fragment>
+                  <div className="table-scroll">
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
                       <th
@@ -1212,133 +1278,135 @@ function App() {
                             </td>
                             <td style={{ ...tableCellStyle, position: 'relative', zIndex: isMenuAberto ? 100 : 1 }}>
                               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                <div className="dropdown-acoes-container" style={{ position: 'relative', zIndex: isMenuAberto ? 100 : 1 }}>
-                                  <button
-                                    onClick={() => setMenuAcoesAberto(isMenuAberto ? null : item.sku)}
-                                    style={{
-                                      padding: '5px 12px',
-                                      fontSize: '12px',
-                                      fontWeight: 500,
-                                      borderRadius: '6px',
-                                      border: '1px solid #334155',
-                                      cursor: 'pointer',
-                                      whiteSpace: 'nowrap',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      height: '28px',
-                                      lineHeight: 1,
-                                      backgroundColor: isMenuAberto ? '#334155' : 'rgba(30, 41, 59, 0.75)',
-                                      color: isMenuAberto ? '#ffffff' : '#cbd5e1',
-                                      transition: '0.15s'
-                                    }}
-                                    onMouseEnter={e => {
-                                      if (!isMenuAberto) {
-                                        e.currentTarget.style.backgroundColor = '#334155';
-                                        e.currentTarget.style.color = '#ffffff';
-                                      }
-                                    }}
-                                    onMouseLeave={e => {
-                                      if (!isMenuAberto) {
-                                        e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)';
-                                        e.currentTarget.style.color = '#cbd5e1';
-                                      }
-                                    }}
-                                  >
-                                    ⚙️ Ações ▾
-                                  </button>
-
-                                  {isMenuAberto && (
-                                    <div
+                                {podeEditar && (
+                                  <div className="dropdown-acoes-container" style={{ position: 'relative', zIndex: isMenuAberto ? 100 : 1 }}>
+                                    <button
+                                      onClick={() => setMenuAcoesAberto(isMenuAberto ? null : item.sku)}
                                       style={{
-                                        position: 'absolute',
-                                        right: 0,
-                                        top: '100%',
-                                        marginTop: '4px',
-                                        backgroundColor: colors.bgCard,
-                                        border: `1px solid ${colors.borderStrong}`,
-                                        borderRadius: '8px',
-                                        boxShadow: '0 10px 30px rgba(0,0,0,0.85)',
-                                        zIndex: 1000,
-                                        minWidth: '160px',
-                                        padding: '4px 0',
-                                        display: 'flex',
-                                        flexDirection: 'column'
+                                        padding: '5px 12px',
+                                        fontSize: '12px',
+                                        fontWeight: 500,
+                                        borderRadius: '6px',
+                                        border: '1px solid #334155',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        height: '28px',
+                                        lineHeight: 1,
+                                        backgroundColor: isMenuAberto ? '#334155' : 'rgba(30, 41, 59, 0.75)',
+                                        color: isMenuAberto ? '#ffffff' : '#cbd5e1',
+                                        transition: '0.15s'
+                                      }}
+                                      onMouseEnter={e => {
+                                        if (!isMenuAberto) {
+                                          e.currentTarget.style.backgroundColor = '#334155';
+                                          e.currentTarget.style.color = '#ffffff';
+                                        }
+                                      }}
+                                      onMouseLeave={e => {
+                                        if (!isMenuAberto) {
+                                          e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)';
+                                          e.currentTarget.style.color = '#cbd5e1';
+                                        }
                                       }}
                                     >
-                                      <button
-                                        onClick={() => { setProdutoParaEditar(item); setMenuAcoesAberto(null); }}
-                                        style={{
-                                          padding: '8px 14px',
-                                          backgroundColor: 'transparent',
-                                          border: 'none',
-                                          color: colors.textPrimary,
-                                          fontSize: '12.5px',
-                                          fontWeight: 500,
-                                          textAlign: 'left',
-                                          cursor: 'pointer',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '8px',
-                                          width: '100%',
-                                          transition: '0.15s'
-                                        }}
-                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)'}
-                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                                      >
-                                        ✏️ Editar
-                                      </button>
+                                      ⚙️ Ações ▾
+                                    </button>
 
-                                      <button
-                                        onClick={() => { toggleStatusProduto(item.sku); setMenuAcoesAberto(null); }}
+                                    {isMenuAberto && (
+                                      <div
                                         style={{
-                                          padding: '8px 14px',
-                                          backgroundColor: 'transparent',
-                                          border: 'none',
-                                          color: item.ativo === false ? colors.successText : colors.amber,
-                                          fontSize: '12.5px',
-                                          fontWeight: 500,
-                                          textAlign: 'left',
-                                          cursor: 'pointer',
+                                          position: 'absolute',
+                                          right: 0,
+                                          top: '100%',
+                                          marginTop: '4px',
+                                          backgroundColor: colors.bgCard,
+                                          border: `1px solid ${colors.borderStrong}`,
+                                          borderRadius: '8px',
+                                          boxShadow: '0 10px 30px rgba(0,0,0,0.85)',
+                                          zIndex: 1000,
+                                          minWidth: '160px',
+                                          padding: '4px 0',
                                           display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '8px',
-                                          width: '100%',
-                                          transition: '0.15s'
+                                          flexDirection: 'column'
                                         }}
-                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.15)'}
-                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                                       >
-                                        {item.ativo === false ? '▶️ Ativar Produto' : '⏸️ Pausar Produto'}
-                                      </button>
+                                        <button
+                                          onClick={() => { setProdutoParaEditar(item); setMenuAcoesAberto(null); }}
+                                          style={{
+                                            padding: '8px 14px',
+                                            backgroundColor: 'transparent',
+                                            border: 'none',
+                                            color: colors.textPrimary,
+                                            fontSize: '12.5px',
+                                            fontWeight: 500,
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            width: '100%',
+                                            transition: '0.15s'
+                                          }}
+                                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)'}
+                                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                          ✏️ Editar
+                                        </button>
 
-                                      <div style={{ height: '1px', backgroundColor: colors.border, margin: '4px 0' }} />
+                                        <button
+                                          onClick={() => { toggleStatusProduto(item.sku); setMenuAcoesAberto(null); }}
+                                          style={{
+                                            padding: '8px 14px',
+                                            backgroundColor: 'transparent',
+                                            border: 'none',
+                                            color: item.ativo === false ? colors.successText : colors.amber,
+                                            fontSize: '12.5px',
+                                            fontWeight: 500,
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            width: '100%',
+                                            transition: '0.15s'
+                                          }}
+                                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.15)'}
+                                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                          {item.ativo === false ? '▶️ Ativar Produto' : '⏸️ Pausar Produto'}
+                                        </button>
 
-                                      <button
-                                        onClick={() => { setMenuAcoesAberto(null); excluirProduto(item.sku); }}
-                                        style={{
-                                          padding: '8px 14px',
-                                          backgroundColor: 'transparent',
-                                          border: 'none',
-                                          color: '#f87171',
-                                          fontSize: '12.5px',
-                                          fontWeight: 500,
-                                          textAlign: 'left',
-                                          cursor: 'pointer',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '8px',
-                                          width: '100%',
-                                          transition: '0.15s'
-                                        }}
-                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerBg}
-                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                                      >
-                                        🗑️ Excluir
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
+                                        <div style={{ height: '1px', backgroundColor: colors.border, margin: '4px 0' }} />
+
+                                        <button
+                                          onClick={() => { setMenuAcoesAberto(null); excluirProduto(item.sku); }}
+                                          style={{
+                                            padding: '8px 14px',
+                                            backgroundColor: 'transparent',
+                                            border: 'none',
+                                            color: '#f87171',
+                                            fontSize: '12.5px',
+                                            fontWeight: 500,
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            width: '100%',
+                                            transition: '0.15s'
+                                          }}
+                                          onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerBg}
+                                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                          🗑️ Excluir
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
 
                                 <button
                                   onClick={() => toggleExpandir(item.sku)}
@@ -1435,6 +1503,63 @@ function App() {
               )}
               {produtosDetalhados.length > 0 && produtosFiltrados.length === 0 && (
                 <p style={{ textAlign: 'center', color: colors.textMuted, marginTop: '24px' }}>Nenhum produto encontrado para "{buscaProduto}".</p>
+              )}
+
+              {/* Barra de Paginação */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap', gap: '12px', paddingTop: '16px', borderTop: `1px solid ${colors.border}` }}>
+                <div style={{ fontSize: '13px', color: colors.textSecondary }}>
+                  Exibindo página <strong>{paginaAtual}</strong> de <strong>{totalPaginas}</strong> (Total: <strong>{totalProdutos}</strong> {totalProdutos === 1 ? 'SKU' : 'SKUs'})
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: colors.textSecondary }}>
+                    <span>Por página:</span>
+                    <select
+                      value={itensPorPagina}
+                      onChange={e => {
+                        setItensPorPagina(Number(e.target.value));
+                        setPaginaAtual(1);
+                      }}
+                      style={{ ...inputStyle, width: '75px', marginBottom: 0, padding: '4px 8px', fontSize: '12px' }}
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      disabled={paginaAtual <= 1 || carregandoEstoque}
+                      onClick={() => setPaginaAtual(prev => Math.max(1, prev - 1))}
+                      style={{
+                        ...btnNeutralStyle,
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        opacity: (paginaAtual <= 1 || carregandoEstoque) ? 0.4 : 1,
+                        cursor: (paginaAtual <= 1 || carregandoEstoque) ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      ◀️ Anterior
+                    </button>
+                    <button
+                      disabled={paginaAtual >= totalPaginas || carregandoEstoque}
+                      onClick={() => setPaginaAtual(prev => Math.min(totalPaginas, prev + 1))}
+                      style={{
+                        ...btnNeutralStyle,
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        opacity: (paginaAtual >= totalPaginas || carregandoEstoque) ? 0.4 : 1,
+                        cursor: (paginaAtual >= totalPaginas || carregandoEstoque) ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      Próxima ▶️
+                    </button>
+                  </div>
+                </div>
+              </div>
+                </React.Fragment>
               )}
             </div>
           </div>
