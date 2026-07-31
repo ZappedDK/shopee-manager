@@ -351,7 +351,7 @@ function App() {
       }
     });
 
-  const abasLiberadas = (usuario?.abas_permitidas || 'dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios')
+  const abasLiberadas = (usuario?.abas_permitidas || 'dashboard,estoque,calculadora,historico,plataformas,insumos,usuarios,shopee,tiktok')
     .split(',')
     .map((a: string) => a.trim().toLowerCase());
 

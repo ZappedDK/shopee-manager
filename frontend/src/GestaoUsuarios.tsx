@@ -18,6 +18,8 @@ const TODAS_ABAS = [
   { id: 'estoque', nome: '📦 Controle de Estoque' },
   { id: 'calculadora', nome: '🧮 Simular / Precificar' },
   { id: 'historico', nome: '📜 Histórico de Ajustes' },
+  { id: 'shopee', nome: '🟠 Integração Shopee' },
+  { id: 'tiktok', nome: '🎵 Integração TikTok Shop' },
   { id: 'plataformas', nome: '🏷️ Taxas por Plataforma' },
   { id: 'insumos', nome: '📦 Insumos & Embalagens' },
   { id: 'usuarios', nome: '👥 Gestão de Usuários' },
