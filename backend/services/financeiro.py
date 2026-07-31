@@ -39,11 +39,27 @@ def obter_taxas_tiktok(preco_venda: float, taxa_extra: float = 0.0):
 
     return taxa_pct, taxa_fixa
 
+def obter_taxas_mercadolivre(preco_venda: float, taxa_extra: float = 0.0, taxa_base: float = 0.14):
+    """
+    Retorna (taxa_percentual, taxa_fixa) para o Mercado Livre (Clássico ou Premium):
+    - Abaixo de R$ 12,50: Custo fixo = 50% do valor da unidade (R$ 8 => R$ 4)
+    - De R$ 12,50 a R$ 78,99: Custo fixo R$ 6,00
+    - A partir de R$ 79,00: Sem custo fixo (R$ 0,00)
+    """
+    if preco_venda < 12.50:
+        taxa_fixa = preco_venda * 0.50
+    elif preco_venda < 79.00:
+        taxa_fixa = 6.00
+    else:
+        taxa_fixa = 0.00
+
+    return taxa_base + taxa_extra, taxa_fixa
+
 def obter_taxas_da_plataforma(preco_venda: float, plataforma: Any):
     """
     Obtém a % de comissão e a taxa fixa com base no preço de venda.
     Se a plataforma possuir faixas_json cadastradas, utiliza as faixas customizadas.
-    Caso contrário, verifica fallback para Shopee/TikTok ou campos fixos.
+    Caso contrário, verifica fallback para Shopee/TikTok/Mercado Livre ou campos fixos.
     """
     taxa_extra = getattr(plataforma, "taxa_extra", 0.0) or 0.0
     faixas_json = getattr(plataforma, "faixas_json", None)
@@ -74,6 +90,11 @@ def obter_taxas_da_plataforma(preco_venda: float, plataforma: Any):
         return obter_taxas_shopee(preco_venda, taxa_extra)
     elif "tiktok" in nome_lower or "tik tok" in nome_lower:
         return obter_taxas_tiktok(preco_venda, taxa_extra)
+    elif "mercado livre" in nome_lower or "mercadolivre" in nome_lower or "ml" in nome_lower:
+        taxa_base = float(getattr(plataforma, "taxa_plataforma", 0.0) or 0.0)
+        if taxa_base == 0.0:
+            taxa_base = 0.19 if "premium" in nome_lower else 0.14
+        return obter_taxas_mercadolivre(preco_venda, taxa_extra, taxa_base)
 
     tp = (getattr(plataforma, "taxa_plataforma", 0.0) or 0.0) + taxa_extra
     tf = getattr(plataforma, "taxa_fixa", 0.0) or 0.0
@@ -205,6 +226,15 @@ def calcular_preco_por_margem(
             faixas = [
                 {"max_p": 50.00, "taxa_pct": 0.10 + taxa_extra, "taxa_fixa": 4.00},
                 {"max_p": float('inf'), "taxa_pct": 0.06 + taxa_extra, "taxa_fixa": 6.00},
+            ]
+        elif "mercado livre" in nome_lower or "mercadolivre" in nome_lower or "ml" in nome_lower:
+            taxa_base = float(getattr(plataforma, "taxa_plataforma", 0.0) or 0.0)
+            if taxa_base == 0.0:
+                taxa_base = 0.19 if "premium" in nome_lower else 0.14
+            faixas = [
+                {"max_p": 12.49, "taxa_pct": taxa_base + 0.50 + taxa_extra, "taxa_fixa": 0.00},
+                {"max_p": 78.99, "taxa_pct": taxa_base + taxa_extra, "taxa_fixa": 6.00},
+                {"max_p": float('inf'), "taxa_pct": taxa_base + taxa_extra, "taxa_fixa": 0.00},
             ]
         else:
             tp = (getattr(plataforma, "taxa_plataforma", 0.0) or 0.0) + taxa_extra

@@ -68,7 +68,7 @@ export function HistoricoEstoque() {
         );
       case 'VENDA_WEBHOOK':
         return (
-          <span style={{ ...badgeBaseStyle, backgroundColor: 'rgba(139, 92, 246, 0.2)', color: colors.purple, border: '1px solid #7c3aed' }}>
+          <span style={{ ...badgeBaseStyle, backgroundColor: colors.dangerBg, color: colors.dangerText, border: `1px solid ${colors.dangerBorder}` }}>
             🛒 VENDA (WEBHOOK)
           </span>
         );

@@ -5,7 +5,7 @@ import {
   btnToggleClosedStyle, btnToggleOpenStyle,
 } from './theme';
 
-export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+export function PageHeader({ title, subtitle }: { title: React.ReactNode; subtitle?: string }) {
   return (
     <div style={{ marginBottom: '32px' }}>
       <h2 style={pageTitleStyle}>{title}</h2>

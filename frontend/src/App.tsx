@@ -9,6 +9,8 @@ import { ModalEditarPlataforma } from './ModalEditarPlataforma';
 import { HistoricoEstoque } from './HistoricoEstoque';
 import { ImportarProdutosModal } from './ImportarProdutosModal';
 import { GestaoUsuarios } from './GestaoUsuarios';
+import { IntegracaoShopee } from './IntegracaoShopee';
+import { IntegracaoTikTok } from './IntegracaoTikTok';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
 import { SkeletonTable } from './Skeleton';
 import {
@@ -18,7 +20,7 @@ import {
   tableHeaderStyle, tableCellStyle, formatarMoeda, formatarNumero
 } from './theme';
 
-type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas' | 'simulador' | 'historico' | 'usuarios';
+type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas' | 'simulador' | 'historico' | 'usuarios' | 'shopee' | 'tiktok';
 
 function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
@@ -363,7 +365,7 @@ function App() {
   };
 
   // Item de menu com hover sutil (inline styles não têm :hover)
-  const MenuItem = ({ icon, label, target }: { icon: string; label: string; target: View }) => {
+  const MenuItem = ({ icon, label, target }: { icon: React.ReactNode; label: string; target: View }) => {
     const ativo = view === target;
     return (
       <div
@@ -372,7 +374,8 @@ function App() {
         onMouseEnter={e => { if (!ativo) e.currentTarget.style.backgroundColor = 'rgba(148,163,184,0.08)'; }}
         onMouseLeave={e => { if (!ativo) e.currentTarget.style.backgroundColor = 'transparent'; }}
       >
-        <span>{icon}</span><span>{label}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', flexShrink: 0 }}>{icon}</span>
+        <span>{label}</span>
       </div>
     );
   };
@@ -418,6 +421,22 @@ function App() {
           <div style={sidebarGroupLabelStyle}>Ferramentas</div>
           {(temPermissaoAba('calculadora') || temPermissaoAba('simulador')) && <MenuItem icon="🎯" label="Simulador de Preço" target="simulador" />}
           {temPermissaoAba('historico') && <MenuItem icon="📋" label="Histórico de Estoque" target="historico" />}
+
+          <div style={sidebarGroupLabelStyle}>Integrações</div>
+          {temPermissaoAba('shopee') && (
+            <MenuItem
+              icon={<img src="/logos/shopee.png" alt="Shopee" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 3 }} />}
+              label="Integração Shopee"
+              target="shopee"
+            />
+          )}
+          {temPermissaoAba('tiktok') && (
+            <MenuItem
+              icon={<img src="/logos/tiktokshop.png" alt="TikTok" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 3 }} />}
+              label="Integração TikTok Shop"
+              target="tiktok"
+            />
+          )}
 
           <div style={sidebarGroupLabelStyle}>Configurações</div>
           {temPermissaoAba('plataformas') && <MenuItem icon="🏪" label="Plataformas de Venda" target="plataformas" />}
@@ -1567,6 +1586,14 @@ function App() {
 
         {view === 'usuarios' && (
           <GestaoUsuarios />
+        )}
+
+        {view === 'shopee' && (
+          <IntegracaoShopee onEstoqueAtualizado={carregarEstoque} />
+        )}
+
+        {view === 'tiktok' && (
+          <IntegracaoTikTok onEstoqueAtualizado={carregarEstoque} />
         )}
       </div>
 

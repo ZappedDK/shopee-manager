@@ -19,6 +19,8 @@ from core.database import engine, get_db, Base
 from models import domain as models_domain
 from schemas import domain as schemas_domain
 from services.financeiro import calcular_metricas_plataforma, calcular_preco_por_margem, limpar_cache_financeiro
+from services.shopee_api import ShopeeClient, extrair_itens_do_webhook
+from services.tiktok_api import TikTokShopClient, extrair_itens_do_webhook_tiktok
 
 def obter_ou_criar_etiqueta_padrao(db: Session):
     etiqueta = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave="etiqueta_padrao").first()
@@ -58,6 +60,13 @@ try:
                 default_val = "1" if engine.url.drivername.startswith("sqlite") else "TRUE"
                 conn.execute(text(f"ALTER TABLE produtos ADD COLUMN ativo BOOLEAN DEFAULT {default_val}"))
             print("✅ Coluna ativo adicionada à tabela produtos!")
+
+    if inspector.has_table("configuracoes_globais"):
+        columns_cfg = [col["name"] for col in inspector.get_columns("configuracoes_globais")]
+        if "valor_texto" not in columns_cfg:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE configuracoes_globais ADD COLUMN valor_texto VARCHAR(500)"))
+            print("✅ Coluna valor_texto adicionada à tabela configuracoes_globais!")
 
     if inspector.has_table("usuarios"):
         columns_user = [col["name"] for col in inspector.get_columns("usuarios")]
@@ -460,7 +469,10 @@ def cadastrar_produto(produto_data: schemas_domain.ProdutoCreate, db: Session = 
 
 @app.put("/produtos/{sku}", tags=["Estoque"])
 def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = Depends(get_db), current_user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
-    produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
+    prod_id = int(sku) if sku.isdigit() else -1
+    produto = db.query(models_domain.Produto).filter(
+        (models_domain.Produto.sku.ilike(sku)) | (models_domain.Produto.id == prod_id)
+    ).first()
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado.")
 
@@ -1029,25 +1041,84 @@ def simular_preco_produto_existente(
     }
 
 
-# --- WEBHOOKS E INTEGRAÇÕES ---
-class ShopeeWebhookPayload(BaseModel):
-    shop_id: int
-    code: int
-    data: dict
+# --- CONFIGURAÇÃO E INTEGRAÇÃO SHOPEE ---
+class ShopeeConfigSchema(BaseModel):
+    partner_id: Optional[int] = None
+    partner_key: Optional[str] = None
+    shop_id: Optional[int] = None
+    ambiente: Optional[str] = "PRODUCAO"
 
-@app.post("/webhooks/shopee", tags=["Integrações"])
-async def receber_venda_shopee(payload: dict, db: Session = Depends(get_db)):
-    dados = payload.get("data", {})
-    order_sn = dados.get("ordersn")
+class SimularVendaShopeeSchema(BaseModel):
+    sku: str
+    quantidade: int = 1
+    order_sn: Optional[str] = None
+
+@app.get("/shopee/config", tags=["Integração Shopee"])
+def obter_configuracao_shopee(db: Session = Depends(get_db)):
+    configs = db.query(models_domain.ConfiguracaoGlobal).filter(
+        models_domain.ConfiguracaoGlobal.chave.in_(["shopee_partner_id", "shopee_partner_key", "shopee_shop_id", "shopee_ambiente"])
+    ).all()
     
-    if order_sn == "TESTE-001":
-        sku_simulado = dados.get("sku")
-        qtd_simulada = dados.get("quantidade", 1)
-        
-        produto = db.query(models_domain.Produto).filter_by(sku=sku_simulado).first()
+    cfg_map = {c.chave: c.valor_texto for c in configs}
+    return {
+        "partner_id": int(cfg_map.get("shopee_partner_id")) if cfg_map.get("shopee_partner_id") and cfg_map.get("shopee_partner_id").isdigit() else None,
+        "partner_key": cfg_map.get("shopee_partner_key") or "",
+        "shop_id": int(cfg_map.get("shopee_shop_id")) if cfg_map.get("shopee_shop_id") and cfg_map.get("shopee_shop_id").isdigit() else None,
+        "ambiente": cfg_map.get("shopee_ambiente") or "PRODUCAO"
+    }
+
+@app.post("/shopee/config", tags=["Integração Shopee"])
+def salvar_configuracao_shopee(
+    dados: ShopeeConfigSchema,
+    db: Session = Depends(get_db),
+    _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)
+):
+    mapeamento = {
+        "shopee_partner_id": str(dados.partner_id) if dados.partner_id else "",
+        "shopee_partner_key": str(dados.partner_key).strip() if dados.partner_key else "",
+        "shopee_shop_id": str(dados.shop_id) if dados.shop_id else "",
+        "shopee_ambiente": dados.ambiente or "PRODUCAO"
+    }
+
+    for chave, valor in mapeamento.items():
+        item = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave=chave).first()
+        if item:
+            item.valor_texto = valor
+        else:
+            item = models_domain.ConfiguracaoGlobal(chave=chave, valor_texto=valor, valor_pacote=0.0, qtd_unidades=1)
+            db.add(item)
+
+    db.commit()
+    return {"status": "sucesso", "mensagem": "Credenciais da Shopee salvas com sucesso!"}
+
+@app.post("/webhooks/shopee", tags=["Integração Shopee"])
+async def receber_venda_shopee(payload: dict, db: Session = Depends(get_db)):
+    """
+    Webhook oficial para receber notificações de vendas da Shopee (API v2).
+    Extrai SKUs e quantidades vendidas, abatendo automaticamente no Skold Stock.
+    """
+    import time
+    dados = payload.get("data", payload)
+    order_sn = str(dados.get("ordersn") or dados.get("order_sn") or f"SN-{int(time.time())}")
+
+    itens = extrair_itens_do_webhook(payload)
+    if not itens:
+        return {"status": "ignorado", "motivo": "Nenhum SKU/item identificado no payload do webhook"}
+
+    baixados = []
+    nao_encontrados = []
+
+    for item in itens:
+        sku = item["sku"]
+        qtd = item["quantidade"]
+
+        produto = db.query(models_domain.Produto).filter(
+            models_domain.Produto.sku.ilike(sku)
+        ).first()
+
         if produto:
             estoque_ant = produto.quantidade_estoque
-            produto.quantidade_estoque -= qtd_simulada
+            produto.quantidade_estoque -= qtd
             estoque_novo = produto.quantidade_estoque
 
             registrar_movimentacao(
@@ -1055,20 +1126,226 @@ async def receber_venda_shopee(payload: dict, db: Session = Depends(get_db)):
                 produto_id=produto.id,
                 produto_sku=produto.sku,
                 produto_nome=produto.nome,
-                tipo="SAIDA",
-                qtd_alterada=qtd_simulada,
+                tipo="VENDA_WEBHOOK",
+                qtd_alterada=qtd,
                 estoque_ant=estoque_ant,
                 estoque_novo=estoque_novo,
                 motivo=f"Baixa automática Venda Shopee #{order_sn}",
                 usuario_nome="Shopee Webhook"
             )
-
-            db.commit()
-            return {"status": "sucesso", "estoque_restante": produto.quantidade_estoque}
+            baixados.append({"sku": produto.sku, "nome": produto.nome, "qtd_baixada": qtd, "novo_estoque": estoque_novo})
         else:
-            return {"status": "erro", "motivo": f"SKU '{sku_simulado}' não encontrado."}
-            
-    return {"status": "recebido_sem_acao"}
+            nao_encontrados.append({"sku": sku, "qtd": qtd})
+
+    db.commit()
+    return {
+        "status": "sucesso",
+        "order_sn": order_sn,
+        "itens_baixados": baixados,
+        "nao_encontrados": nao_encontrados
+    }
+
+@app.post("/shopee/simular-venda", tags=["Integração Shopee"])
+def simular_venda_shopee(
+    dados: SimularVendaShopeeSchema,
+    db: Session = Depends(get_db),
+    _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)
+):
+    """
+    Simula o recebimento de uma venda da Shopee para testar a baixa de estoque em tempo real.
+    """
+    import time
+    sku_limpo = dados.sku.strip()
+    produto = db.query(models_domain.Produto).filter(
+        models_domain.Produto.sku.ilike(sku_limpo)
+    ).first()
+
+    if not produto:
+        raise HTTPException(status_code=404, detail=f"Produto com SKU '{sku_limpo}' não foi encontrado no sistema.")
+
+    order_sn = dados.order_sn or f"SIMULADO-{int(time.time())}"
+    qtd = max(1, dados.quantidade)
+
+    estoque_ant = produto.quantidade_estoque
+    produto.quantidade_estoque -= qtd
+    estoque_novo = produto.quantidade_estoque
+
+    registrar_movimentacao(
+        db=db,
+        produto_id=produto.id,
+        produto_sku=produto.sku,
+        produto_nome=produto.nome,
+        tipo="VENDA_WEBHOOK",
+        qtd_alterada=qtd,
+        estoque_ant=estoque_ant,
+        estoque_novo=estoque_novo,
+        motivo=f"Venda de Teste Shopee #{order_sn}",
+        usuario_nome=_user.nome
+    )
+
+    db.commit()
+    return {
+        "status": "sucesso",
+        "mensagem": f"Venda de {qtd} un. do SKU '{produto.sku}' processada com sucesso!",
+        "order_sn": order_sn,
+        "sku": produto.sku,
+        "nome": produto.nome,
+        "estoque_anterior": estoque_ant,
+        "novo_estoque": estoque_novo
+    }
+
+# --- CONFIGURAÇÃO E INTEGRAÇÃO TIKTOK SHOP ---
+class TikTokConfigSchema(BaseModel):
+    app_key: Optional[str] = None
+    app_secret: Optional[str] = None
+    shop_cipher: Optional[str] = None
+    ambiente: Optional[str] = "PRODUCAO"
+
+class SimularVendaTikTokSchema(BaseModel):
+    sku: str
+    quantidade: int = 1
+    order_id: Optional[str] = None
+
+@app.get("/tiktok/config", tags=["Integração TikTok Shop"])
+def obter_configuracao_tiktok(db: Session = Depends(get_db)):
+    configs = db.query(models_domain.ConfiguracaoGlobal).filter(
+        models_domain.ConfiguracaoGlobal.chave.in_(["tiktok_app_key", "tiktok_app_secret", "tiktok_shop_cipher", "tiktok_ambiente"])
+    ).all()
+    
+    cfg_map = {c.chave: c.valor_texto for c in configs}
+    return {
+        "app_key": cfg_map.get("tiktok_app_key") or "",
+        "app_secret": cfg_map.get("tiktok_app_secret") or "",
+        "shop_cipher": cfg_map.get("tiktok_shop_cipher") or "",
+        "ambiente": cfg_map.get("tiktok_ambiente") or "PRODUCAO"
+    }
+
+@app.post("/tiktok/config", tags=["Integração TikTok Shop"])
+def salvar_configuracao_tiktok(
+    dados: TikTokConfigSchema,
+    db: Session = Depends(get_db),
+    _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)
+):
+    mapeamento = {
+        "tiktok_app_key": str(dados.app_key).strip() if dados.app_key else "",
+        "tiktok_app_secret": str(dados.app_secret).strip() if dados.app_secret else "",
+        "tiktok_shop_cipher": str(dados.shop_cipher).strip() if dados.shop_cipher else "",
+        "tiktok_ambiente": dados.ambiente or "PRODUCAO"
+    }
+
+    for chave, valor in mapeamento.items():
+        item = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave=chave).first()
+        if item:
+            item.valor_texto = valor
+        else:
+            item = models_domain.ConfiguracaoGlobal(chave=chave, valor_texto=valor, valor_pacote=0.0, qtd_unidades=1)
+            db.add(item)
+
+    db.commit()
+    return {"status": "sucesso", "mensagem": "Credenciais do TikTok Shop salvas com sucesso!"}
+
+@app.post("/webhooks/tiktok", tags=["Integração TikTok Shop"])
+async def receber_venda_tiktok(payload: dict, db: Session = Depends(get_db)):
+    """
+    Webhook oficial para receber notificações de vendas do TikTok Shop.
+    Extrai SKUs e quantidades vendidas, abatendo automaticamente no Skold Stock.
+    """
+    import time
+    dados = payload.get("data", payload)
+    order_id = str(dados.get("order_id") or dados.get("ordersn") or payload.get("order_id") or f"TT-{int(time.time())}")
+
+    itens = extrair_itens_do_webhook_tiktok(payload)
+    if not itens:
+        return {"status": "ignorado", "motivo": "Nenhum SKU/item identificado no payload do webhook TikTok"}
+
+    baixados = []
+    nao_encontrados = []
+
+    for item in itens:
+        sku = item["sku"]
+        qtd = item["quantidade"]
+
+        produto = db.query(models_domain.Produto).filter(
+            models_domain.Produto.sku.ilike(sku)
+        ).first()
+
+        if produto:
+            estoque_ant = produto.quantidade_estoque
+            produto.quantidade_estoque -= qtd
+            estoque_novo = produto.quantidade_estoque
+
+            registrar_movimentacao(
+                db=db,
+                produto_id=produto.id,
+                produto_sku=produto.sku,
+                produto_nome=produto.nome,
+                tipo="VENDA_WEBHOOK",
+                qtd_alterada=qtd,
+                estoque_ant=estoque_ant,
+                estoque_novo=estoque_novo,
+                motivo=f"Baixa automática Venda TikTok Shop #{order_id}",
+                usuario_nome="TikTok Webhook"
+            )
+            baixados.append({"sku": produto.sku, "nome": produto.nome, "qtd_baixada": qtd, "novo_estoque": estoque_novo})
+        else:
+            nao_encontrados.append({"sku": sku, "qtd": qtd})
+
+    db.commit()
+    return {
+        "status": "sucesso",
+        "order_id": order_id,
+        "itens_baixados": baixados,
+        "nao_encontrados": nao_encontrados
+    }
+
+@app.post("/tiktok/simular-venda", tags=["Integração TikTok Shop"])
+def simular_venda_tiktok(
+    dados: SimularVendaTikTokSchema,
+    db: Session = Depends(get_db),
+    _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)
+):
+    """
+    Simula o recebimento de uma venda do TikTok Shop para testar a baixa de estoque em tempo real.
+    """
+    import time
+    sku_limpo = dados.sku.strip()
+    produto = db.query(models_domain.Produto).filter(
+        models_domain.Produto.sku.ilike(sku_limpo)
+    ).first()
+
+    if not produto:
+        raise HTTPException(status_code=404, detail=f"Produto com SKU '{sku_limpo}' não foi encontrado no sistema.")
+
+    order_id = dados.order_id or f"TT-SIMULADO-{int(time.time())}"
+    qtd = max(1, dados.quantidade)
+
+    estoque_ant = produto.quantidade_estoque
+    produto.quantidade_estoque -= qtd
+    estoque_novo = produto.quantidade_estoque
+
+    registrar_movimentacao(
+        db=db,
+        produto_id=produto.id,
+        produto_sku=produto.sku,
+        produto_nome=produto.nome,
+        tipo="VENDA_WEBHOOK",
+        qtd_alterada=qtd,
+        estoque_ant=estoque_ant,
+        estoque_novo=estoque_novo,
+        motivo=f"Venda de Teste TikTok Shop #{order_id}",
+        usuario_nome=_user.nome
+    )
+
+    db.commit()
+    return {
+        "status": "sucesso",
+        "mensagem": f"Venda TikTok Shop de {qtd} un. do SKU '{produto.sku}' processada com sucesso!",
+        "order_id": order_id,
+        "sku": produto.sku,
+        "nome": produto.nome,
+        "estoque_anterior": estoque_ant,
+        "novo_estoque": estoque_novo
+    }
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

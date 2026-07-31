@@ -15,8 +15,9 @@ class ConfiguracaoGlobal(Base):
     __tablename__ = "configuracoes_globais"
     id = Column(Integer, primary_key=True, index=True)
     chave = Column(String(50), unique=True, index=True, nullable=False)
-    valor_pacote = Column(Float, nullable=False)
-    qtd_unidades = Column(Integer, nullable=False)
+    valor_pacote = Column(Float, nullable=True, default=0.0)
+    qtd_unidades = Column(Integer, nullable=True, default=1)
+    valor_texto = Column(String(500), nullable=True)
 
 class Embalagem(Base):
     __tablename__ = "embalagens"

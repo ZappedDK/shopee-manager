@@ -28,9 +28,9 @@ class PlataformaCreate(BaseModel):
 class ProdutoCreate(BaseModel):
     sku: str
     nome: str
-    preco_venda: float = Field(..., gt=0)
-    custo_produto: float = Field(..., gt=0)
-    quantidade_estoque: int = Field(..., ge=0)
+    preco_venda: float = Field(..., ge=0)
+    custo_produto: float = Field(..., ge=0)
+    quantidade_estoque: int = 0
     ativo: Optional[bool] = True
     embalagem_id: Optional[int] = None
     plataformas_ids: List[int] = []
@@ -84,13 +84,13 @@ class RedefinirSenhaRequest(BaseModel):
 
 class ProdutoUpdate(BaseModel):
     nome: str
-    preco_venda: float = Field(..., gt=0)
-    custo_produto: float = Field(..., gt=0)
-    quantidade_estoque: int = Field(..., ge=0)
+    preco_venda: float = Field(..., ge=0)
+    custo_produto: float = Field(..., ge=0)
+    quantidade_estoque: int = 0
     ativo: Optional[bool] = True
     embalagem_id: Optional[int] = None
     plataformas_ids: List[int] = []
-    motivo_ajuste: str = "Edição de produto/custo/estoque"
+    motivo_ajuste: Optional[str] = "Edição de produto/custo/estoque"
 
 class MovimentacaoEstoqueResponse(BaseModel):
     id: int
