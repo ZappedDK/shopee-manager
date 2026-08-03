@@ -527,6 +527,7 @@ def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = 
         )
 
     db.commit()
+    db.expire_all()
     return {"status": "sucesso", "produto": produto.nome}
 
 @app.delete("/produtos/{sku}", tags=["Estoque"])
@@ -865,7 +866,11 @@ def listar_produtos_detalhados(
     custo_etiq = etiqueta.valor_pacote / etiqueta.qtd_unidades
 
     for p in produtos:
-        custo_emb = (p.embalagem.custo_pacote / p.embalagem.qtd_unidades) if p.embalagem else 0.0
+        emb_obj = p.embalagem
+        if not emb_obj and p.embalagem_id:
+            emb_obj = db.query(models_domain.Embalagem).filter_by(id=p.embalagem_id).first()
+
+        custo_emb = (emb_obj.custo_pacote / emb_obj.qtd_unidades) if (emb_obj and emb_obj.qtd_unidades > 0) else 0.0
         metricas_multiplas = []
         
         # Calcula as métricas apenas para a página de produtos retornada
@@ -888,7 +893,7 @@ def listar_produtos_detalhados(
             "custo_produto": p.custo_produto,
             "ativo": p.ativo if p.ativo is not None else True,
             "embalagem_id": p.embalagem_id,
-            "embalagem_nome": p.embalagem.nome if p.embalagem else "Caixa Própria",
+            "embalagem_nome": emb_obj.nome if emb_obj else "Caixa Própria",
             "valor_estoque": p.quantidade_estoque * p.custo_produto,
             "analises_plataformas": metricas_multiplas
         })

@@ -25,13 +25,23 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
   const [erro, setErro] = useState('');
 
   useEffect(() => {
-    // Inicializa IDs das plataformas vinculadas ao produto
-    if (produto.analises_plataformas && Array.isArray(produto.analises_plataformas)) {
-      const ids = produto.analises_plataformas.map((a: any) => a.plataforma_id);
-      setPlataformasIds(ids);
-    } else if (produto.plataformas && Array.isArray(produto.plataformas)) {
-      const ids = produto.plataformas.map((p: any) => p.id);
-      setPlataformasIds(ids);
+    if (produto) {
+      setNome(produto.nome || '');
+      setPrecoVenda(produto.preco_venda ? String(produto.preco_venda) : '');
+      setCustoProduto(produto.custo_produto ? String(produto.custo_produto) : '');
+      setQuantidadeEstoque(produto.quantidade_estoque !== undefined ? String(produto.quantidade_estoque) : '0');
+      setAtivo(produto.ativo !== false);
+      
+      const embId = produto.embalagem_id ? String(produto.embalagem_id) : (produto.embalagem?.id ? String(produto.embalagem.id) : '');
+      setEmbalagemId(embId);
+
+      if (produto.analises_plataformas && Array.isArray(produto.analises_plataformas)) {
+        const ids = produto.analises_plataformas.map((a: any) => a.plataforma_id);
+        setPlataformasIds(ids);
+      } else if (produto.plataformas && Array.isArray(produto.plataformas)) {
+        const ids = produto.plataformas.map((p: any) => p.id);
+        setPlataformasIds(ids);
+      }
     }
   }, [produto]);
 
