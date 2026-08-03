@@ -1179,7 +1179,7 @@ def simular_venda_shopee(
         qtd_alterada=qtd,
         estoque_ant=estoque_ant,
         estoque_novo=estoque_novo,
-        motivo=f"Venda de Teste Shopee #{order_sn}",
+        motivo=f"Venda Shopee #{order_sn}",
         usuario_nome=_user.nome
     )
 
@@ -1332,7 +1332,7 @@ def simular_venda_tiktok(
         qtd_alterada=qtd,
         estoque_ant=estoque_ant,
         estoque_novo=estoque_novo,
-        motivo=f"Venda de Teste TikTok Shop #{order_id}",
+        motivo=f"Venda TikTok Shop #{order_id}",
         usuario_nome=_user.nome
     )
 
