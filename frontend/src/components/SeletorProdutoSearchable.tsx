@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-interface SeletorProdutoProps {
+interface SeletorProdutoSearchableProps {
   produtos: any[];
   skuSelecionado: string;
   onSelectSku: (sku: string) => void;
@@ -8,15 +8,22 @@ interface SeletorProdutoProps {
   inputStyle: any;
 }
 
-export function SeletorProdutoSearchable({ produtos, skuSelecionado, onSelectSku, colors, inputStyle }: SeletorProdutoProps) {
+export function SeletorProdutoSearchable({ produtos, skuSelecionado, onSelectSku, colors, inputStyle }: SeletorProdutoSearchableProps) {
   const [aberto, setAberto] = useState(false);
-  const [busca, setBusca] = useState('');
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [termoBusca, setTermoBusca] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Fecha o dropdown ao clicar fora do componente
+  const produtoAtual = produtos.find(p => p.sku === skuSelecionado);
+
+  const produtosFiltrados = produtos.filter((p) => {
+    const t = termoBusca.toLowerCase().trim();
+    if (!t) return true;
+    return (p.sku && p.sku.toLowerCase().includes(t)) || (p.nome && p.nome.toLowerCase().includes(t));
+  });
+
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setAberto(false);
       }
     };
@@ -24,153 +31,115 @@ export function SeletorProdutoSearchable({ produtos, skuSelecionado, onSelectSku
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const produtoSelecionado = produtos.find(p => p.sku === skuSelecionado);
-
-  const produtosFiltrados = produtos.filter(p => {
-    if (!busca.trim()) return true;
-    const b = busca.toLowerCase();
-    return (
-      (p.sku && p.sku.toLowerCase().includes(b)) ||
-      (p.nome && p.nome.toLowerCase().includes(b))
-    );
-  });
-
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
-      {/* Botão Principal Estilizado como Caixa de Seleção */}
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      {/* Campo Principal (Clique para abrir) - Idêntico ao Simulador de Preço */}
       <div
         onClick={() => setAberto(!aberto)}
         style={{
           ...inputStyle,
           width: '100%',
+          maxWidth: 'none',
           margin: 0,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           cursor: 'pointer',
+          border: `1px solid ${aberto ? (colors.accent || '#3b82f6') : (colors.borderStrong || colors.border || '#374151')}`,
+          backgroundColor: colors.bgInput || colors.cardBackground || '#1f2937',
           userSelect: 'none',
-          backgroundColor: colors.cardBackground,
-          borderColor: aberto ? colors.accent : colors.border,
-          color: produtoSelecionado ? colors.textPrimary : colors.textSecondary,
-          fontWeight: produtoSelecionado ? 'bold' : 'normal',
-          fontSize: '13.5px',
-          boxShadow: aberto ? `0 0 0 2px ${colors.accent}33` : 'none',
-          transition: 'all 0.2s ease',
           boxSizing: 'border-box'
         }}
       >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>
-          {produtoSelecionado ? (
-            <>
-              <span style={{ color: colors.accent, fontWeight: 'bold' }}>{produtoSelecionado.sku}</span>
-              {' — '}
-              <span>{produtoSelecionado.nome}</span>
-              <span style={{ color: colors.textSecondary, fontSize: '12px', marginLeft: '6px' }}>
-                (Estoque: {produtoSelecionado.quantidade_estoque} un.)
-              </span>
-            </>
-          ) : (
-            'Selecione o produto para simulação...'
-          )}
+        <span style={{ color: produtoAtual ? (colors.textPrimary || '#fff') : (colors.textMuted || colors.textSecondary || '#9ca3af'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {produtoAtual ? `📦 ${produtoAtual.sku} — ${produtoAtual.nome} (Estoque: ${produtoAtual.quantidade_estoque ?? 0} un.)` : 'Selecione um produto...'}
         </span>
-        <span style={{ fontSize: '11px', color: colors.textSecondary }}>{aberto ? '▲' : '▼'}</span>
+        <span style={{ fontSize: '12px', color: colors.textSecondary || '#9ca3af', marginLeft: '8px' }}>
+          {aberto ? '▲' : '▼'}
+        </span>
       </div>
 
-      {/* Menu Dropdown Suspenso com Campo de Pesquisa Interno */}
+      {/* Painel Flutuante com busca + lista */}
       {aberto && (
         <div
           style={{
             position: 'absolute',
-            top: 'calc(100% + 6px)',
+            top: 'calc(100% + 4px)',
             left: 0,
             right: 0,
-            zIndex: 999,
-            backgroundColor: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
+            backgroundColor: colors.bgSidebar || colors.cardBackground || '#111827',
+            border: `1px solid ${colors.borderStrong || colors.border || '#374151'}`,
             borderRadius: '10px',
-            boxShadow: '0 12px 28px rgba(0,0,0,0.35)',
-            padding: '10px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px'
+            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            zIndex: 1000,
+            padding: '8px',
           }}
         >
-          {/* Campo de Busca DENTRO do Dropdown */}
-          <div>
-            <input
-              type="text"
-              autoFocus
-              placeholder="🔎 Pesquisar produto ou SKU..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              style={{
-                ...inputStyle,
-                width: '100%',
-                margin: 0,
-                fontSize: '12.5px',
-                padding: '8px 12px',
-                backgroundColor: colors.background,
-                borderColor: colors.accent,
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
+          {/* Campo de Pesquisa Interno */}
+          <input
+            type="text"
+            placeholder="🔍 Digite para pesquisar SKU ou Nome..."
+            value={termoBusca}
+            onChange={(e) => setTermoBusca(e.target.value)}
+            autoFocus
+            style={{
+              ...inputStyle,
+              width: '100%',
+              maxWidth: 'none',
+              marginBottom: '8px',
+              padding: '8px 12px',
+              fontSize: '13px',
+              backgroundColor: colors.bgApp || colors.background || '#030712',
+              boxSizing: 'border-box'
+            }}
+          />
 
-          {/* Lista Scrollável de Produtos */}
-          <div style={{ maxHeight: '210px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            {produtosFiltrados.length > 0 ? (
+          {/* Lista de Opções */}
+          <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+            {produtosFiltrados.length === 0 ? (
+              <div style={{ padding: '10px', color: colors.textMuted || '#6b7280', textAlign: 'center', fontSize: '13px' }}>
+                Nenhum produto encontrado
+              </div>
+            ) : (
               produtosFiltrados.map((p) => {
-                const eSelecionado = p.sku === skuSelecionado;
+                const selecionado = p.sku === skuSelecionado;
                 return (
                   <div
-                    key={p.id}
+                    key={p.sku}
                     onClick={() => {
                       onSelectSku(p.sku);
                       setAberto(false);
+                      setTermoBusca('');
                     }}
                     style={{
-                      padding: '8px 12px',
+                      padding: '10px 12px',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '13px',
+                      backgroundColor: selecionado ? 'rgba(59,130,246,0.2)' : 'transparent',
+                      color: selecionado ? '#fff' : (colors.textPrimary || '#f3f4f6'),
+                      fontWeight: selecionado ? 600 : 400,
+                      marginBottom: '2px',
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
-                      backgroundColor: eSelecionado ? `${colors.accent}22` : 'transparent',
-                      color: eSelecionado ? colors.accent : colors.textPrimary,
-                      fontWeight: eSelecionado ? 'bold' : 'normal',
-                      transition: 'background-color 0.15s ease'
+                      alignItems: 'center'
                     }}
                     onMouseEnter={(e) => {
-                      if (!eSelecionado) e.currentTarget.style.backgroundColor = `${colors.border}44`;
+                      if (!selecionado) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
                     }}
                     onMouseLeave={(e) => {
-                      if (!eSelecionado) e.currentTarget.style.backgroundColor = 'transparent';
+                      if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingRight: '8px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 600 }}>{p.sku} — {p.nome}</span>
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        padding: '2px 8px',
-                        borderRadius: '10px',
-                        backgroundColor: p.quantidade_estoque > 5 ? '#10b98122' : '#f59e0b22',
-                        color: p.quantidade_estoque > 5 ? '#10b981' : '#f59e0b',
-                        fontWeight: 'bold',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {p.quantidade_estoque} un.
+                    <span>
+                      <strong style={{ color: colors.accent || '#3b82f6' }}>{p.sku}</strong> — {p.nome}
+                    </span>
+                    <span style={{ fontSize: '12px', color: colors.textSecondary || '#9ca3af', marginLeft: '8px' }}>
+                      Estoque: {p.quantidade_estoque ?? 0} un.
                     </span>
                   </div>
                 );
               })
-            ) : (
-              <div style={{ padding: '12px', textAlign: 'center', fontSize: '12.5px', color: colors.textSecondary }}>
-                Nenhum produto encontrado com "{busca}".
-              </div>
             )}
           </div>
         </div>
