@@ -23,9 +23,19 @@ export function IntegracaoShopee({ onEstoqueAtualizado }: IntegracaoShopeeProps)
   // Simulador de Venda
   const [produtos, setProdutos] = useState<any[]>([]);
   const [skuSimulado, setSkuSimulado] = useState<string>('');
+  const [buscaSku, setBuscaSku] = useState<string>('');
   const [qtdSimulada, setQtdSimulada] = useState<number>(1);
   const [simulando, setSimulando] = useState<boolean>(false);
   const [copiado, setCopiado] = useState<boolean>(false);
+
+  const produtosFiltrados = produtos.filter((p) => {
+    if (!buscaSku.trim()) return true;
+    const termo = buscaSku.toLowerCase();
+    return (
+      (p.sku && p.sku.toLowerCase().includes(termo)) ||
+      (p.nome && p.nome.toLowerCase().includes(termo))
+    );
+  });
 
   const webhookUrl = `${window.location.protocol}//${window.location.host}/api/webhooks/shopee`;
 
@@ -231,31 +241,46 @@ export function IntegracaoShopee({ onEstoqueAtualizado }: IntegracaoShopeeProps)
         </p>
 
         <form onSubmit={executarSimulacaoVenda} style={{ marginTop: '20px', display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: 2, minWidth: '240px' }}>
-            <label style={{ display: 'block', color: colors.textSecondary, fontSize: '12.5px', marginBottom: '6px' }}>
-              Selecionar SKU para Teste:
+          <div style={{ flex: 2, minWidth: '280px' }}>
+            <label style={{ display: 'block', color: colors.textSecondary, fontSize: '12.5px', marginBottom: '6px', fontWeight: 600 }}>
+              🔍 Pesquisar & Selecionar SKU para Teste:
             </label>
-            {produtos.length > 0 ? (
-              <select
-                value={skuSimulado}
-                onChange={(e) => setSkuSimulado(e.target.value)}
-                style={{ ...inputStyle, width: '100%', margin: 0, color: colors.textPrimary, fontWeight: 'bold' }}
-              >
-                {produtos.map((p) => (
-                  <option key={p.id} value={p.sku}>
-                    {p.sku} — {p.nome} (Estoque Atual: {p.quantidade_estoque} un.)
-                  </option>
-                ))}
-              </select>
-            ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <input
                 type="text"
-                placeholder="Informe o SKU manualmente (Ex: SKU-123)"
-                value={skuSimulado}
-                onChange={(e) => setSkuSimulado(e.target.value)}
-                style={{ ...inputStyle, width: '100%', margin: 0 }}
+                placeholder="🔎 Pesquisar por SKU ou Nome do produto..."
+                value={buscaSku}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setBuscaSku(val);
+                  const list = produtos.filter((p) =>
+                    (p.sku && p.sku.toLowerCase().includes(val.toLowerCase())) ||
+                    (p.nome && p.nome.toLowerCase().includes(val.toLowerCase()))
+                  );
+                  if (list.length > 0 && !list.some(p => p.sku === skuSimulado)) {
+                    setSkuSimulado(list[0].sku);
+                  }
+                }}
+                style={{ ...inputStyle, width: '100%', margin: 0, fontSize: '13px' }}
               />
-            )}
+              {produtosFiltrados.length > 0 ? (
+                <select
+                  value={skuSimulado}
+                  onChange={(e) => setSkuSimulado(e.target.value)}
+                  style={{ ...inputStyle, width: '100%', margin: 0, color: colors.textPrimary, fontWeight: 'bold', fontSize: '13px' }}
+                >
+                  {produtosFiltrados.map((p) => (
+                    <option key={p.id} value={p.sku}>
+                      {p.sku} — {p.nome} (Estoque: {p.quantidade_estoque} un.)
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div style={{ fontSize: '12px', color: '#ff6b6b', padding: '4px 0' }}>
+                  Nenhum produto encontrado com "{buscaSku}".
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={{ flex: 1, minWidth: '120px' }}>
