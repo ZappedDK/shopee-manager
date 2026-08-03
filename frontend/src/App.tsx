@@ -199,11 +199,15 @@ function App() {
   useEffect(() => {
     if (view === 'estoque') {
       const timer = setTimeout(() => {
-        carregarEstoque(1, itensPorPagina, buscaProduto, filtroStatus);
-      }, 300);
+        carregarEstoque(paginaAtual, itensPorPagina, buscaProduto, filtroStatus);
+      }, 250);
       return () => clearTimeout(timer);
     }
-  }, [buscaProduto, filtroStatus, itensPorPagina, view]);
+  }, [paginaAtual, itensPorPagina, buscaProduto, filtroStatus, view]);
+
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [buscaProduto, filtroStatus, itensPorPagina]);
 
   const mostrarMensagem = (texto: string, duracaoMs = 5000) => {
     setMensagem(texto);
