@@ -350,15 +350,28 @@ def deletar_plataforma(id: int, db: Session = Depends(get_db), _admin: models_do
 # --- ROTAS DE INSUMOS E CONFIGURAÇÕES ---
 @app.post("/embalagens/", tags=["Cadastros"])
 def cadastrar_embalagem(embalagem: schemas_domain.EmbalagemCreate, db: Session = Depends(get_db), _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
-    nova_embalagem = models_domain.Embalagem(**embalagem.model_dump())
+    dados = embalagem.model_dump()
+    custom_id = dados.pop("id", None)
+    if custom_id:
+        if db.query(models_domain.Embalagem).filter_by(id=custom_id).first():
+            raise HTTPException(status_code=400, detail=f"Já existe uma embalagem com o ID #{custom_id}.")
+        nova_embalagem = models_domain.Embalagem(id=custom_id, **dados)
+    else:
+        # Preenchimento automático do menor ID vago (gap fill)
+        ids_existentes = set(r[0] for r in db.query(models_domain.Embalagem.id).all())
+        proximo_id = 1
+        while proximo_id in ids_existentes:
+            proximo_id += 1
+        nova_embalagem = models_domain.Embalagem(id=proximo_id, **dados)
+
     db.add(nova_embalagem)
     db.commit()
     limpar_cache_financeiro()
-    return {"status": "sucesso"}
+    return {"status": "sucesso", "id": nova_embalagem.id}
 
 @app.get("/embalagens/", tags=["Cadastros"])
 def listar_embalagens(db: Session = Depends(get_db)):
-    return db.query(models_domain.Embalagem).all()
+    return db.query(models_domain.Embalagem).order_by(models_domain.Embalagem.id.asc()).all()
 
 @app.put("/embalagens/{id}", tags=["Cadastros"])
 def editar_embalagem(id: int, dados: schemas_domain.EmbalagemCreate, db: Session = Depends(get_db), _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
@@ -469,10 +482,11 @@ def cadastrar_produto(produto_data: schemas_domain.ProdutoCreate, db: Session = 
 
 @app.put("/produtos/{sku}", tags=["Estoque"])
 def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = Depends(get_db), current_user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
-    prod_id = int(sku) if sku.isdigit() else -1
-    produto = db.query(models_domain.Produto).filter(
-        (models_domain.Produto.sku.ilike(sku)) | (models_domain.Produto.id == prod_id)
-    ).first()
+    # Busca estrita pelo SKU do produto primeiro para evitar colisao entre ID e SKU numerico
+    produto = db.query(models_domain.Produto).filter(models_domain.Produto.sku.ilike(sku)).first()
+    if not produto and sku.isdigit():
+        produto = db.query(models_domain.Produto).filter_by(id=int(sku)).first()
+        
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado.")
 
@@ -532,12 +546,19 @@ def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = 
 
 @app.delete("/produtos/{sku}", tags=["Estoque"])
 def deletar_produto(sku: str, db: Session = Depends(get_db), _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
-    produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
+    produto = db.query(models_domain.Produto).filter(models_domain.Produto.sku.ilike(sku)).first()
+    if not produto and sku.isdigit():
+        produto = db.query(models_domain.Produto).filter_by(id=int(sku)).first()
+        
     if not produto: 
-        raise HTTPException(status_code=404, detail="Produto não encontrado")
+        raise HTTPException(status_code=404, detail="Produto não encontrado.")
+    
+    # Remove relacionamentos em produto_plataforma e historico de movimentacoes para evitar violacao de chave estrangeira
+    db.execute(text("DELETE FROM produto_plataforma WHERE produto_id = :pid"), {"pid": produto.id})
+    db.execute(text("DELETE FROM movimentacoes_estoque WHERE produto_id = :pid"), {"pid": produto.id})
     db.delete(produto)
     db.commit()
-    return {"status": "sucesso"}
+    return {"status": "sucesso", "mensagem": "Produto excluído com sucesso."}
 
 @app.patch("/produtos/{sku}/status", tags=["Estoque"])
 def alterar_status_produto(sku: str, db: Session = Depends(get_db), _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)):

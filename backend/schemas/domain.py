@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 
 class EmbalagemCreate(BaseModel):
+    id: Optional[int] = None
     nome: str
     custo_pacote: float = Field(..., gt=0)
     qtd_unidades: int = Field(..., gt=0)
