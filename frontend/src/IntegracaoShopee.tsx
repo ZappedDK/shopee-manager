@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { PageHeader, MessageBanner } from './ui';
-import { SeletorProdutoSearchable } from './components/SeletorProdutoSearchable';
 import {
   colors, cardStyle, cardTitleStyle, cardDescStyle,
   inputStyle, btnStyle, btnNeutralStyle
@@ -11,7 +10,7 @@ interface IntegracaoShopeeProps {
   onEstoqueAtualizado?: () => void;
 }
 
-export function IntegracaoShopee({ onEstoqueAtualizado }: IntegracaoShopeeProps) {
+export function IntegracaoShopee({}: IntegracaoShopeeProps) {
   const [partnerId, setPartnerId] = useState<string>('');
   const [partnerKey, setPartnerKey] = useState<string>('');
   const [shopId, setShopId] = useState<string>('');
@@ -20,19 +19,12 @@ export function IntegracaoShopee({ onEstoqueAtualizado }: IntegracaoShopeeProps)
   const [mostrarKey, setMostrarKey] = useState<boolean>(false);
   const [salvando, setSalvando] = useState<boolean>(false);
   const [mensagem, setMensagem] = useState<string>('');
-
-  // Simulador de Venda
-  const [produtos, setProdutos] = useState<any[]>([]);
-  const [skuSimulado, setSkuSimulado] = useState<string>('');
-  const [qtdSimulada, setQtdSimulada] = useState<number>(1);
-  const [simulando, setSimulando] = useState<boolean>(false);
   const [copiado, setCopiado] = useState<boolean>(false);
 
   const webhookUrl = `${window.location.protocol}//${window.location.host}/api/webhooks/shopee`;
 
   useEffect(() => {
     carregarConfiguracao();
-    carregarProdutos();
   }, []);
 
   const carregarConfiguracao = async () => {
@@ -46,19 +38,6 @@ export function IntegracaoShopee({ onEstoqueAtualizado }: IntegracaoShopeeProps)
       }
     } catch (err) {
       console.error('Erro ao carregar configurações da Shopee:', err);
-    }
-  };
-
-  const carregarProdutos = async () => {
-    try {
-      const res = await api.get('/produtos/detalhados?limit=100');
-      const lista = res.data?.produtos || res.data || [];
-      setProdutos(lista);
-      if (lista.length > 0) {
-        setSkuSimulado(lista[0].sku);
-      }
-    } catch (err) {
-      console.error('Erro ao carregar produtos para simulador:', err);
     }
   };
 
@@ -78,28 +57,6 @@ export function IntegracaoShopee({ onEstoqueAtualizado }: IntegracaoShopeeProps)
       setMensagem(`⚠️ ${err.response?.data?.detail || 'Erro ao salvar credenciais.'}`);
     } finally {
       setSalvando(false);
-    }
-  };
-
-  const executarSimulacaoVenda = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!skuSimulado) return;
-
-    try {
-      setSimulando(true);
-      const res = await api.post('/shopee/simular-venda', {
-        sku: skuSimulado,
-        quantidade: qtdSimulada
-      });
-      
-      setMensagem(`🎉 ${res.data.mensagem} (Estoque anterior: ${res.data.estoque_anterior} ➔ Novo: ${res.data.novo_estoque})`);
-      if (onEstoqueAtualizado) onEstoqueAtualizado();
-      carregarProdutos();
-      setTimeout(() => setMensagem(''), 6000);
-    } catch (err: any) {
-      setMensagem(`⚠️ ${err.response?.data?.detail || 'Erro ao simular venda.'}`);
-    } finally {
-      setSimulando(false);
     }
   };
 
@@ -128,25 +85,31 @@ export function IntegracaoShopee({ onEstoqueAtualizado }: IntegracaoShopeeProps)
         <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.accent}` }}>
           <h3 style={cardTitleStyle}>🔗 URL do Webhook de Vendas</h3>
           <p style={cardDescStyle}>
-            Cadastre o endereço abaixo no Portal do Desenvolvedor Shopee para receber avisos automáticos de novas vendas.
+            Cole esta URL no painel de desenvolvedor da Shopee (Open Platform) na seção Push Notifications (Order Status Update).
           </p>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+          <div style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
             <input
               type="text"
               readOnly
               value={webhookUrl}
-              style={{ ...inputStyle, flex: 1, margin: 0, fontFamily: 'monospace', fontSize: '13px', backgroundColor: colors.bgApp, color: '#60a5fa' }}
+              style={{ ...inputStyle, width: '100%', margin: 0, fontSize: '13px', backgroundColor: colors.bgInput, color: colors.textSecondary }}
             />
             <button
               onClick={copiarUrlWebhook}
-              style={{ ...btnNeutralStyle, padding: '8px 16px', fontSize: '13px', whiteSpace: 'nowrap' }}
+              style={{
+                ...btnNeutralStyle,
+                whiteSpace: 'nowrap',
+                backgroundColor: copiado ? colors.successBg : 'rgba(59, 130, 246, 0.16)',
+                color: copiado ? colors.successText : '#60a5fa',
+                border: `1px solid ${copiado ? colors.successBorder : colors.borderStrong}`
+              }}
             >
-              {copiado ? '✅ Copiado!' : '📋 Copiar URL'}
+              {copiado ? '✓ Copiado!' : '📋 Copiar'}
             </button>
           </div>
 
-          <div style={{ marginTop: '16px', padding: '12px 14px', backgroundColor: 'rgba(30, 41, 59, 0.7)', borderRadius: '8px', border: `1px solid ${colors.borderStrong}`, fontSize: '12.5px', color: colors.textSecondary }}>
+          <div style={{ marginTop: '16px', fontSize: '12.5px', color: colors.textMuted, lineHeight: '1.5', backgroundColor: colors.bgInput, padding: '12px 14px', borderRadius: '8px', border: `1px solid ${colors.border}` }}>
             💡 <strong>Como funciona:</strong> Sempre que uma venda for concluída na Shopee, o pedido é lido, o SKU correspondente é localizado e a quantidade é abatida do estoque local instantaneamente.
           </div>
         </div>
@@ -222,62 +185,6 @@ export function IntegracaoShopee({ onEstoqueAtualizado }: IntegracaoShopeeProps)
             </button>
           </form>
         </div>
-      </div>
-
-      {/* Card 3: Simulador de Vendas Shopee */}
-      <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.accent}` }}>
-        <h3 style={cardTitleStyle}>🧪 Simulador de Baixa de Venda Shopee</h3>
-        <p style={cardDescStyle}>
-          Teste a baixa de estoque em tempo real selecionando um SKU do seu estoque e disparando uma venda simulada.
-        </p>
-
-        <form onSubmit={executarSimulacaoVenda} style={{ marginTop: '20px', display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: 2, minWidth: '280px' }}>
-            <label style={{ display: 'block', color: colors.textSecondary, fontSize: '12.5px', marginBottom: '6px', fontWeight: 600 }}>
-              📦 Selecionar Produto para Simulação:
-            </label>
-            <SeletorProdutoSearchable
-              produtos={produtos}
-              skuSelecionado={skuSimulado}
-              onSelectSku={(sku) => setSkuSimulado(sku)}
-              colors={colors}
-              inputStyle={inputStyle}
-            />
-          </div>
-
-          <div style={{ flex: 1, minWidth: '120px' }}>
-            <label style={{ display: 'block', color: colors.textSecondary, fontSize: '12.5px', marginBottom: '6px' }}>
-              Qtd Vendida:
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="999"
-              value={qtdSimulada}
-              onChange={(e) => setQtdSimulada(Number(e.target.value))}
-              style={{ ...inputStyle, width: '100%', margin: 0, fontWeight: 'bold' }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={simulando || !skuSimulado}
-            style={{
-              ...btnNeutralStyle,
-              backgroundColor: 'rgba(59, 130, 246, 0.16)',
-              border: `1px solid ${colors.borderStrong}`,
-              color: '#60a5fa',
-              padding: '10px 20px',
-              fontSize: '13.5px',
-              fontWeight: 500,
-              opacity: (simulando || !skuSimulado) ? 0.6 : 1
-            }}
-            onMouseEnter={e => { if (!simulando && skuSimulado) e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.28)'; }}
-            onMouseLeave={e => { if (!simulando && skuSimulado) e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.16)'; }}
-          >
-            {simulando ? 'Processando Venda...' : '🚀 Simular Venda Shopee Agora'}
-          </button>
-        </form>
       </div>
     </div>
   );

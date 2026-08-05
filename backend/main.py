@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core.database import engine, get_db, Base
 from models import domain as models_domain
 from schemas import domain as schemas_domain
-from services.financeiro import calcular_metricas_plataforma, calcular_preco_por_margem, limpar_cache_financeiro
+from services.financeiro import calcular_metricas_plataforma, calcular_preco_por_margem, limpar_cache_financeiro, obter_taxas_da_plataforma
 from services.shopee_api import ShopeeClient, extrair_itens_do_webhook
 from services.tiktok_api import TikTokShopClient, extrair_itens_do_webhook_tiktok
 
@@ -841,7 +841,7 @@ def listar_movimentacoes_estoque(
 
 
 @app.get("/produtos/alertas", tags=["Dashboard"])
-def alertas_de_estoque(limite: int = 10, db: Session = Depends(get_db)):
+def alertas_de_estoque(limite: int = 0, db: Session = Depends(get_db)):
     produtos_criticos = db.query(models_domain.Produto).filter(
         models_domain.Produto.quantidade_estoque <= limite,
         models_domain.Produto.ativo != False
@@ -1192,6 +1192,12 @@ def simular_venda_shopee(
     order_sn = dados.order_sn or f"SIMULADO-{int(time.time())}"
     qtd = max(1, dados.quantidade)
 
+    if produto.quantidade_estoque < qtd:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Estoque insuficiente! O produto '{produto.nome}' (SKU: {produto.sku}) possui apenas {produto.quantidade_estoque} un. em estoque."
+        )
+
     estoque_ant = produto.quantidade_estoque
     produto.quantidade_estoque -= qtd
     estoque_novo = produto.quantidade_estoque
@@ -1345,6 +1351,12 @@ def simular_venda_tiktok(
     order_id = dados.order_id or f"TT-SIMULADO-{int(time.time())}"
     qtd = max(1, dados.quantidade)
 
+    if produto.quantidade_estoque < qtd:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Estoque insuficiente! O produto '{produto.nome}' (SKU: {produto.sku}) possui apenas {produto.quantidade_estoque} un. em estoque."
+        )
+
     estoque_ant = produto.quantidade_estoque
     produto.quantidade_estoque -= qtd
     estoque_novo = produto.quantidade_estoque
@@ -1365,12 +1377,110 @@ def simular_venda_tiktok(
     db.commit()
     return {
         "status": "sucesso",
-        "mensagem": f"Venda TikTok Shop de {qtd} un. do SKU '{produto.sku}' processada com sucesso!",
+        "mensagem": f"Venda de {qtd} un. do SKU '{produto.sku}' processada com sucesso!",
         "order_id": order_id,
         "sku": produto.sku,
-        "nome": produto.nome,
+        "quantidade": qtd,
         "estoque_anterior": estoque_ant,
-        "novo_estoque": estoque_novo
+        "estoque_novo": estoque_novo
+    }
+
+# --- BAIXA DE VENDA MANUAL (PLATAFORMAS & VENDA DIRETA) ---
+class BaixaVendaManualSchema(BaseModel):
+    sku: str
+    quantidade: int = 1
+    plataforma_id: Optional[int] = None
+    forma_pagamento: Optional[str] = None
+    preco_venda_unitario: Optional[float] = None
+    incluir_embalagem: bool = False
+    incluir_etiqueta: bool = False
+    observacao: Optional[str] = None
+
+@app.post("/vendas/baixa-manual", tags=["Baixa Venda Manual"])
+@app.post("/vendas/direta", tags=["Baixa Venda Manual"])
+def registrar_baixa_venda_manual(
+    dados: BaixaVendaManualSchema,
+    db: Session = Depends(get_db),
+    _user: models_domain.Usuario = Depends(exigir_editor_ou_admin)
+):
+    """
+    Registra a baixa manual de estoque referente a uma venda (Shopee, TikTok, Mercado Livre ou Venda Direta).
+    """
+    sku_limpo = dados.sku.strip()
+    produto = db.query(models_domain.Produto).filter(
+        models_domain.Produto.sku.ilike(sku_limpo)
+    ).first()
+
+    if not produto:
+        raise HTTPException(status_code=404, detail=f"Produto com SKU '{sku_limpo}' não foi encontrado.")
+
+    qtd = max(1, dados.quantidade)
+    if produto.quantidade_estoque < qtd:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Estoque insuficiente! O produto '{produto.nome}' (SKU: {produto.sku}) possui apenas {produto.quantidade_estoque} un. em estoque."
+        )
+
+    estoque_ant = produto.quantidade_estoque
+    produto.quantidade_estoque -= qtd
+    estoque_novo = produto.quantidade_estoque
+
+    preco_un = dados.preco_venda_unitario if (dados.preco_venda_unitario and dados.preco_venda_unitario > 0) else produto.preco_venda
+    receita_total = preco_un * qtd
+
+    plat_nome = "Venda Direta"
+    taxa_plat_un = 0.0
+    if dados.plataforma_id:
+        plat = db.query(models_domain.Plataforma).filter_by(id=dados.plataforma_id).first()
+        if plat:
+            plat_nome = plat.nome
+            tp, tf = obter_taxas_da_plataforma(preco_un, plat)
+            taxa_plat_un = (preco_un * tp) + tf
+
+    custo_emb = (produto.embalagem.custo_pacote / produto.embalagem.qtd_unidades) if (dados.incluir_embalagem and produto.embalagem and produto.embalagem.qtd_unidades > 0) else 0.0
+    etiqueta = obter_ou_criar_etiqueta_padrao(db)
+    custo_etiq = (etiqueta.valor_pacote / etiqueta.qtd_unidades) if (dados.incluir_etiqueta and etiqueta and etiqueta.qtd_unidades > 0) else 0.0
+
+    custo_total_unitario = produto.custo_produto + custo_emb + custo_etiq + taxa_plat_un
+    lucro_unitario = preco_un - custo_total_unitario
+    lucro_total = lucro_unitario * qtd
+    taxa_total = taxa_plat_un * qtd
+
+    # Motivo legível para o Histórico de Estoque
+    if dados.plataforma_id:
+        motivo_txt = f"Venda {plat_nome}"
+    else:
+        forma_pag = f" [{dados.forma_pagamento}]" if dados.forma_pagamento else ""
+        motivo_txt = f"Venda Direta{forma_pag}"
+
+    if dados.observacao:
+        motivo_txt += f" - {dados.observacao}"
+
+    registrar_movimentacao(
+        db=db,
+        produto_id=produto.id,
+        produto_sku=produto.sku,
+        produto_nome=produto.nome,
+        tipo="VENDA",
+        qtd_alterada=qtd,
+        estoque_ant=estoque_ant,
+        estoque_novo=estoque_novo,
+        motivo=motivo_txt,
+        usuario_nome=_user.nome
+    )
+
+    db.commit()
+    return {
+        "status": "sucesso",
+        "produto": produto.nome,
+        "sku": produto.sku,
+        "quantidade": qtd,
+        "estoque_novo": estoque_novo,
+        "preco_unitario": preco_un,
+        "receita_total": receita_total,
+        "taxa_plataforma_total": taxa_total,
+        "lucro_total": lucro_total,
+        "plataforma": plat_nome
     }
 
 if __name__ == "__main__":

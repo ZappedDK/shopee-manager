@@ -67,15 +67,24 @@ export function HistoricoEstoque() {
           </span>
         );
       case 'VENDA_WEBHOOK':
+      case 'VENDA':
+      case 'VENDA_DIRETA':
         return (
           <span style={{ ...badgeBaseStyle, backgroundColor: colors.dangerBg, color: colors.dangerText, border: `1px solid ${colors.dangerBorder}` }}>
-            🛒 VENDA (WEBHOOK)
+            🛒 VENDA
+          </span>
+        );
+      case 'AJUSTE':
+      case 'REAJUSTE':
+        return (
+          <span style={{ ...badgeBaseStyle, backgroundColor: 'rgba(59, 130, 246, 0.2)', color: colors.accent, border: '1px solid #2563eb' }}>
+            ⚙️ REAJUSTE
           </span>
         );
       default:
         return (
-          <span style={{ ...badgeBaseStyle, backgroundColor: 'rgba(59, 130, 246, 0.2)', color: colors.accent, border: '1px solid #2563eb' }}>
-            ⚙️ REAJUSTE
+          <span style={{ ...badgeBaseStyle, backgroundColor: colors.dangerBg, color: colors.dangerText, border: `1px solid ${colors.dangerBorder}` }}>
+            🛒 VENDA
           </span>
         );
     }
@@ -113,7 +122,7 @@ export function HistoricoEstoque() {
               <option value="">-- Todos os Tipos --</option>
               <option value="ENTRADA">📥 Entradas de Estoque</option>
               <option value="SAIDA">📤 Saídas / Baixas</option>
-              <option value="VENDA_WEBHOOK">🛒 Vendas Webhook</option>
+              <option value="VENDA">🛒 Vendas de Produtos</option>
               <option value="AJUSTE">⚙️ Reajustes / Alterações</option>
             </select>
           </div>
@@ -170,9 +179,21 @@ export function HistoricoEstoque() {
                     </td>
 
                     <td style={{ ...tableCellStyle, fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                      {m.tipo === 'ENTRADA' && <span style={{ color: colors.successText }}>+{m.quantidade_alterada} un.</span>}
-                      {(m.tipo === 'SAIDA' || m.tipo === 'VENDA_WEBHOOK') && <span style={{ color: colors.dangerText }}>-{m.quantidade_alterada} un.</span>}
-                      {m.tipo === 'AJUSTE' && <span style={{ color: colors.textSecondary }}>{m.quantidade_alterada > 0 ? `+${m.quantidade_alterada}` : `${m.quantidade_alterada}`} un.</span>}
+                      {m.tipo === 'ENTRADA' && (
+                        <span style={{ color: colors.successText }}>
+                          +{(m.qtd_alterada ?? m.quantidade_alterada ?? 1)} un.
+                        </span>
+                      )}
+                      {(m.tipo === 'SAIDA' || m.tipo === 'VENDA_WEBHOOK' || m.tipo === 'VENDA' || m.tipo === 'VENDA_DIRETA') && (
+                        <span style={{ color: colors.dangerText }}>
+                          -{(m.qtd_alterada ?? m.quantidade_alterada ?? (m.estoque_anterior - m.estoque_novo))} un.
+                        </span>
+                      )}
+                      {(m.tipo === 'AJUSTE' || m.tipo === 'REAJUSTE') && (
+                        <span style={{ color: colors.textSecondary }}>
+                          {(m.qtd_alterada ?? m.quantidade_alterada ?? 0) > 0 ? `+${m.qtd_alterada ?? m.quantidade_alterada}` : `${m.qtd_alterada ?? m.quantidade_alterada}`} un.
+                        </span>
+                      )}
                     </td>
 
                     <td style={{ ...tableCellStyle, fontSize: '13.5px', whiteSpace: 'nowrap' }}>
@@ -182,7 +203,7 @@ export function HistoricoEstoque() {
                     </td>
 
                     <td style={{ ...tableCellStyle, fontSize: '13px', color: colors.textSecondary }}>
-                      {m.motivo}
+                      {m.motivo ? m.motivo.replace(/\s*\(R\$\s*[\d.,]+\/un\)/gi, '') : ''}
                     </td>
 
                     <td style={{ ...tableCellStyle, fontSize: '12.5px', color: colors.textMuted, whiteSpace: 'nowrap' }}>

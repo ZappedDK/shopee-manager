@@ -11,6 +11,7 @@ import { ImportarProdutosModal } from './ImportarProdutosModal';
 import { GestaoUsuarios } from './GestaoUsuarios';
 import { IntegracaoShopee } from './IntegracaoShopee';
 import { IntegracaoTikTok } from './IntegracaoTikTok';
+import { VendaDireta } from './VendaDireta';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
 import { SkeletonTable } from './Skeleton';
 import {
@@ -20,7 +21,7 @@ import {
   tableHeaderStyle, tableCellStyle, formatarMoeda, formatarNumero
 } from './theme';
 
-type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas' | 'simulador' | 'historico' | 'usuarios' | 'shopee' | 'tiktok';
+type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas' | 'simulador' | 'historico' | 'usuarios' | 'shopee' | 'tiktok' | 'venda_direta';
 
 function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
@@ -426,7 +427,7 @@ function App() {
           {(temPermissaoAba('calculadora') || temPermissaoAba('simulador')) && <MenuItem icon="🎯" label="Simulador de Preço" target="simulador" />}
           {temPermissaoAba('historico') && <MenuItem icon="📋" label="Histórico de Estoque" target="historico" />}
 
-          <div style={sidebarGroupLabelStyle}>Integrações</div>
+          <div style={sidebarGroupLabelStyle}>Integrações & Vendas</div>
           {temPermissaoAba('shopee') && (
             <MenuItem
               icon={<img src="/logos/shopee.png" alt="Shopee" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 3 }} />}
@@ -437,10 +438,11 @@ function App() {
           {temPermissaoAba('tiktok') && (
             <MenuItem
               icon={<img src="/logos/tiktokshop.png" alt="TikTok" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 3 }} />}
-              label="Integração TikTok Shop"
+              label="Integração TikTok"
               target="tiktok"
             />
           )}
+          <MenuItem icon="🤝" label="Baixa Venda Manual" target="venda_direta" />
 
           <div style={sidebarGroupLabelStyle}>Configurações</div>
           {temPermissaoAba('plataformas') && <MenuItem icon="🏪" label="Plataformas de Venda" target="plataformas" />}
@@ -496,6 +498,8 @@ function App() {
         {view === 'simulador' && <SimuladorPreco />}
 
         {view === 'historico' && <HistoricoEstoque />}
+
+        {view === 'venda_direta' && <VendaDireta mostrarMensagem={mostrarMensagem} carregarEstoqueGlobal={carregarEstoque} />}
 
 
         {view === 'almoxarifado' && (

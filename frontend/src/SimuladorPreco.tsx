@@ -162,26 +162,63 @@ function calcularMetricasPlataformaLocal(
     return { precoVenda: 0, lucroLiquido: 0, margemFinal: 0, taxaPlataforma: 0 };
   }
 
-  let taxaPercentual = plat.taxa_plataforma || 0.0;
+  let taxaPercentual = (plat.taxa_plataforma || 0.0) > 1 ? (plat.taxa_plataforma / 100) : (plat.taxa_plataforma || 0.0);
   let taxaFixa = plat.taxa_fixa || 0.0;
+  const taxaExtra = (plat.taxa_extra || 0.0) > 1 ? (plat.taxa_extra / 100) : (plat.taxa_extra || 0.0);
+  const nomeLower = (plat.nome || '').toLowerCase();
 
   if (plat.faixas_json) {
     try {
       const faixas = typeof plat.faixas_json === 'string' ? JSON.parse(plat.faixas_json) : plat.faixas_json;
       if (Array.isArray(faixas) && faixas.length > 0) {
-        for (const f of faixas) {
-          const de = f.de_valor || 0;
-          const ate = f.ate_valor !== null && f.ate_valor !== undefined ? f.ate_valor : Infinity;
-          if (precoVenda >= de && precoVenda <= ate) {
-            taxaPercentual = (f.taxa_percentual || 0) > 1 ? (f.taxa_percentual / 100) : (f.taxa_percentual || 0);
-            taxaFixa = f.taxa_fixa || 0;
+        const faixasOrdenadas = [...faixas].sort((a, b) => Number(a.de_valor || 0) - Number(b.de_valor || 0));
+        for (const f of faixasOrdenadas) {
+          const ate = f.ate_valor;
+          if (ate === null || ate === undefined || ate === 0 || precoVenda <= Number(ate)) {
+            let tp = Number(f.taxa_percentual || 0);
+            if (tp > 1.0) tp = tp / 100.0;
+            taxaPercentual = tp + taxaExtra;
+            taxaFixa = Number(f.taxa_fixa || 0);
             break;
           }
         }
       }
     } catch (e) {
-      // ignore
+      console.error('Erro ao parsear faixas_json:', e);
     }
+  } else if (nomeLower.includes('shopee')) {
+    if (precoVenda <= 79.99) {
+      taxaPercentual = 0.20 + taxaExtra;
+      taxaFixa = 4.00;
+    } else if (precoVenda <= 99.99) {
+      taxaPercentual = 0.14 + taxaExtra;
+      taxaFixa = 16.00;
+    } else if (precoVenda <= 199.99) {
+      taxaPercentual = 0.14 + taxaExtra;
+      taxaFixa = 20.00;
+    } else {
+      taxaPercentual = 0.14 + taxaExtra;
+      taxaFixa = 26.00;
+    }
+  } else if (nomeLower.includes('tiktok') || nomeLower.includes('tik tok')) {
+    if (precoVenda <= 50.00) {
+      taxaPercentual = 0.10 + taxaExtra;
+      taxaFixa = 4.00;
+    } else {
+      taxaPercentual = 0.06 + taxaExtra;
+      taxaFixa = 6.00;
+    }
+  } else if (nomeLower.includes('mercado livre') || nomeLower.includes('mercadolivre') || nomeLower.includes('ml')) {
+    let taxaBase = (plat.taxa_plataforma || 0) / 100;
+    if (taxaBase === 0) taxaBase = nomeLower.includes('premium') ? 0.19 : 0.14;
+    if (precoVenda < 12.50) {
+      taxaFixa = precoVenda * 0.50;
+    } else if (precoVenda < 79.00) {
+      taxaFixa = 6.00;
+    } else {
+      taxaFixa = 0.00;
+    }
+    taxaPercentual = taxaBase + taxaExtra;
   }
 
   const comissaoPlat = precoVenda * taxaPercentual + taxaFixa;
@@ -234,6 +271,7 @@ export function SimuladorPreco() {
   const [produtos, setProdutos] = useState<any[]>([]);
   const [embalagens, setEmbalagens] = useState<any[]>([]);
   const [plataformas, setPlataformas] = useState<any[]>([]);
+  const [configuracoes, setConfiguracoes] = useState<any[]>([]);
 
   // Formulário - Modo Existente
   const [skuSelecionado, setSkuSelecionado] = useState<string>('');
@@ -267,14 +305,16 @@ export function SimuladorPreco() {
 
   const carregarDados = async () => {
     try {
-      const [resProd, resEmb, resPlat] = await Promise.all([
+      const [resProd, resEmb, resPlat, resCfg] = await Promise.all([
         api.get('/produtos/detalhados'),
         api.get('/embalagens/'),
-        api.get('/plataformas/')
+        api.get('/plataformas/'),
+        api.get('/configuracoes/')
       ]);
       setProdutos(resProd.data || []);
       setEmbalagens(resEmb.data || []);
       setPlataformas(resPlat.data || []);
+      setConfiguracoes(resCfg.data || []);
 
       if (resProd.data && resProd.data.length > 0) {
         setSkuSelecionado(resProd.data[0].sku);
@@ -360,7 +400,12 @@ export function SimuladorPreco() {
       custoEmb = p.custo_embalagem;
     }
 
-    const custoEtiq = 0.50; // etiqueta padrao (R$ 0,50)
+    let custoEtiq = 0.04;
+    const cfgEtiqueta = configuracoes.find((c: any) => c.chave === 'etiqueta_padrao');
+    if (cfgEtiqueta && cfgEtiqueta.qtd_unidades > 0) {
+      custoEtiq = cfgEtiqueta.valor_pacote / cfgEtiqueta.qtd_unidades;
+    }
+
     return { custoEmb, custoEtiq };
   };
 
@@ -1063,8 +1108,8 @@ export function SimuladorPreco() {
                   </label>
                   <input
                     type="number"
-                    step="0.50"
-                    min="1"
+                    step="0.01"
+                    min="0.01"
                     value={precoVendaInformado}
                     onChange={e => setPrecoVendaInformado(e.target.value)}
                     style={{
