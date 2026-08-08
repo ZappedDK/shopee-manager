@@ -728,7 +728,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                   max="9999"
                   value={quantidade}
                   onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
-                  style={{ ...inputStyle, width: '100%', margin: 0, fontWeight: 'bold' }}
+                  style={{ ...inputStyle, width: '100%', maxWidth: 'none', margin: 0, fontWeight: 'bold' }}
                 />
               </div>
 
@@ -743,7 +743,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                   value={precoUnitarioStr}
                   onChange={(e) => setPrecoUnitarioStr(e.target.value)}
                   placeholder="Ex: 69.99"
-                  style={{ ...inputStyle, width: '100%', margin: 0, fontWeight: 'bold', color: '#60a5fa' }}
+                  style={{ ...inputStyle, width: '100%', maxWidth: 'none', margin: 0, fontWeight: 'bold', color: '#60a5fa' }}
                 />
               </div>
             </div>
@@ -781,7 +781,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                 placeholder="Ex: Venda Erlan Pix"
                 value={observacao}
                 onChange={(e) => setObservacao(e.target.value)}
-                style={{ ...inputStyle, width: '100%', margin: 0 }}
+                style={{ ...inputStyle, width: '100%', maxWidth: 'none', margin: 0 }}
               />
             </div>
 
