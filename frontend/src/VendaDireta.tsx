@@ -264,6 +264,226 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
   );
 }
 
+interface SeletorPlataformaVendaProps {
+  plataformas: any[];
+  plataformaIdStr: string;
+  onSelectPlataforma: (id: string) => void;
+}
+
+function SeletorPlataformaVenda({ plataformas, plataformaIdStr, onSelectPlataforma }: SeletorPlataformaVendaProps) {
+  const [aberto, setAberto] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const opcaoAtual = plataformaIdStr === 'direta'
+    ? { id: 'direta', nome: '🤝 Venda Direta / Balcão (Sem Taxas)' }
+    : plataformas.find(p => String(p.id) === plataformaIdStr);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setAberto(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const opcoes = [
+    { id: 'direta', nome: '🤝 Venda Direta / Balcão (Sem Taxas)' },
+    ...plataformas.map(p => ({ id: String(p.id), nome: `🛒 ${p.nome}` }))
+  ];
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      <div
+        onClick={() => setAberto(!aberto)}
+        style={{
+          ...inputStyle,
+          width: '100%',
+          maxWidth: 'none',
+          margin: 0,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          cursor: 'pointer',
+          border: `1px solid ${aberto ? colors.accent : colors.borderStrong}`,
+          backgroundColor: colors.bgInput,
+          userSelect: 'none'
+        }}
+      >
+        <span style={{ color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+          {opcaoAtual ? opcaoAtual.nome : 'Selecione a plataforma...'}
+        </span>
+        <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px' }}>
+          {aberto ? '▲' : '▼'}
+        </span>
+      </div>
+
+      {aberto && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            backgroundColor: colors.bgSidebar,
+            border: `1px solid ${colors.borderStrong}`,
+            borderRadius: '10px',
+            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            zIndex: 1000,
+            padding: '6px',
+          }}
+        >
+          {opcoes.map((op) => {
+            const selecionado = String(op.id) === plataformaIdStr;
+            return (
+              <div
+                key={op.id}
+                onClick={() => {
+                  onSelectPlataforma(String(op.id));
+                  setAberto(false);
+                }}
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  backgroundColor: selecionado ? 'rgba(59,130,246,0.2)' : 'transparent',
+                  color: selecionado ? '#fff' : colors.textPrimary,
+                  fontWeight: selecionado ? 600 : 400,
+                  marginBottom: '2px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+                onMouseEnter={(e) => {
+                  if (!selecionado) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <span>{op.nome}</span>
+                {selecionado && <span style={{ color: colors.accent, fontWeight: 'bold' }}>✓</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface SeletorFormaPagamentoProps {
+  formaPagamento: string;
+  onSelectForma: (forma: string) => void;
+}
+
+function SeletorFormaPagamento({ formaPagamento, onSelectForma }: SeletorFormaPagamentoProps) {
+  const [aberto, setAberto] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setAberto(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const opcoes = [
+    { id: 'PIX', nome: '⚡ PIX' },
+    { id: 'Dinheiro', nome: '💵 Dinheiro' },
+    { id: 'Cartão de Crédito', nome: '💳 Cartão de Crédito' },
+    { id: 'Cartão de Débito', nome: '💳 Cartão de Débito' },
+    { id: 'Outros', nome: '🔄 Outros' }
+  ];
+
+  const opcaoAtual = opcoes.find(o => o.id === formaPagamento) || opcoes[0];
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      <div
+        onClick={() => setAberto(!aberto)}
+        style={{
+          ...inputStyle,
+          width: '100%',
+          maxWidth: 'none',
+          margin: 0,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          cursor: 'pointer',
+          border: `1px solid ${aberto ? colors.accent : colors.borderStrong}`,
+          backgroundColor: colors.bgInput,
+          userSelect: 'none'
+        }}
+      >
+        <span style={{ color: '#60a5fa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+          {opcaoAtual ? opcaoAtual.nome : formaPagamento}
+        </span>
+        <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px' }}>
+          {aberto ? '▲' : '▼'}
+        </span>
+      </div>
+
+      {aberto && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            backgroundColor: colors.bgSidebar,
+            border: `1px solid ${colors.borderStrong}`,
+            borderRadius: '10px',
+            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            zIndex: 1000,
+            padding: '6px',
+          }}
+        >
+          {opcoes.map((op) => {
+            const selecionado = op.id === formaPagamento;
+            return (
+              <div
+                key={op.id}
+                onClick={() => {
+                  onSelectForma(op.id);
+                  setAberto(false);
+                }}
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  backgroundColor: selecionado ? 'rgba(59,130,246,0.2)' : 'transparent',
+                  color: selecionado ? '#60a5fa' : colors.textPrimary,
+                  fontWeight: selecionado ? 600 : 400,
+                  marginBottom: '2px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+                onMouseEnter={(e) => {
+                  if (!selecionado) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <span>{op.nome}</span>
+                {selecionado && <span style={{ color: colors.accent, fontWeight: 'bold' }}>✓</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVendaManualProps) {
   const [produtos, setProdutos] = useState<any[]>([]);
   const [plataformas, setPlataformas] = useState<any[]>([]);
@@ -475,18 +695,11 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                 <label style={{ display: 'block', color: colors.textSecondary, fontSize: '13px', marginBottom: '6px', fontWeight: 600 }}>
                   🏪 Plataforma da Venda:
                 </label>
-                <select
-                  value={plataformaIdStr}
-                  onChange={(e) => setPlataformaIdStr(e.target.value)}
-                  style={{ ...inputStyle, width: '100%', maxWidth: 'none', margin: 0, fontWeight: 500 }}
-                >
-                  <option value="direta">🤝 Venda Direta / Balcão (Sem Taxas)</option>
-                  {plataformas.map((plat) => (
-                    <option key={plat.id} value={plat.id}>
-                      🛒 {plat.nome}
-                    </option>
-                  ))}
-                </select>
+                <SeletorPlataformaVenda
+                  plataformas={plataformas}
+                  plataformaIdStr={plataformaIdStr}
+                  onSelectPlataforma={setPlataformaIdStr}
+                />
               </div>
 
               {/* Opção de Forma de Pagamento (EXIBIDA APENAS PARA VENDA DIRETA) */}
@@ -495,17 +708,10 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                   <label style={{ display: 'block', color: colors.textSecondary, fontSize: '13px', marginBottom: '6px', fontWeight: 600 }}>
                     💳 Forma de Pagamento:
                   </label>
-                  <select
-                    value={formaPagamento}
-                    onChange={(e) => setFormaPagamento(e.target.value)}
-                    style={{ ...inputStyle, width: '100%', maxWidth: 'none', margin: 0, fontWeight: 500, color: '#60a5fa' }}
-                  >
-                    <option value="PIX">⚡ PIX</option>
-                    <option value="Dinheiro">💵 Dinheiro</option>
-                    <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
-                    <option value="Cartão de Débito">💳 Cartão de Débito</option>
-                    <option value="Outros">🔄 Outros</option>
-                  </select>
+                  <SeletorFormaPagamento
+                    formaPagamento={formaPagamento}
+                    onSelectForma={setFormaPagamento}
+                  />
                 </div>
               )}
             </div>
