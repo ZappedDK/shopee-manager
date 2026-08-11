@@ -13,6 +13,7 @@ import openpyxl
 import json
 import sys
 import os
+from datetime import timedelta
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from core.database import engine, get_db, Base
@@ -824,6 +825,8 @@ def listar_movimentacoes_estoque(
     
     resultados = []
     for m in movs:
+        # Ajusta de UTC para o Horário de Brasília (UTC-3)
+        data_local = (m.criado_em - timedelta(hours=3)) if m.criado_em else None
         resultados.append({
             "id": m.id,
             "produto_id": m.produto_id,
@@ -835,7 +838,7 @@ def listar_movimentacoes_estoque(
             "estoque_novo": m.estoque_novo,
             "motivo": m.motivo,
             "usuario_nome": m.usuario_nome or "Sistema",
-            "criado_em": m.criado_em.strftime("%d/%m/%Y %H:%M") if m.criado_em else ""
+            "criado_em": data_local.strftime("%d/%m/%Y %H:%M") if data_local else ""
         })
     return resultados
 
