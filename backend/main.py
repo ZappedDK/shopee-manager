@@ -843,6 +843,145 @@ def listar_movimentacoes_estoque(
     return resultados
 
 
+@app.get("/relatorios/vendas", tags=["Dashboard"])
+def obter_relatorio_vendas(db: Session = Depends(get_db)):
+    """
+    Retorna métricas de vendas consolidadas por Período: Hoje, Esta Semana (7 dias) e Este Mês (30 dias).
+    Faturamento real/estimado, lucro líquido e quantidade de unidades vendidas.
+    """
+    from datetime import datetime, timedelta
+
+    agora = datetime.utcnow()
+    agora_brt = agora - timedelta(hours=3)
+
+    # Limites de datas (UTC)
+    inicio_hoje = agora_brt.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=3)
+    inicio_semana = agora - timedelta(days=7)
+    inicio_mes = agora - timedelta(days=30)
+
+    # Produtos cadastrados para calcular preco_venda e lucro_unitario
+    produtos = db.query(models_domain.Produto).all()
+    prod_map = {p.id: p for p in produtos}
+    sku_map = {p.sku.upper(): p for p in produtos if p.sku}
+
+    # Busca movimentações de vendas (VENDA_WEBHOOK, SAIDA com vendas)
+    movs = db.query(models_domain.MovimentacaoEstoque).filter(
+        models_domain.MovimentacaoEstoque.tipo.in_(["VENDA_WEBHOOK", "SAIDA"])
+    ).order_by(models_domain.MovimentacaoEstoque.criado_em.desc()).all()
+
+    def calcular_periodo(data_limite):
+        qtd_total = 0
+        faturamento = 0.0
+        lucro_total = 0.0
+        vendas_lista = []
+
+        for m in movs:
+            if not m.criado_em or m.criado_em < data_limite:
+                continue
+
+            # Filtra saídas que são de fato vendas
+            motivo_lower = (m.motivo or "").lower()
+            if m.tipo == "SAIDA" and not ("venda" in motivo_lower or "baixa" in motivo_lower or "shopee" in motivo_lower or "tiktok" in motivo_lower):
+                continue
+
+            qtd = m.quantidade_alterada or 1
+            prod = prod_map.get(m.produto_id) or sku_map.get((m.produto_sku or "").upper())
+
+            preco_un = prod.preco_venda if prod else 0.0
+            custo_un = (prod.custo_produto if prod else 0.0) + (prod.embalagem.custo_pacote / prod.embalagem.qtd_unidades if prod and prod.embalagem else 0.0)
+            lucro_un = max(0.0, preco_un - custo_un - (preco_un * 0.14)) # estimativa comissão ~14%
+
+            # Tenta extrair preço do motivo se for Venda Direta
+            if "r$" in motivo_lower:
+                try:
+                    # Ex: Venda Direta [PIX] (1x R$ 59.90 = R$ 59.90)
+                    partes = m.motivo.split("=")
+                    if len(partes) > 1:
+                        val_str = partes[-1].replace("R$", "").replace(",", ".").strip()
+                        fat_item = float(val_str)
+                        preco_un = fat_item / qtd if qtd > 0 else fat_item
+                except Exception:
+                    pass
+
+            item_fat = preco_un * qtd
+            item_lucro = lucro_un * qtd
+
+            qtd_total += qtd
+            faturamento += item_fat
+            lucro_total += item_lucro
+
+            data_local = (m.criado_em - timedelta(hours=3)) if m.criado_em else None
+            vendas_lista.append({
+                "id": m.id,
+                "data": data_local.strftime("%d/%m/%Y %H:%M") if data_local else "",
+                "sku": m.produto_sku,
+                "nome": m.produto_nome,
+                "quantidade": qtd,
+                "faturamento": item_fat,
+                "lucro_estimado": item_lucro,
+                "canal": "Shopee" if "shopee" in motivo_lower else ("TikTok" if "tiktok" in motivo_lower else "Venda Direta"),
+                "motivo": m.motivo
+            })
+
+        return {
+            "unidades_vendidas": qtd_total,
+            "faturamento": round(faturamento, 2),
+            "lucro_estimado": round(lucro_total, 2),
+            "total_pedidos": len(vendas_lista),
+            "vendas": vendas_lista[:20]
+        }
+
+    return {
+        "hoje": calcular_periodo(inicio_hoje),
+        "semana": calcular_periodo(inicio_semana),
+        "mes": calcular_periodo(inicio_mes)
+    }
+
+@app.get("/relatorios/vendas/exportar", tags=["Dashboard"])
+def exportar_relatorio_vendas_excel(periodo: str = "mes", db: Session = Depends(get_db)):
+    """
+    Gera e faz download do relatório de vendas formatado para Excel (.csv) por período (hoje, semana, mes).
+    """
+    relatorio = obter_relatorio_vendas(db=db)
+    dados = relatorio.get(periodo, relatorio.get("mes"))
+    
+    nome_periodo = "Hoje" if periodo == "hoje" else ("Esta_Semana" if periodo == "semana" else "Este_Mes")
+    
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+
+    # Cabeçalho de Resumo
+    writer.writerow([f"RELATÓRIO DE VENDAS - PERÍODO: {nome_periodo.upper().replace('_', ' ')}"])
+    writer.writerow(["Total de Unidades Vendidas", f"{dados['unidades_vendidas']} un."])
+    writer.writerow(["Faturamento Total (R$)", f"R$ {dados['faturamento']:.2f}".replace(".", ",")])
+    writer.writerow(["Lucro Líquido Estimado (R$)", f"R$ {dados['lucro_estimado']:.2f}".replace(".", ",")])
+    writer.writerow(["Total de Pedidos/Operações", dados['total_pedidos']])
+    writer.writerow([]) # Linha em branco
+
+    # Tabela de Detalhes
+    writer.writerow(["Data / Hora", "SKU", "Produto", "Canal de Venda", "Quantidade", "Faturamento (R$)", "Lucro Estimado (R$)", "Detalhes"])
+
+    for v in dados.get("vendas", []):
+        writer.writerow([
+            v["data"],
+            v["sku"],
+            v["nome"],
+            v["canal"],
+            v["quantidade"],
+            f"{v['faturamento']:.2f}".replace(".", ","),
+            f"{v['lucro_estimado']:.2f}".replace(".", ","),
+            v["motivo"]
+        ])
+
+    output.seek(0)
+    filename = f"relatorio_vendas_{nome_periodo.lower()}.csv"
+
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode('utf-8-sig')),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 @app.get("/produtos/alertas", tags=["Dashboard"])
 def alertas_de_estoque(limite: int = 0, db: Session = Depends(get_db)):
     produtos_criticos = db.query(models_domain.Produto).filter(
