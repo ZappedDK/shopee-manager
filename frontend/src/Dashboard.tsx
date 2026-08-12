@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from './services/api';
 import { PageHeader } from './ui';
+import { PlatformIcon } from './PlatformIcon';
 import {
   colors, cardStyle, cardTitleStyle, cardDescStyle,
   inputStyle, tableHeaderStyle, tableCellStyle, formatarMoeda
@@ -8,6 +9,133 @@ import {
 import { SkeletonBox, SkeletonList, SkeletonTable } from './Skeleton';
 
 type PeriodoRelatorio = 'hoje' | 'semana' | 'mes';
+
+interface SeletorFiltroCanalProps {
+  canalFiltro: string;
+  onSelectCanal: (canal: string) => void;
+}
+
+function SeletorFiltroCanal({ canalFiltro, onSelectCanal }: SeletorFiltroCanalProps) {
+  const [aberto, setAberto] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setAberto(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const opcoes = [
+    { id: 'todos', nome: 'Todos os Canais', icone: null },
+    { id: 'direta', nome: 'Venda Direta', icone: null },
+    { id: 'shopee', nome: 'Shopee', icone: 'shopee' },
+    { id: 'tiktok', nome: 'TikTok Shop', icone: 'tiktokshop' },
+    { id: 'mercado', nome: 'Mercado Livre', icone: 'mercadolivre' }
+  ];
+
+  const opcaoAtual = opcoes.find(o => o.id === canalFiltro) || opcoes[0];
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', minWidth: '170px' }}>
+      <div
+        onClick={() => setAberto(!aberto)}
+        style={{
+          ...inputStyle,
+          width: '100%',
+          maxWidth: 'none',
+          margin: 0,
+          padding: '6px 12px',
+          fontSize: '13px',
+          fontWeight: 600,
+          backgroundColor: colors.bgApp,
+          color: colors.textPrimary,
+          border: `1px solid ${aberto ? colors.accent : colors.borderStrong}`,
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: 'pointer',
+          userSelect: 'none'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {opcaoAtual.icone ? (
+            <PlatformIcon nome={opcaoAtual.nome} size={16} />
+          ) : (
+            <span style={{ fontSize: '13px' }}>{opcaoAtual.id === 'direta' ? '🤝' : '🌐'}</span>
+          )}
+          <span>{opcaoAtual.nome}</span>
+        </div>
+        <span style={{ fontSize: '11px', color: colors.textSecondary, marginLeft: '6px' }}>
+          {aberto ? '▲' : '▼'}
+        </span>
+      </div>
+
+      {aberto && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            backgroundColor: colors.bgSidebar,
+            border: `1px solid ${colors.borderStrong}`,
+            borderRadius: '8px',
+            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            zIndex: 1000,
+            padding: '4px',
+          }}
+        >
+          {opcoes.map((op) => {
+            const selecionado = op.id === canalFiltro;
+            return (
+              <div
+                key={op.id}
+                onClick={() => {
+                  onSelectCanal(op.id);
+                  setAberto(false);
+                }}
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  backgroundColor: selecionado ? 'rgba(59,130,246,0.2)' : 'transparent',
+                  color: selecionado ? '#fff' : colors.textPrimary,
+                  fontWeight: selecionado ? 600 : 400,
+                  marginBottom: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
+                onMouseEnter={(e) => {
+                  if (!selecionado) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {op.icone ? (
+                    <PlatformIcon nome={op.nome} size={16} />
+                  ) : (
+                    <span style={{ fontSize: '13px' }}>{op.id === 'direta' ? '🤝' : '🌐'}</span>
+                  )}
+                  <span>{op.nome}</span>
+                </div>
+                {selecionado && <span style={{ color: colors.accent, fontWeight: 'bold' }}>✓</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Dashboard() {
   const [alertas, setAlertas] = useState<any[]>([]);
@@ -197,34 +325,14 @@ export function Dashboard() {
               </button>
             </div>
 
-            {/* Seletor de Canal / Plataforma */}
-            <select
-              value={canalFiltro}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCanalFiltro(val);
-                carregarRelatorioVendas(val);
+            {/* Seletor de Canal / Plataforma com Logos Oficiais */}
+            <SeletorFiltroCanal
+              canalFiltro={canalFiltro}
+              onSelectCanal={(c) => {
+                setCanalFiltro(c);
+                carregarRelatorioVendas(c);
               }}
-              style={{
-                ...inputStyle,
-                width: 'auto',
-                maxWidth: 'none',
-                margin: 0,
-                padding: '6px 14px',
-                fontSize: '13px',
-                fontWeight: 600,
-                backgroundColor: colors.bgApp,
-                color: colors.textPrimary,
-                border: `1px solid ${colors.borderStrong}`,
-                borderRadius: '8px'
-              }}
-            >
-              <option value="todos">🌐 Todos os Canais</option>
-              <option value="direta">🤝 Venda Direta / Balcão</option>
-              <option value="shopee">🟠 Shopee</option>
-              <option value="tiktok">🎵 TikTok Shop</option>
-              <option value="mercado">💛 Mercado Livre</option>
-            </select>
+            />
 
             {/* Botão Exportar para Excel */}
             <button
@@ -306,18 +414,8 @@ export function Dashboard() {
                         <td style={{ ...tableCellStyle, fontSize: '12.5px', color: colors.textSecondary, whiteSpace: 'nowrap' }}>{v.data}</td>
                         <td style={{ ...tableCellStyle, fontWeight: 'bold', color: colors.accent, whiteSpace: 'nowrap' }}>{v.sku}</td>
                         <td style={tableCellStyle}>{v.nome}</td>
-                        <td style={{ ...tableCellStyle, whiteSpace: 'nowrap' }}>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '4px',
-                            fontSize: '11.5px',
-                            fontWeight: 600,
-                            backgroundColor: v.canal === 'Shopee' ? 'rgba(245, 158, 11, 0.18)' : (v.canal === 'TikTok' ? 'rgba(6, 182, 212, 0.18)' : 'rgba(59, 130, 246, 0.18)'),
-                            color: v.canal === 'Shopee' ? '#fbbf24' : (v.canal === 'TikTok' ? '#38bdf8' : '#60a5fa'),
-                            border: `1px solid ${v.canal === 'Shopee' ? 'rgba(245, 158, 11, 0.3)' : (v.canal === 'TikTok' ? 'rgba(6, 182, 212, 0.3)' : 'rgba(59, 130, 246, 0.3)')}`
-                          }}>
-                            {v.canal}
-                          </span>
+                        <td style={{ ...tableCellStyle, color: colors.textPrimary, whiteSpace: 'nowrap', fontWeight: 500 }}>
+                          {v.canal}
                         </td>
                         <td style={{ ...tableCellStyle, fontWeight: 'bold' }}>{v.quantidade} un.</td>
                         <td style={{ ...tableCellStyle, color: '#60a5fa', fontWeight: 600 }}>{formatarMoeda(v.faturamento)}</td>
