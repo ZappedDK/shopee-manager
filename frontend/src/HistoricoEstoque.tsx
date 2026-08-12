@@ -90,6 +90,14 @@ export function HistoricoEstoque() {
     }
   };
 
+  const limparMotivoVisivel = (motivo: string) => {
+    if (!motivo) return '';
+    return motivo
+      .replace(/\s*\(\s*R\$\s*[\d.,]+\/un[^)]*\)/gi, '')
+      .replace(/\s*\(\s*emb=[SN]\s*,\s*etiq=[SN]\s*\)/gi, '')
+      .trim();
+  };
+
   return (
     <div>
       <PageHeader
@@ -154,63 +162,68 @@ export function HistoricoEstoque() {
                   <th style={tableHeaderStyle}>Nome do Produto</th>
                   <th style={tableHeaderStyle}>Tipo</th>
                   <th style={tableHeaderStyle}>Qtd. Alterada</th>
-                  <th style={tableHeaderStyle}>Estoque (Antes ➔ Depois)</th>
+                  <th style={tableHeaderStyle}>Estoque</th>
                   <th style={tableHeaderStyle}>Motivo / Descrição</th>
                   <th style={tableHeaderStyle}>Responsável</th>
                 </tr>
               </thead>
               <tbody>
-                {movimentacoesFiltradas.map((m) => (
-                  <tr key={m.id}>
-                    <td style={{ ...tableCellStyle, fontSize: '13px', color: colors.textSecondary, whiteSpace: 'nowrap' }}>
-                      {m.criado_em}
-                    </td>
+                {movimentacoesFiltradas.map((m) => {
+                  const motivoLimpo = limparMotivoVisivel(m.motivo);
+                  return (
+                    <tr key={m.id}>
+                      <td style={{ ...tableCellStyle, fontSize: '13px', color: colors.textSecondary, whiteSpace: 'nowrap' }}>
+                        {m.criado_em}
+                      </td>
 
-                    <td style={{ ...tableCellStyle, whiteSpace: 'nowrap' }}>
-                      <strong style={{ color: colors.accent }}>{m.produto_sku}</strong>
-                    </td>
+                      <td style={{ ...tableCellStyle, whiteSpace: 'nowrap' }}>
+                        <strong style={{ color: colors.accent }}>{m.produto_sku}</strong>
+                      </td>
 
-                    <td style={{ ...tableCellStyle, minWidth: '180px' }}>
-                      {m.produto_nome}
-                    </td>
+                      <td style={{ ...tableCellStyle, minWidth: '180px' }}>
+                        {m.produto_nome}
+                      </td>
 
-                    <td style={{ ...tableCellStyle, whiteSpace: 'nowrap', minWidth: '140px' }}>
-                      {getTipoBadge(m.tipo)}
-                    </td>
+                      <td style={{ ...tableCellStyle, whiteSpace: 'nowrap', minWidth: '140px' }}>
+                        {getTipoBadge(m.tipo)}
+                      </td>
 
-                    <td style={{ ...tableCellStyle, fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                      {m.tipo === 'ENTRADA' && (
-                        <span style={{ color: colors.successText }}>
-                          +{(m.qtd_alterada ?? m.quantidade_alterada ?? 1)} un.
-                        </span>
-                      )}
-                      {(m.tipo === 'SAIDA' || m.tipo === 'VENDA_WEBHOOK' || m.tipo === 'VENDA' || m.tipo === 'VENDA_DIRETA') && (
-                        <span style={{ color: colors.dangerText }}>
-                          -{(m.qtd_alterada ?? m.quantidade_alterada ?? (m.estoque_anterior - m.estoque_novo))} un.
-                        </span>
-                      )}
-                      {(m.tipo === 'AJUSTE' || m.tipo === 'REAJUSTE') && (
-                        <span style={{ color: colors.textSecondary }}>
-                          {(m.qtd_alterada ?? m.quantidade_alterada ?? 0) > 0 ? `+${m.qtd_alterada ?? m.quantidade_alterada}` : `${m.qtd_alterada ?? m.quantidade_alterada}`} un.
-                        </span>
-                      )}
-                    </td>
+                      <td style={{ ...tableCellStyle, fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                        {m.tipo === 'ENTRADA' && (
+                          <span style={{ color: colors.successText }}>
+                            +{(m.qtd_alterada ?? m.quantidade_alterada ?? 1)} un.
+                          </span>
+                        )}
+                        {(m.tipo === 'SAIDA' || m.tipo === 'VENDA_WEBHOOK' || m.tipo === 'VENDA' || m.tipo === 'VENDA_DIRETA') && (
+                          <span style={{ color: colors.dangerText }}>
+                            -{(m.qtd_alterada ?? m.quantidade_alterada ?? (m.estoque_anterior - m.estoque_novo))} un.
+                          </span>
+                        )}
+                        {(m.tipo === 'AJUSTE' || m.tipo === 'REAJUSTE') && (
+                          <span style={{ color: colors.textSecondary }}>
+                            {(m.qtd_alterada ?? m.quantidade_alterada ?? 0) > 0 ? `+${m.qtd_alterada ?? m.quantidade_alterada}` : `${m.qtd_alterada ?? m.quantidade_alterada}`} un.
+                          </span>
+                        )}
+                      </td>
 
-                    <td style={{ ...tableCellStyle, fontSize: '13.5px', whiteSpace: 'nowrap' }}>
-                      <span style={{ color: colors.textMuted }}>{m.estoque_anterior} un.</span>
-                      {' ➔ '}
-                      <strong style={{ color: colors.textPrimary }}>{m.estoque_novo} un.</strong>
-                    </td>
+                      {/* Coluna Ajustada: Estoque (Antes ➔ Depois) */}
+                      <td style={{ ...tableCellStyle, fontSize: '13px', whiteSpace: 'nowrap' }}>
+                        <span style={{ color: colors.textMuted }}>{m.estoque_anterior}</span>
+                        {' ➔ '}
+                        <strong style={{ color: colors.textPrimary }}>{m.estoque_novo} un.</strong>
+                      </td>
 
-                    <td style={{ ...tableCellStyle, fontSize: '13px', color: colors.textSecondary }}>
-                      {m.motivo ? m.motivo.replace(/\s*\(R\$\s*[\d.,]+\/un\)/gi, '') : ''}
-                    </td>
+                      {/* Motivo Limpo (sem tags internas emb=S/N, etiq=S/N) */}
+                      <td style={{ ...tableCellStyle, fontSize: '13px', color: colors.textSecondary }}>
+                        {motivoLimpo}
+                      </td>
 
-                    <td style={{ ...tableCellStyle, fontSize: '12.5px', color: colors.textMuted, whiteSpace: 'nowrap' }}>
-                      👤 {m.usuario_nome}
-                    </td>
-                  </tr>
-                ))}
+                      <td style={{ ...tableCellStyle, fontSize: '12.5px', color: colors.textMuted, whiteSpace: 'nowrap' }}>
+                        👤 {m.usuario_nome}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -844,10 +844,9 @@ def listar_movimentacoes_estoque(
 
 
 @app.get("/relatorios/vendas", tags=["Dashboard"])
-def obter_relatorio_vendas(db: Session = Depends(get_db)):
+def obter_relatorio_vendas(canal: Optional[str] = None, db: Session = Depends(get_db)):
     """
-    Retorna métricas de vendas consolidadas por Período: Hoje, Esta Semana (7 dias) e Este Mês (30 dias).
-    Faturamento real/estimado, lucro líquido e quantidade de unidades vendidas.
+    Retorna métricas de vendas consolidadas por Período (Hoje, Semana, Mês) e Canal/Plataforma.
     """
     from services.financeiro import calcular_metricas_plataforma
 
@@ -892,32 +891,51 @@ def obter_relatorio_vendas(db: Session = Depends(get_db)):
             if m.tipo == "SAIDA" and not ("venda" in motivo_lower or "baixa" in motivo_lower or "shopee" in motivo_lower or "tiktok" in motivo_lower):
                 continue
 
+            canal_venda = "Shopee" if "shopee" in motivo_lower else ("TikTok" if "tiktok" in motivo_lower else ("Mercado Livre" if ("mercado" in motivo_lower or "ml" in motivo_lower) else "Venda Direta"))
+
+            # Filtro por canal/plataforma
+            if canal:
+                c_filter = canal.lower().strip()
+                if c_filter == "direta" and canal_venda != "Venda Direta":
+                    continue
+                elif c_filter != "direta" and c_filter not in canal_venda.lower():
+                    continue
+
             qtd = abs(m.quantidade_alterada) if m.quantidade_alterada is not None else 1
             prod = prod_map.get(m.produto_id) or sku_map.get((m.produto_sku or "").upper())
-
+            import re
             preco_un = prod.preco_venda if prod else 0.0
 
-            # Tenta extrair preço cobrado real do motivo se for Venda Direta
+            # 1. Extrai preço cobrado real do motivo se gravado (ex: R$ 50.00/un)
             if "r$" in motivo_lower:
                 try:
-                    # Ex: Venda Direta [PIX] (1x R$ 59.90 = R$ 59.90)
-                    partes = m.motivo.split("=")
-                    if len(partes) > 1:
-                        val_str = partes[-1].replace("R$", "").replace(",", ".").strip()
-                        fat_item = float(val_str)
-                        preco_un = fat_item / qtd if qtd > 0 else fat_item
+                    match_preco = re.search(r"r\$\s*([\d\.,]+)", motivo_lower)
+                    if match_preco:
+                        s_val = match_preco.group(1).strip()
+                        if "," in s_val:
+                            s_val = s_val.replace(".", "").replace(",", ".")
+                        val_num = float(s_val)
+                        if val_num > 0:
+                            preco_un = val_num
                 except Exception:
                     pass
 
-            canal = "Shopee" if "shopee" in motivo_lower else ("TikTok" if "tiktok" in motivo_lower else ("Mercado Livre" if ("mercado" in motivo_lower or "ml" in motivo_lower) else "Venda Direta"))
-            
+            # 2. Extrai preferências de embalagem e etiqueta registradas na baixa manual
+            emb_incluida = True
+            etiq_incluida = True
+
+            if "emb=n" in motivo_lower or "sem embalagem" in motivo_lower:
+                emb_incluida = False
+            if "etiq=n" in motivo_lower or "sem etiqueta" in motivo_lower:
+                etiq_incluida = False
+
             custo_prod = prod.custo_produto if prod else 0.0
-            custo_emb = (prod.embalagem.custo_pacote / prod.embalagem.qtd_unidades) if prod and prod.embalagem else 0.0
-            custo_etiq = 0.04
+            custo_emb = (prod.embalagem.custo_pacote / prod.embalagem.qtd_unidades) if (prod and prod.embalagem and emb_incluida) else 0.0
+            custo_etiq = 0.04 if etiq_incluida else 0.0
 
-            plat_obj = obter_plataforma_canal(canal)
+            plat_obj = obter_plataforma_canal(canal_venda)
 
-            if canal == "Venda Direta" or not plat_obj:
+            if canal_venda == "Venda Direta" or not plat_obj:
                 lucro_un = preco_un - (custo_prod + custo_emb + custo_etiq)
             else:
                 metricas = calcular_metricas_plataforma(preco_un, custo_prod, custo_emb, custo_etiq, plat_obj)
@@ -939,7 +957,7 @@ def obter_relatorio_vendas(db: Session = Depends(get_db)):
                 "quantidade": qtd,
                 "faturamento": item_fat,
                 "lucro_estimado": item_lucro,
-                "canal": canal,
+                "canal": canal_venda,
                 "motivo": m.motivo
             })
 
@@ -958,11 +976,11 @@ def obter_relatorio_vendas(db: Session = Depends(get_db)):
     }
 
 @app.get("/relatorios/vendas/exportar", tags=["Dashboard"])
-def exportar_relatorio_vendas_excel(periodo: str = "mes", db: Session = Depends(get_db)):
+def exportar_relatorio_vendas_excel(periodo: str = "mes", canal: Optional[str] = None, db: Session = Depends(get_db)):
     """
-    Gera e faz download do relatório de vendas formatado para Excel (.csv) por período (hoje, semana, mes).
+    Gera e faz download do relatório de vendas formatado para Excel (.csv) por período e canal.
     """
-    relatorio = obter_relatorio_vendas(db=db)
+    relatorio = obter_relatorio_vendas(canal=canal, db=db)
     dados = relatorio.get(periodo, relatorio.get("mes"))
     
     nome_periodo = "Hoje" if periodo == "hoje" else ("Esta_Semana" if periodo == "semana" else "Este_Mes")
@@ -1608,12 +1626,16 @@ def registrar_baixa_venda_manual(
     lucro_total = lucro_unitario * qtd
     taxa_total = taxa_plat_un * qtd
 
-    # Motivo legível para o Histórico de Estoque
+    # Motivo legível para o Histórico de Estoque com detalhes exatos da venda manual
+    emb_tag = "emb=S" if dados.incluir_embalagem else "emb=N"
+    etiq_tag = "etiq=S" if dados.incluir_etiqueta else "etiq=N"
+    detalhes_precificacao = f"(R$ {preco_un:.2f}/un, {emb_tag}, {etiq_tag})"
+
     if dados.plataforma_id:
-        motivo_txt = f"Venda {plat_nome}"
+        motivo_txt = f"Venda {plat_nome} {detalhes_precificacao}"
     else:
         forma_pag = f" [{dados.forma_pagamento}]" if dados.forma_pagamento else ""
-        motivo_txt = f"Venda Direta{forma_pag}"
+        motivo_txt = f"Venda Direta{forma_pag} {detalhes_precificacao}"
 
     if dados.observacao:
         motivo_txt += f" - {dados.observacao}"

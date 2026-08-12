@@ -3,7 +3,7 @@ import { api } from './services/api';
 import { PageHeader } from './ui';
 import {
   colors, cardStyle, cardTitleStyle, cardDescStyle,
-  tableHeaderStyle, tableCellStyle, formatarMoeda
+  inputStyle, tableHeaderStyle, tableCellStyle, formatarMoeda
 } from './theme';
 import { SkeletonBox, SkeletonList, SkeletonTable } from './Skeleton';
 
@@ -17,13 +17,14 @@ export function Dashboard() {
 
   // Relatório de Vendas
   const [periodo, setPeriodo] = useState<PeriodoRelatorio>('mes');
+  const [canalFiltro, setCanalFiltro] = useState<string>('todos');
   const [relatorioVendas, setRelatorioVendas] = useState<any>(null);
   const [carregandoRelatorio, setCarregandoRelatorio] = useState(true);
 
   useEffect(() => {
     carregarAlertas();
     carregarValorEstoque();
-    carregarRelatorioVendas();
+    carregarRelatorioVendas(canalFiltro);
   }, []);
 
   const carregarAlertas = async () => {
@@ -62,10 +63,14 @@ export function Dashboard() {
     }
   };
 
-  const carregarRelatorioVendas = async () => {
+  const carregarRelatorioVendas = async (canal?: string) => {
     try {
       setCarregandoRelatorio(true);
-      const res = await api.get('/relatorios/vendas');
+      const targetCanal = canal !== undefined ? canal : canalFiltro;
+      const url = targetCanal && targetCanal !== 'todos'
+        ? `/relatorios/vendas?canal=${encodeURIComponent(targetCanal)}`
+        : '/relatorios/vendas';
+      const res = await api.get(url);
       setRelatorioVendas(res.data);
     } catch (err) {
       console.error('Erro ao carregar relatório de vendas:', err);
@@ -76,7 +81,12 @@ export function Dashboard() {
 
   const exportarExcel = () => {
     const baseURL = api.defaults.baseURL || 'http://localhost:8000';
-    window.open(`${baseURL}/relatorios/vendas/exportar?periodo=${periodo}`, '_blank');
+    const params = new URLSearchParams();
+    params.append('periodo', periodo);
+    if (canalFiltro && canalFiltro !== 'todos') {
+      params.append('canal', canalFiltro);
+    }
+    window.open(`${baseURL}/relatorios/vendas/exportar?${params.toString()}`, '_blank');
   };
 
   const statCardStyle = {
@@ -186,6 +196,35 @@ export function Dashboard() {
                 📊 Este Mês (30d)
               </button>
             </div>
+
+            {/* Seletor de Canal / Plataforma */}
+            <select
+              value={canalFiltro}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCanalFiltro(val);
+                carregarRelatorioVendas(val);
+              }}
+              style={{
+                ...inputStyle,
+                width: 'auto',
+                maxWidth: 'none',
+                margin: 0,
+                padding: '6px 14px',
+                fontSize: '13px',
+                fontWeight: 600,
+                backgroundColor: colors.bgApp,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.borderStrong}`,
+                borderRadius: '8px'
+              }}
+            >
+              <option value="todos">🌐 Todos os Canais</option>
+              <option value="direta">🤝 Venda Direta / Balcão</option>
+              <option value="shopee">🟠 Shopee</option>
+              <option value="tiktok">🎵 TikTok Shop</option>
+              <option value="mercado">💛 Mercado Livre</option>
+            </select>
 
             {/* Botão Exportar para Excel */}
             <button
