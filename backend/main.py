@@ -849,7 +849,7 @@ def obter_relatorio_vendas(db: Session = Depends(get_db)):
     Retorna métricas de vendas consolidadas por Período: Hoje, Esta Semana (7 dias) e Este Mês (30 dias).
     Faturamento real/estimado, lucro líquido e quantidade de unidades vendidas.
     """
-    from datetime import datetime, timedelta
+    from services.financeiro import calcular_metricas_plataforma
 
     agora = datetime.utcnow()
     agora_brt = agora - timedelta(hours=3)
@@ -859,14 +859,22 @@ def obter_relatorio_vendas(db: Session = Depends(get_db)):
     inicio_semana = agora - timedelta(days=7)
     inicio_mes = agora - timedelta(days=30)
 
-    # Produtos cadastrados para calcular preco_venda e lucro_unitario
+    # Produtos e Plataformas para cálculo exato de margem
     produtos = db.query(models_domain.Produto).all()
+    plataformas = db.query(models_domain.Plataforma).all()
     prod_map = {p.id: p for p in produtos}
     sku_map = {p.sku.upper(): p for p in produtos if p.sku}
 
-    # Busca movimentações de vendas (VENDA_WEBHOOK, SAIDA com vendas)
+    def obter_plataforma_canal(nome_canal):
+        n = (nome_canal or "").lower()
+        for p in plataformas:
+            if n in (p.nome or "").lower():
+                return p
+        return None
+
+    # Busca movimentações de vendas (VENDA, VENDA_DIRETA, VENDA_WEBHOOK, SAIDA com vendas)
     movs = db.query(models_domain.MovimentacaoEstoque).filter(
-        models_domain.MovimentacaoEstoque.tipo.in_(["VENDA_WEBHOOK", "SAIDA"])
+        models_domain.MovimentacaoEstoque.tipo.in_(["VENDA", "VENDA_DIRETA", "VENDA_WEBHOOK", "SAIDA"])
     ).order_by(models_domain.MovimentacaoEstoque.criado_em.desc()).all()
 
     def calcular_periodo(data_limite):
@@ -884,14 +892,12 @@ def obter_relatorio_vendas(db: Session = Depends(get_db)):
             if m.tipo == "SAIDA" and not ("venda" in motivo_lower or "baixa" in motivo_lower or "shopee" in motivo_lower or "tiktok" in motivo_lower):
                 continue
 
-            qtd = m.quantidade_alterada or 1
+            qtd = abs(m.quantidade_alterada) if m.quantidade_alterada is not None else 1
             prod = prod_map.get(m.produto_id) or sku_map.get((m.produto_sku or "").upper())
 
             preco_un = prod.preco_venda if prod else 0.0
-            custo_un = (prod.custo_produto if prod else 0.0) + (prod.embalagem.custo_pacote / prod.embalagem.qtd_unidades if prod and prod.embalagem else 0.0)
-            lucro_un = max(0.0, preco_un - custo_un - (preco_un * 0.14)) # estimativa comissão ~14%
 
-            # Tenta extrair preço do motivo se for Venda Direta
+            # Tenta extrair preço cobrado real do motivo se for Venda Direta
             if "r$" in motivo_lower:
                 try:
                     # Ex: Venda Direta [PIX] (1x R$ 59.90 = R$ 59.90)
@@ -902,6 +908,20 @@ def obter_relatorio_vendas(db: Session = Depends(get_db)):
                         preco_un = fat_item / qtd if qtd > 0 else fat_item
                 except Exception:
                     pass
+
+            canal = "Shopee" if "shopee" in motivo_lower else ("TikTok" if "tiktok" in motivo_lower else ("Mercado Livre" if ("mercado" in motivo_lower or "ml" in motivo_lower) else "Venda Direta"))
+            
+            custo_prod = prod.custo_produto if prod else 0.0
+            custo_emb = (prod.embalagem.custo_pacote / prod.embalagem.qtd_unidades) if prod and prod.embalagem else 0.0
+            custo_etiq = 0.04
+
+            plat_obj = obter_plataforma_canal(canal)
+
+            if canal == "Venda Direta" or not plat_obj:
+                lucro_un = preco_un - (custo_prod + custo_emb + custo_etiq)
+            else:
+                metricas = calcular_metricas_plataforma(preco_un, custo_prod, custo_emb, custo_etiq, plat_obj)
+                lucro_un = metricas.get("lucro_liquido", 0.0)
 
             item_fat = preco_un * qtd
             item_lucro = lucro_un * qtd
@@ -919,7 +939,7 @@ def obter_relatorio_vendas(db: Session = Depends(get_db)):
                 "quantidade": qtd,
                 "faturamento": item_fat,
                 "lucro_estimado": item_lucro,
-                "canal": "Shopee" if "shopee" in motivo_lower else ("TikTok" if "tiktok" in motivo_lower else "Venda Direta"),
+                "canal": canal,
                 "motivo": m.motivo
             })
 
@@ -928,7 +948,7 @@ def obter_relatorio_vendas(db: Session = Depends(get_db)):
             "faturamento": round(faturamento, 2),
             "lucro_estimado": round(lucro_total, 2),
             "total_pedidos": len(vendas_lista),
-            "vendas": vendas_lista[:20]
+            "vendas": vendas_lista[:100]
         }
 
     return {
