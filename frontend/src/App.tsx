@@ -1090,10 +1090,14 @@ function App() {
 
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
                   <h3 style={{ ...cardTitleStyle, marginBottom: 0, fontSize: '16px' }}>Produtos Cadastrados</h3>
                   <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: colors.accent, border: `1px solid ${colors.borderStrong}`, padding: '2px 8px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 600 }}>
                     📦 {produtosFiltrados.length} {produtosFiltrados.length === 1 ? 'SKU' : 'SKUs'} {buscaProduto || filtroStatus !== 'ativos' ? `(filtrado de ${produtosDetalhados.length})` : ''}
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 600 }}>
+                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#60a5fa', display: 'inline-block' }}></span>
+                    Cross-docking
                   </span>
                 </div>
 
@@ -1269,13 +1273,13 @@ function App() {
                             </td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{item.nome}</td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{formatarMoeda(item.custo_produto)}</td>
-                            <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1, color: item.quantidade_estoque <= 10 ? (item.cross_docking ? '#60a5fa' : '#f87171') : colors.textPrimary, fontWeight: 'bold' }}>
+                            <td style={{
+                              ...tableCellStyle,
+                              opacity: item.ativo === false ? 0.65 : 1,
+                              color: item.cross_docking ? '#60a5fa' : (item.quantidade_estoque === 0 ? '#f87171' : '#34d399'),
+                              fontWeight: 'bold'
+                            }}>
                               {item.quantidade_estoque} un.
-                              {item.cross_docking && (
-                                <span style={{ marginLeft: '6px', fontSize: '10px', backgroundColor: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, display: 'inline-block' }}>
-                                  📦 CROSS-DOCKING
-                                </span>
-                              )}
                             </td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{formatarMoeda(item.valor_estoque)}</td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>

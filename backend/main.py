@@ -1111,15 +1111,23 @@ def listar_produtos_detalhados(
             (models_domain.Produto.nome.ilike(termo))
         )
 
+    from sqlalchemy import cast, Integer
+
     total_registros = query.count()
+
+    query_ordenada = query.order_by(
+        cast(models_domain.Produto.sku, Integer).asc(),
+        models_domain.Produto.sku.asc(),
+        models_domain.Produto.id.asc()
+    )
 
     if limit and limit > 0:
         page_val = max(1, page)
         offset = (page_val - 1) * limit
-        produtos = query.order_by(models_domain.Produto.id.desc()).offset(offset).limit(limit).all()
+        produtos = query_ordenada.offset(offset).limit(limit).all()
         total_paginas = (total_registros + limit - 1) // limit
     else:
-        produtos = query.order_by(models_domain.Produto.id.desc()).all()
+        produtos = query_ordenada.all()
         page_val = 1
         total_paginas = 1
 
