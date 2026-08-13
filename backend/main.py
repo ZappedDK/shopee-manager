@@ -821,6 +821,9 @@ def ajustar_estoque_manual(sku: str, ajuste: AjusteEstoque, db: Session = Depend
 def listar_movimentacoes_estoque(
     sku: Optional[str] = None,
     tipo: Optional[str] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    limite: Optional[int] = 500,
     db: Session = Depends(get_db)
 ):
     query = db.query(models_domain.MovimentacaoEstoque)
@@ -829,7 +832,34 @@ def listar_movimentacoes_estoque(
     if tipo:
         query = query.filter(models_domain.MovimentacaoEstoque.tipo == tipo)
 
-    movs = query.order_by(models_domain.MovimentacaoEstoque.criado_em.desc()).limit(250).all()
+    agora_brt = datetime.utcnow() - timedelta(hours=3)
+
+    if data_inicio:
+        try:
+            dt_inicio_brt = datetime.strptime(data_inicio, "%Y-%m-%d")
+        except Exception:
+            dt_inicio_brt = (agora_brt - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        dt_inicio_brt = (agora_brt - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if data_fim:
+        try:
+            dt_fim_brt = datetime.strptime(data_fim, "%Y-%m-%d").replace(hour=23, minute=59, second=59, microsecond=999999)
+        except Exception:
+            dt_fim_brt = agora_brt.replace(hour=23, minute=59, second=59, microsecond=999999)
+    else:
+        dt_fim_brt = agora_brt.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    inicio_utc = dt_inicio_brt + timedelta(hours=3)
+    fim_utc = dt_fim_brt + timedelta(hours=3)
+
+    query = query.filter(
+        models_domain.MovimentacaoEstoque.criado_em >= inicio_utc,
+        models_domain.MovimentacaoEstoque.criado_em <= fim_utc
+    )
+
+    lim_val = min(1000, max(1, limite)) if limite else 500
+    movs = query.order_by(models_domain.MovimentacaoEstoque.criado_em.desc()).limit(lim_val).all()
     
     resultados = []
     for m in movs:
@@ -869,9 +899,9 @@ def obter_relatorio_vendas(
         try:
             dt_inicio_brt = datetime.strptime(data_inicio, "%Y-%m-%d")
         except Exception:
-            dt_inicio_brt = (agora_brt - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+            dt_inicio_brt = (agora_brt - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
     else:
-        dt_inicio_brt = (agora_brt - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+        dt_inicio_brt = (agora_brt - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     if data_fim:
         try:

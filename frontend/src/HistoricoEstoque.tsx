@@ -15,16 +15,28 @@ export function HistoricoEstoque() {
   // Filtros
   const [buscaSku, setBuscaSku] = useState<string>('');
   const [filtroTipo, setFiltroTipo] = useState<string>('');
+  const [dataInicio, setDataInicio] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().split('T')[0];
+  });
+  const [dataFim, setDataFim] = useState<string>(() => {
+    return new Date().toISOString().split('T')[0];
+  });
 
   useEffect(() => {
     carregarMovimentacoes();
-  }, [filtroTipo]);
+  }, [filtroTipo, dataInicio, dataFim]);
 
   const carregarMovimentacoes = async () => {
     try {
       setCarregando(true);
-      const url = filtroTipo ? `/produtos/movimentacoes?tipo=${filtroTipo}` : '/produtos/movimentacoes';
-      const res = await api.get(url);
+      const params = new URLSearchParams();
+      if (filtroTipo) params.append('tipo', filtroTipo);
+      if (dataInicio) params.append('data_inicio', dataInicio);
+      if (dataFim) params.append('data_fim', dataFim);
+
+      const res = await api.get(`/produtos/movimentacoes?${params.toString()}`);
       setMovimentacoes(res.data || []);
     } catch (err) {
       console.error('Erro ao carregar histórico de movimentações:', err);
@@ -108,10 +120,10 @@ export function HistoricoEstoque() {
       {/* Cards de Filtros e Resumo */}
       <div style={{ ...cardStyle, marginBottom: '24px' }}>
         <h3 style={cardTitleStyle}>🔍 Filtrar Auditoria</h3>
-        <p style={cardDescStyle}>Filtre as movimentações por SKU do produto, tipo de alteração ou palavra-chave.</p>
+        <p style={cardDescStyle}>Filtre as movimentações por intervalo de datas, SKU do produto, tipo de alteração ou palavra-chave.</p>
 
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ flex: 2, minWidth: '220px' }}>
+          <div style={{ flex: 2, minWidth: '200px' }}>
             <input
               type="text"
               placeholder="Buscar por SKU, nome do produto ou motivo..."
@@ -121,7 +133,47 @@ export function HistoricoEstoque() {
             />
           </div>
 
-          <div style={{ flex: 1, minWidth: '180px' }}>
+          {/* Seletor de Intervalo de Datas (De / Até) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: colors.bgApp, padding: '6px 12px', borderRadius: '8px', border: `1px solid ${colors.borderStrong}` }}>
+            <label style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600 }}>De:</label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              style={{
+                ...inputStyle,
+                width: 'auto',
+                maxWidth: 'none',
+                margin: 0,
+                padding: '4px 8px',
+                fontSize: '12px',
+                color: colors.textPrimary,
+                backgroundColor: colors.bgSidebar,
+                border: `1px solid ${colors.border}`,
+                colorScheme: 'dark'
+              }}
+            />
+            <label style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600, marginLeft: '4px' }}>Até:</label>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              style={{
+                ...inputStyle,
+                width: 'auto',
+                maxWidth: 'none',
+                margin: 0,
+                padding: '4px 8px',
+                fontSize: '12px',
+                color: colors.textPrimary,
+                backgroundColor: colors.bgSidebar,
+                border: `1px solid ${colors.border}`,
+                colorScheme: 'dark'
+              }}
+            />
+          </div>
+
+          <div style={{ flex: 1, minWidth: '160px' }}>
             <select
               value={filtroTipo}
               onChange={(e) => setFiltroTipo(e.target.value)}

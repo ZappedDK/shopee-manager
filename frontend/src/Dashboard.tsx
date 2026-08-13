@@ -144,7 +144,7 @@ export function Dashboard() {
   // Relatório de Vendas com Intervalo de Data Personalizado
   const [dataInicio, setDataInicio] = useState<string>(() => {
     const d = new Date();
-    d.setDate(d.getDate() - 30);
+    d.setDate(d.getDate() - 7);
     return d.toISOString().split('T')[0];
   });
   const [dataFim, setDataFim] = useState<string>(() => {
