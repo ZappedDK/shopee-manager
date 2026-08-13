@@ -69,6 +69,13 @@ try:
                 conn.execute(text("ALTER TABLE configuracoes_globais ADD COLUMN valor_texto VARCHAR(500)"))
             print("✅ Coluna valor_texto adicionada à tabela configuracoes_globais!")
 
+    if inspector.has_table("produtos"):
+        columns_prod = [col["name"] for col in inspector.get_columns("produtos")]
+        if "cross_docking" not in columns_prod:
+            default_val = "0" if engine.url.drivername.startswith("sqlite") else "FALSE"
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE produtos ADD COLUMN cross_docking BOOLEAN DEFAULT {default_val}"))
+
     if inspector.has_table("usuarios"):
         columns_user = [col["name"] for col in inspector.get_columns("usuarios")]
         with engine.begin() as conn:
@@ -507,6 +514,7 @@ def editar_produto(sku: str, dados: schemas_domain.ProdutoUpdate, db: Session = 
     produto.preco_venda = dados.preco_venda
     produto.custo_produto = dados.custo_produto
     produto.quantidade_estoque = dados.quantidade_estoque
+    produto.cross_docking = getattr(dados, 'cross_docking', False)
     produto.ativo = dados.ativo if dados.ativo is not None else True
     produto.embalagem_id = dados.embalagem_id
     produto.plataformas = plataformas_selecionadas
@@ -844,19 +852,38 @@ def listar_movimentacoes_estoque(
 
 
 @app.get("/relatorios/vendas", tags=["Dashboard"])
-def obter_relatorio_vendas(canal: Optional[str] = None, db: Session = Depends(get_db)):
+def obter_relatorio_vendas(
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    canal: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
     """
-    Retorna métricas de vendas consolidadas por Período (Hoje, Semana, Mês) e Canal/Plataforma.
+    Retorna métricas de vendas consolidadas por intervalo de datas personalizado (data_inicio / data_fim) e Canal/Plataforma.
     """
     from services.financeiro import calcular_metricas_plataforma
 
-    agora = datetime.utcnow()
-    agora_brt = agora - timedelta(hours=3)
+    agora_brt = datetime.utcnow() - timedelta(hours=3)
 
-    # Limites de datas (UTC)
-    inicio_hoje = agora_brt.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=3)
-    inicio_semana = agora - timedelta(days=7)
-    inicio_mes = agora - timedelta(days=30)
+    if data_inicio:
+        try:
+            dt_inicio_brt = datetime.strptime(data_inicio, "%Y-%m-%d")
+        except Exception:
+            dt_inicio_brt = (agora_brt - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        dt_inicio_brt = (agora_brt - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if data_fim:
+        try:
+            dt_fim_brt = datetime.strptime(data_fim, "%Y-%m-%d").replace(hour=23, minute=59, second=59, microsecond=999999)
+        except Exception:
+            dt_fim_brt = agora_brt.replace(hour=23, minute=59, second=59, microsecond=999999)
+    else:
+        dt_fim_brt = agora_brt.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    # Converte limites de BRT para UTC no banco (+3 horas)
+    inicio_utc = dt_inicio_brt + timedelta(hours=3)
+    fim_utc = dt_fim_brt + timedelta(hours=3)
 
     # Produtos e Plataformas para cálculo exato de margem
     produtos = db.query(models_domain.Produto).all()
@@ -871,129 +898,133 @@ def obter_relatorio_vendas(canal: Optional[str] = None, db: Session = Depends(ge
                 return p
         return None
 
-    # Busca movimentações de vendas (VENDA, VENDA_DIRETA, VENDA_WEBHOOK, SAIDA com vendas)
     movs = db.query(models_domain.MovimentacaoEstoque).filter(
         models_domain.MovimentacaoEstoque.tipo.in_(["VENDA", "VENDA_DIRETA", "VENDA_WEBHOOK", "SAIDA"])
     ).order_by(models_domain.MovimentacaoEstoque.criado_em.desc()).all()
 
-    def calcular_periodo(data_limite):
-        qtd_total = 0
-        faturamento = 0.0
-        lucro_total = 0.0
-        vendas_lista = []
+    qtd_total = 0
+    faturamento = 0.0
+    lucro_total = 0.0
+    vendas_lista = []
 
-        for m in movs:
-            if not m.criado_em or m.criado_em < data_limite:
+    for m in movs:
+        if not m.criado_em or m.criado_em < inicio_utc or m.criado_em > fim_utc:
+            continue
+
+        motivo_lower = (m.motivo or "").lower()
+        if m.tipo == "SAIDA" and not ("venda" in motivo_lower or "baixa" in motivo_lower or "shopee" in motivo_lower or "tiktok" in motivo_lower):
+            continue
+
+        canal_venda = "Shopee" if "shopee" in motivo_lower else ("TikTok" if "tiktok" in motivo_lower else ("Mercado Livre" if ("mercado" in motivo_lower or "ml" in motivo_lower) else "Venda Direta"))
+
+        if canal:
+            c_filter = canal.lower().strip()
+            if c_filter == "direta" and canal_venda != "Venda Direta":
+                continue
+            elif c_filter != "direta" and c_filter not in canal_venda.lower():
                 continue
 
-            # Filtra saídas que são de fato vendas
-            motivo_lower = (m.motivo or "").lower()
-            if m.tipo == "SAIDA" and not ("venda" in motivo_lower or "baixa" in motivo_lower or "shopee" in motivo_lower or "tiktok" in motivo_lower):
-                continue
+        qtd = abs(m.quantidade_alterada) if m.quantidade_alterada is not None else 1
+        prod = prod_map.get(m.produto_id) or sku_map.get((m.produto_sku or "").upper())
+        import re
+        preco_un = prod.preco_venda if prod else 0.0
 
-            canal_venda = "Shopee" if "shopee" in motivo_lower else ("TikTok" if "tiktok" in motivo_lower else ("Mercado Livre" if ("mercado" in motivo_lower or "ml" in motivo_lower) else "Venda Direta"))
+        if "r$" in motivo_lower:
+            try:
+                match_preco = re.search(r"r\$\s*([\d\.,]+)", motivo_lower)
+                if match_preco:
+                    s_val = match_preco.group(1).strip()
+                    if "," in s_val:
+                        s_val = s_val.replace(".", "").replace(",", ".")
+                    val_num = float(s_val)
+                    if val_num > 0:
+                        preco_un = val_num
+            except Exception:
+                pass
 
-            # Filtro por canal/plataforma
-            if canal:
-                c_filter = canal.lower().strip()
-                if c_filter == "direta" and canal_venda != "Venda Direta":
-                    continue
-                elif c_filter != "direta" and c_filter not in canal_venda.lower():
-                    continue
+        emb_incluida = True
+        etiq_incluida = True
 
-            qtd = abs(m.quantidade_alterada) if m.quantidade_alterada is not None else 1
-            prod = prod_map.get(m.produto_id) or sku_map.get((m.produto_sku or "").upper())
-            import re
-            preco_un = prod.preco_venda if prod else 0.0
+        if "emb=n" in motivo_lower or "sem embalagem" in motivo_lower:
+            emb_incluida = False
+        if "etiq=n" in motivo_lower or "sem etiqueta" in motivo_lower:
+            etiq_incluida = False
 
-            # 1. Extrai preço cobrado real do motivo se gravado (ex: R$ 50.00/un)
-            if "r$" in motivo_lower:
-                try:
-                    match_preco = re.search(r"r\$\s*([\d\.,]+)", motivo_lower)
-                    if match_preco:
-                        s_val = match_preco.group(1).strip()
-                        if "," in s_val:
-                            s_val = s_val.replace(".", "").replace(",", ".")
-                        val_num = float(s_val)
-                        if val_num > 0:
-                            preco_un = val_num
-                except Exception:
-                    pass
+        custo_prod = prod.custo_produto if prod else 0.0
+        custo_emb = (prod.embalagem.custo_pacote / prod.embalagem.qtd_unidades) if (prod and prod.embalagem and emb_incluida) else 0.0
+        custo_etiq = 0.04 if etiq_incluida else 0.0
 
-            # 2. Extrai preferências de embalagem e etiqueta registradas na baixa manual
-            emb_incluida = True
-            etiq_incluida = True
+        plat_obj = obter_plataforma_canal(canal_venda)
 
-            if "emb=n" in motivo_lower or "sem embalagem" in motivo_lower:
-                emb_incluida = False
-            if "etiq=n" in motivo_lower or "sem etiqueta" in motivo_lower:
-                etiq_incluida = False
+        if canal_venda == "Venda Direta" or not plat_obj:
+            lucro_un = preco_un - (custo_prod + custo_emb + custo_etiq)
+        else:
+            metricas = calcular_metricas_plataforma(preco_un, custo_prod, custo_emb, custo_etiq, plat_obj)
+            lucro_un = metricas.get("lucro_liquido", 0.0)
 
-            custo_prod = prod.custo_produto if prod else 0.0
-            custo_emb = (prod.embalagem.custo_pacote / prod.embalagem.qtd_unidades) if (prod and prod.embalagem and emb_incluida) else 0.0
-            custo_etiq = 0.04 if etiq_incluida else 0.0
+        item_fat = preco_un * qtd
+        item_lucro = lucro_un * qtd
 
-            plat_obj = obter_plataforma_canal(canal_venda)
+        qtd_total += qtd
+        faturamento += item_fat
+        lucro_total += item_lucro
 
-            if canal_venda == "Venda Direta" or not plat_obj:
-                lucro_un = preco_un - (custo_prod + custo_emb + custo_etiq)
-            else:
-                metricas = calcular_metricas_plataforma(preco_un, custo_prod, custo_emb, custo_etiq, plat_obj)
-                lucro_un = metricas.get("lucro_liquido", 0.0)
+        data_local = (m.criado_em - timedelta(hours=3)) if m.criado_em else None
+        vendas_lista.append({
+            "id": m.id,
+            "data": data_local.strftime("%d/%m/%Y %H:%M") if data_local else "",
+            "raw_date": data_local.isoformat() if data_local else "",
+            "sku": m.produto_sku or "",
+            "nome": m.produto_nome or "",
+            "quantidade": qtd,
+            "faturamento": round(item_fat, 2),
+            "lucro_estimado": round(item_lucro, 2),
+            "canal": canal_venda,
+            "motivo": m.motivo
+        })
 
-            item_fat = preco_un * qtd
-            item_lucro = lucro_un * qtd
-
-            qtd_total += qtd
-            faturamento += item_fat
-            lucro_total += item_lucro
-
-            data_local = (m.criado_em - timedelta(hours=3)) if m.criado_em else None
-            vendas_lista.append({
-                "id": m.id,
-                "data": data_local.strftime("%d/%m/%Y %H:%M") if data_local else "",
-                "sku": m.produto_sku,
-                "nome": m.produto_nome,
-                "quantidade": qtd,
-                "faturamento": item_fat,
-                "lucro_estimado": item_lucro,
-                "canal": canal_venda,
-                "motivo": m.motivo
-            })
-
-        return {
-            "unidades_vendidas": qtd_total,
-            "faturamento": round(faturamento, 2),
-            "lucro_estimado": round(lucro_total, 2),
-            "total_pedidos": len(vendas_lista),
-            "vendas": vendas_lista[:100]
-        }
+    dados_resumo = {
+        "unidades_vendidas": qtd_total,
+        "faturamento": round(faturamento, 2),
+        "lucro_estimado": round(lucro_total, 2),
+        "total_pedidos": len(vendas_lista),
+        "vendas": vendas_lista,
+        "data_inicio": dt_inicio_brt.strftime("%Y-%m-%d"),
+        "data_fim": dt_fim_brt.strftime("%Y-%m-%d")
+    }
 
     return {
-        "hoje": calcular_periodo(inicio_hoje),
-        "semana": calcular_periodo(inicio_semana),
-        "mes": calcular_periodo(inicio_mes)
+        "resumo": dados_resumo,
+        "hoje": dados_resumo,
+        "semana": dados_resumo,
+        "mes": dados_resumo,
+        **dados_resumo
     }
 
 @app.get("/relatorios/vendas/exportar", tags=["Dashboard"])
-def exportar_relatorio_vendas_excel(periodo: str = "mes", canal: Optional[str] = None, db: Session = Depends(get_db)):
+def exportar_relatorio_vendas_excel(
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    canal: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
     """
-    Gera e faz download do relatório de vendas formatado para Excel (.csv) por período e canal.
+    Gera e faz download do relatório de vendas formatado para Excel (.csv) por intervalo de datas e canal.
     """
-    relatorio = obter_relatorio_vendas(canal=canal, db=db)
-    dados = relatorio.get(periodo, relatorio.get("mes"))
+    relatorio = obter_relatorio_vendas(data_inicio=data_inicio, data_fim=data_fim, canal=canal, db=db)
+    dados = relatorio.get("resumo", relatorio)
     
-    nome_periodo = "Hoje" if periodo == "hoje" else ("Esta_Semana" if periodo == "semana" else "Este_Mes")
+    nome_periodo = f"{dados.get('data_inicio', '')}_ate_{dados.get('data_fim', '')}"
     
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';')
 
     # Cabeçalho de Resumo
-    writer.writerow([f"RELATÓRIO DE VENDAS - PERÍODO: {nome_periodo.upper().replace('_', ' ')}"])
-    writer.writerow(["Total de Unidades Vendidas", f"{dados['unidades_vendidas']} un."])
-    writer.writerow(["Faturamento Total (R$)", f"R$ {dados['faturamento']:.2f}".replace(".", ",")])
-    writer.writerow(["Lucro Líquido Estimado (R$)", f"R$ {dados['lucro_estimado']:.2f}".replace(".", ",")])
-    writer.writerow(["Total de Pedidos/Operações", dados['total_pedidos']])
+    writer.writerow([f"RELATÓRIO DE VENDAS - PERÍODO: {dados.get('data_inicio')} A {dados.get('data_fim')}"])
+    writer.writerow(["Total de Unidades Vendidas", f"{dados.get('unidades_vendidas', 0)} un."])
+    writer.writerow(["Faturamento Total (R$)", f"R$ {dados.get('faturamento', 0.0):.2f}".replace(".", ",")])
+    writer.writerow(["Lucro Líquido Estimado (R$)", f"R$ {dados.get('lucro_estimado', 0.0):.2f}".replace(".", ",")])
+    writer.writerow(["Total de Pedidos/Operações", dados.get('total_pedidos', 0)])
     writer.writerow([]) # Linha em branco
 
     # Tabela de Detalhes
@@ -1093,9 +1124,10 @@ def listar_produtos_detalhados(
             "preco_venda": p.preco_venda,
             "custo_produto": p.custo_produto,
             "ativo": p.ativo if p.ativo is not None else True,
+            "cross_docking": getattr(p, "cross_docking", False),
             "embalagem_id": p.embalagem_id,
             "embalagem_nome": emb_obj.nome if emb_obj else "Caixa Própria",
-            "valor_estoque": p.quantidade_estoque * p.custo_produto,
+            "valor_estoque": max(0, p.quantidade_estoque) * p.custo_produto,
             "analises_plataformas": metricas_multiplas
         })
         
@@ -1595,14 +1627,18 @@ def registrar_baixa_venda_manual(
         raise HTTPException(status_code=404, detail=f"Produto com SKU '{sku_limpo}' não foi encontrado.")
 
     qtd = max(1, dados.quantidade)
-    if produto.quantidade_estoque < qtd:
+    is_cross_docking = getattr(produto, "cross_docking", False)
+    if not is_cross_docking and produto.quantidade_estoque < qtd:
         raise HTTPException(
             status_code=400,
             detail=f"Estoque insuficiente! O produto '{produto.nome}' (SKU: {produto.sku}) possui apenas {produto.quantidade_estoque} un. em estoque."
         )
 
     estoque_ant = produto.quantidade_estoque
-    produto.quantidade_estoque -= qtd
+    if is_cross_docking:
+        produto.quantidade_estoque = max(0, produto.quantidade_estoque - qtd)
+    else:
+        produto.quantidade_estoque -= qtd
     estoque_novo = produto.quantidade_estoque
 
     preco_un = dados.preco_venda_unitario if (dados.preco_venda_unitario and dados.preco_venda_unitario > 0) else produto.preco_venda

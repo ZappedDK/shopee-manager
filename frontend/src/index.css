@@ -192,3 +192,16 @@ select::-ms-expand {
   animation: skeletonShimmer 1.4s ease infinite;
   border-radius: 6px;
 }
+
+/* Ícone de Calendário Branco para inputs de data no tema escuro */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: brightness(0) invert(1) !important;
+  cursor: pointer !important;
+  opacity: 0.9 !important;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1 !important;
+}
+input[type="date"] {
+  color-scheme: dark !important;
+}

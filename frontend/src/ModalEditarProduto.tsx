@@ -15,7 +15,8 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
   const [nome, setNome] = useState(produto.nome || '');
   const [precoVenda, setPrecoVenda] = useState(produto.preco_venda ? String(produto.preco_venda) : '');
   const [custoProduto, setCustoProduto] = useState(produto.custo_produto ? String(produto.custo_produto) : '');
-  const [quantidadeEstoque, setQuantidadeEstoque] = useState(produto.quantidade_estoque ? String(produto.quantidade_estoque) : '0');
+  const [quantidadeEstoque, setQuantidadeEstoque] = useState(produto.quantidade_estoque !== undefined ? String(produto.quantidade_estoque) : '0');
+  const [crossDocking, setCrossDocking] = useState<boolean>(produto.cross_docking || false);
   const [ativo, setAtivo] = useState(produto.ativo !== false);
   const [embalagemId, setEmbalagemId] = useState(produto.embalagem_id ? String(produto.embalagem_id) : (produto.embalagem?.id ? String(produto.embalagem.id) : ''));
   const [plataformasIds, setPlataformasIds] = useState<number[]>([]);
@@ -30,6 +31,7 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
       setPrecoVenda(produto.preco_venda ? String(produto.preco_venda) : '');
       setCustoProduto(produto.custo_produto ? String(produto.custo_produto) : '');
       setQuantidadeEstoque(produto.quantidade_estoque !== undefined ? String(produto.quantidade_estoque) : '0');
+      setCrossDocking(produto.cross_docking || false);
       setAtivo(produto.ativo !== false);
       
       const embId = produto.embalagem_id ? String(produto.embalagem_id) : (produto.embalagem?.id ? String(produto.embalagem.id) : '');
@@ -69,6 +71,7 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
         preco_venda: parseFloat(precoVenda.replace(',', '.')),
         custo_produto: parseFloat(custoProduto.replace(',', '.')),
         quantidade_estoque: Number(quantidadeEstoque),
+        cross_docking: crossDocking,
         ativo,
         embalagem_id: embalagemId ? Number(embalagemId) : null,
         plataformas_ids: plataformasIds,
@@ -228,6 +231,21 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
                 style={{ ...inputStyle, maxWidth: '100%' }}
               />
             </div>
+          </div>
+
+          {/* Opção Cross-docking / Venda sob Demanda */}
+          <div style={{ marginBottom: '16px', backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textPrimary, fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}>
+              <input
+                type="checkbox"
+                checked={crossDocking}
+                onChange={(e) => setCrossDocking(e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+              />
+              <span>
+                📦 <strong>Produto Cross-docking</strong> <span style={{ color: colors.textSecondary, fontSize: '12px' }}>(Venda sob demanda)</span>
+              </span>
+            </label>
           </div>
 
           <div style={{ marginBottom: '16px' }}>

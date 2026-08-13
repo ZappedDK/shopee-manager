@@ -32,6 +32,7 @@ class ProdutoCreate(BaseModel):
     preco_venda: float = Field(..., ge=0)
     custo_produto: float = Field(..., ge=0)
     quantidade_estoque: int = 0
+    cross_docking: Optional[bool] = False
     ativo: Optional[bool] = True
     embalagem_id: Optional[int] = None
     plataformas_ids: List[int] = []
@@ -88,6 +89,7 @@ class ProdutoUpdate(BaseModel):
     preco_venda: float = Field(..., ge=0)
     custo_produto: float = Field(..., ge=0)
     quantidade_estoque: int = 0
+    cross_docking: Optional[bool] = False
     ativo: Optional[bool] = True
     embalagem_id: Optional[int] = None
     plataformas_ids: List[int] = []

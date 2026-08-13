@@ -8,8 +8,6 @@ import {
 } from './theme';
 import { SkeletonBox, SkeletonList, SkeletonTable } from './Skeleton';
 
-type PeriodoRelatorio = 'hoje' | 'semana' | 'mes';
-
 interface SeletorFiltroCanalProps {
   canalFiltro: string;
   onSelectCanal: (canal: string) => void;
@@ -143,16 +141,28 @@ export function Dashboard() {
   const [lucroPotencialTotal, setLucroPotencialTotal] = useState<number | null>(null);
   const [carregando, setCarregando] = useState(true);
 
-  // Relatório de Vendas
-  const [periodo, setPeriodo] = useState<PeriodoRelatorio>('mes');
+  // Relatório de Vendas com Intervalo de Data Personalizado
+  const [dataInicio, setDataInicio] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  });
+  const [dataFim, setDataFim] = useState<string>(() => {
+    return new Date().toISOString().split('T')[0];
+  });
   const [canalFiltro, setCanalFiltro] = useState<string>('todos');
   const [relatorioVendas, setRelatorioVendas] = useState<any>(null);
   const [carregandoRelatorio, setCarregandoRelatorio] = useState(true);
 
+  // Ordenação de Colunas na Tabela de Vendas
+  type SortFieldVendas = 'data' | 'sku' | 'nome' | 'canal' | 'quantidade' | 'faturamento' | 'lucro_estimado';
+  const [sortField, setSortField] = useState<SortFieldVendas>('data');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
   useEffect(() => {
     carregarAlertas();
     carregarValorEstoque();
-    carregarRelatorioVendas(canalFiltro);
+    carregarRelatorioVendas(dataInicio, dataFim, canalFiltro);
   }, []);
 
   const carregarAlertas = async () => {
@@ -173,7 +183,7 @@ export function Dashboard() {
       const produtos = res.data || [];
 
       // Custo Total em Estoque
-      const totalCusto = produtos.reduce((soma: number, p: any) => soma + (p.valor_estoque || 0), 0);
+      const totalCusto = produtos.reduce((soma: number, p: any) => soma + Math.max(0, p.valor_estoque || 0), 0);
       setValorTotalEstoque(totalCusto);
 
       // Lucro Potencial Total (Lucro da Shopee por padrão ou primeira plataforma disponível)
@@ -182,7 +192,7 @@ export function Dashboard() {
         const shopee = p.analises_plataformas?.find((plat: any) => plat.plataforma_nome?.toLowerCase().includes('shopee'));
         const analise = shopee || p.analises_plataformas?.[0];
         const lucroUn = analise?.lucro_liquido || 0;
-        return soma + (lucroUn * (p.quantidade_estoque || 0));
+        return soma + (lucroUn * Math.max(0, p.quantidade_estoque || 0));
       }, 0);
 
       setLucroPotencialTotal(lucroTotal);
@@ -191,14 +201,19 @@ export function Dashboard() {
     }
   };
 
-  const carregarRelatorioVendas = async (canal?: string) => {
+  const carregarRelatorioVendas = async (inicio?: string, fim?: string, canal?: string) => {
     try {
       setCarregandoRelatorio(true);
+      const targetInicio = inicio !== undefined ? inicio : dataInicio;
+      const targetFim = fim !== undefined ? fim : dataFim;
       const targetCanal = canal !== undefined ? canal : canalFiltro;
-      const url = targetCanal && targetCanal !== 'todos'
-        ? `/relatorios/vendas?canal=${encodeURIComponent(targetCanal)}`
-        : '/relatorios/vendas';
-      const res = await api.get(url);
+
+      const params = new URLSearchParams();
+      if (targetInicio) params.append('data_inicio', targetInicio);
+      if (targetFim) params.append('data_fim', targetFim);
+      if (targetCanal && targetCanal !== 'todos') params.append('canal', targetCanal);
+
+      const res = await api.get(`/relatorios/vendas?${params.toString()}`);
       setRelatorioVendas(res.data);
     } catch (err) {
       console.error('Erro ao carregar relatório de vendas:', err);
@@ -210,11 +225,26 @@ export function Dashboard() {
   const exportarExcel = () => {
     const baseURL = api.defaults.baseURL || 'http://localhost:8000';
     const params = new URLSearchParams();
-    params.append('periodo', periodo);
+    if (dataInicio) params.append('data_inicio', dataInicio);
+    if (dataFim) params.append('data_fim', dataFim);
     if (canalFiltro && canalFiltro !== 'todos') {
       params.append('canal', canalFiltro);
     }
     window.open(`${baseURL}/relatorios/vendas/exportar?${params.toString()}`, '_blank');
+  };
+
+  const handleSort = (field: SortFieldVendas) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const renderSortIcon = (field: SortFieldVendas) => {
+    if (sortField !== field) return <span style={{ opacity: 0.3, marginLeft: '4px' }}>↕</span>;
+    return <span style={{ color: colors.accent, marginLeft: '4px', fontWeight: 'bold' }}>{sortDirection === 'asc' ? '▲' : '▼'}</span>;
   };
 
   const statCardStyle = {
@@ -224,7 +254,24 @@ export function Dashboard() {
     minWidth: '220px',
   };
 
-  const dadosPeriodo = relatorioVendas ? relatorioVendas[periodo] : null;
+  const dadosResumo = relatorioVendas?.resumo || relatorioVendas;
+
+  const vendasOrdenadas = [...(dadosResumo?.vendas || [])].sort((a: any, b: any) => {
+    let valA = a[sortField];
+    let valB = b[sortField];
+
+    if (sortField === 'data') {
+      valA = a.raw_date || a.data;
+      valB = b.raw_date || b.data;
+    }
+
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   return (
     <div>
@@ -264,65 +311,61 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Relatório Interativo de Vendas (Dia / Semana / Mês) */}
+      {/* Relatório Interativo de Vendas com Intervalo de Data Personalizado */}
       <div style={{ ...cardStyle, marginBottom: '28px', borderLeft: `4px solid ${colors.accent}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
           <div>
             <h3 style={cardTitleStyle}>📊 Relatório de Vendas & Desempenho</h3>
-            <p style={{ ...cardDescStyle, margin: 0 }}>Consolidado de vendas por período: filtre por Dia, Semana ou Mês.</p>
+            <p style={{ ...cardDescStyle, margin: 0 }}>Consolidado de vendas por intervalo de data personalizado e canal.</p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            {/* Botões de Seleção de Período */}
-            <div style={{ display: 'flex', gap: '8px', backgroundColor: colors.bgApp, padding: '4px', borderRadius: '8px', border: `1px solid ${colors.borderStrong}` }}>
-              <button
-                onClick={() => setPeriodo('hoje')}
-                style={{
-                  padding: '6px 16px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  border: 'none',
-                  cursor: 'pointer',
-                  backgroundColor: periodo === 'hoje' ? 'rgba(59, 130, 246, 0.25)' : 'transparent',
-                  color: periodo === 'hoje' ? '#60a5fa' : colors.textSecondary,
-                  transition: '0.15s'
+            {/* Seletor de Intervalo de Datas (De / Até) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: colors.bgApp, padding: '4px 10px', borderRadius: '8px', border: `1px solid ${colors.borderStrong}` }}>
+              <label style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600 }}>De:</label>
+              <input
+                type="date"
+                value={dataInicio}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDataInicio(val);
+                  carregarRelatorioVendas(val, dataFim, canalFiltro);
                 }}
-              >
-                📅 Hoje
-              </button>
-              <button
-                onClick={() => setPeriodo('semana')}
                 style={{
-                  padding: '6px 16px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  border: 'none',
-                  cursor: 'pointer',
-                  backgroundColor: periodo === 'semana' ? 'rgba(59, 130, 246, 0.25)' : 'transparent',
-                  color: periodo === 'semana' ? '#60a5fa' : colors.textSecondary,
-                  transition: '0.15s'
+                  ...inputStyle,
+                  width: 'auto',
+                  maxWidth: 'none',
+                  margin: 0,
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  color: colors.textPrimary,
+                  backgroundColor: colors.bgSidebar,
+                  border: `1px solid ${colors.border}`,
+                  colorScheme: 'dark'
                 }}
-              >
-                🗓️ Esta Semana (7d)
-              </button>
-              <button
-                onClick={() => setPeriodo('mes')}
+              />
+              <label style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600, marginLeft: '4px' }}>Até:</label>
+              <input
+                type="date"
+                value={dataFim}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDataFim(val);
+                  carregarRelatorioVendas(dataInicio, val, canalFiltro);
+                }}
                 style={{
-                  padding: '6px 16px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  border: 'none',
-                  cursor: 'pointer',
-                  backgroundColor: periodo === 'mes' ? 'rgba(59, 130, 246, 0.25)' : 'transparent',
-                  color: periodo === 'mes' ? '#60a5fa' : colors.textSecondary,
-                  transition: '0.15s'
+                  ...inputStyle,
+                  width: 'auto',
+                  maxWidth: 'none',
+                  margin: 0,
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  color: colors.textPrimary,
+                  backgroundColor: colors.bgSidebar,
+                  border: `1px solid ${colors.border}`,
+                  colorScheme: 'dark'
                 }}
-              >
-                📊 Este Mês (30d)
-              </button>
+              />
             </div>
 
             {/* Seletor de Canal / Plataforma com Logos Oficiais */}
@@ -330,7 +373,7 @@ export function Dashboard() {
               canalFiltro={canalFiltro}
               onSelectCanal={(c) => {
                 setCanalFiltro(c);
-                carregarRelatorioVendas(c);
+                carregarRelatorioVendas(dataInicio, dataFim, c);
               }}
             />
 
@@ -366,31 +409,31 @@ export function Dashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               <div style={{ backgroundColor: colors.bgApp, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
                 <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>🛒 Unidades Vendidas</span>
-                <strong style={{ fontSize: '22px', color: colors.textPrimary }}>{dadosPeriodo?.unidades_vendidas || 0} un.</strong>
+                <strong style={{ fontSize: '22px', color: colors.textPrimary }}>{dadosResumo?.unidades_vendidas || 0} un.</strong>
               </div>
 
               <div style={{ backgroundColor: colors.bgApp, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
                 <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>💵 Faturamento Total</span>
-                <strong style={{ fontSize: '22px', color: '#60a5fa' }}>{formatarMoeda(dadosPeriodo?.faturamento || 0)}</strong>
+                <strong style={{ fontSize: '22px', color: '#60a5fa' }}>{formatarMoeda(dadosResumo?.faturamento || 0)}</strong>
               </div>
 
               <div style={{ backgroundColor: colors.bgApp, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
                 <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>📈 Lucro Líquido Estimado</span>
-                <strong style={{ fontSize: '22px', color: colors.successText }}>{formatarMoeda(dadosPeriodo?.lucro_estimado || 0)}</strong>
+                <strong style={{ fontSize: '22px', color: colors.successText }}>{formatarMoeda(dadosResumo?.lucro_estimado || 0)}</strong>
               </div>
 
               <div style={{ backgroundColor: colors.bgApp, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
                 <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>📋 Pedidos / Operações</span>
-                <strong style={{ fontSize: '22px', color: colors.textPrimary }}>{dadosPeriodo?.total_pedidos || 0} vendas</strong>
+                <strong style={{ fontSize: '22px', color: colors.textPrimary }}>{dadosResumo?.total_pedidos || 0} vendas</strong>
               </div>
             </div>
 
-            {/* Tabela de Vendas Recentes do Período */}
+            {/* Tabela de Vendas Recentes do Período com Ordenação */}
             <h4 style={{ color: colors.textSecondary, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
-              📜 Últimas Vendas ({periodo === 'hoje' ? 'Hoje' : periodo === 'semana' ? 'Últimos 7 dias' : 'Últimos 30 dias'})
+              📜 Detalhamento de Vendas (Clique nos cabeçalhos da tabela para ordenar)
             </h4>
 
-            {(!dadosPeriodo?.vendas || dadosPeriodo.vendas.length === 0) ? (
+            {(!vendasOrdenadas || vendasOrdenadas.length === 0) ? (
               <div style={{ padding: '20px', textAlign: 'center', color: colors.textMuted, backgroundColor: colors.bgApp, borderRadius: '8px', fontSize: '13.5px' }}>
                 Nenhuma venda registrada neste período.
               </div>
@@ -399,17 +442,31 @@ export function Dashboard() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      <th style={tableHeaderStyle}>Data / Hora</th>
-                      <th style={tableHeaderStyle}>SKU</th>
-                      <th style={tableHeaderStyle}>Produto</th>
-                      <th style={tableHeaderStyle}>Canal</th>
-                      <th style={tableHeaderStyle}>Qtd</th>
-                      <th style={tableHeaderStyle}>Faturamento</th>
-                      <th style={tableHeaderStyle}>Lucro Est.</th>
+                      <th onClick={() => handleSort('data')} style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}>
+                        Data / Hora {renderSortIcon('data')}
+                      </th>
+                      <th onClick={() => handleSort('sku')} style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}>
+                        SKU {renderSortIcon('sku')}
+                      </th>
+                      <th onClick={() => handleSort('nome')} style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}>
+                        Produto {renderSortIcon('nome')}
+                      </th>
+                      <th onClick={() => handleSort('canal')} style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}>
+                        Canal {renderSortIcon('canal')}
+                      </th>
+                      <th onClick={() => handleSort('quantidade')} style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}>
+                        Qtd {renderSortIcon('quantidade')}
+                      </th>
+                      <th onClick={() => handleSort('faturamento')} style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}>
+                        Faturamento {renderSortIcon('faturamento')}
+                      </th>
+                      <th onClick={() => handleSort('lucro_estimado')} style={{ ...tableHeaderStyle, cursor: 'pointer', userSelect: 'none' }}>
+                        Lucro Est. {renderSortIcon('lucro_estimado')}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dadosPeriodo.vendas.map((v: any) => (
+                    {vendasOrdenadas.map((v: any) => (
                       <tr key={v.id}>
                         <td style={{ ...tableCellStyle, fontSize: '12.5px', color: colors.textSecondary, whiteSpace: 'nowrap' }}>{v.data}</td>
                         <td style={{ ...tableCellStyle, fontWeight: 'bold', color: colors.accent, whiteSpace: 'nowrap' }}>{v.sku}</td>

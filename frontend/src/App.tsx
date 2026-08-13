@@ -1269,7 +1269,14 @@ function App() {
                             </td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{item.nome}</td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{formatarMoeda(item.custo_produto)}</td>
-                            <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1, color: item.quantidade_estoque <= 10 ? '#f87171' : colors.textPrimary, fontWeight: 'bold' }}>{item.quantidade_estoque} un.</td>
+                            <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1, color: item.quantidade_estoque <= 10 ? (item.cross_docking ? '#60a5fa' : '#f87171') : colors.textPrimary, fontWeight: 'bold' }}>
+                              {item.quantidade_estoque} un.
+                              {item.cross_docking && (
+                                <span style={{ marginLeft: '6px', fontSize: '10px', backgroundColor: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, display: 'inline-block' }}>
+                                  📦 CROSS-DOCKING
+                                </span>
+                              )}
+                            </td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{formatarMoeda(item.valor_estoque)}</td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>
                               {(() => {

@@ -544,9 +544,10 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
     }
   }, [skuSelecionado, plataformaIdStr]);
 
-  // Trava de Estoque Insuficiente
+  // Trava de Estoque Insuficiente (bypassed para produtos Cross-docking)
   const estoqueAtual = prodSelecionado ? (prodSelecionado.quantidade_estoque || 0) : 0;
-  const estoqueInsuficiente = prodSelecionado ? (quantidade > estoqueAtual) : false;
+  const isCrossDocking = prodSelecionado?.cross_docking || false;
+  const estoqueInsuficiente = prodSelecionado ? (quantidade > estoqueAtual && !isCrossDocking) : false;
 
   // Cálculos Financeiros em Tempo Real
   const precoUnitarioNum = parseFloat(precoUnitarioStr.replace(',', '.')) || (prodSelecionado?.preco_venda || 0);
@@ -679,6 +680,11 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                   <>
                     <span>🛑</span>
                     <span>TRAVA DE ESTOQUE: Estoque insuficiente! (Disponível: {estoqueAtual} un | Solicitado: {quantidade} un)</span>
+                  </>
+                ) : isCrossDocking ? (
+                  <>
+                    <span>📦</span>
+                    <span>PRODUTO CROSS-DOCKING: Venda sob demanda liberada no fornecedor. (Estoque físico: {estoqueAtual} un)</span>
                   </>
                 ) : (
                   <>
