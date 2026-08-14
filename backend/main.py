@@ -1085,7 +1085,8 @@ def exportar_relatorio_vendas_excel(
 def alertas_de_estoque(limite: int = 0, db: Session = Depends(get_db)):
     produtos_criticos = db.query(models_domain.Produto).filter(
         models_domain.Produto.quantidade_estoque <= limite,
-        models_domain.Produto.ativo != False
+        models_domain.Produto.ativo != False,
+        (models_domain.Produto.cross_docking == False) | (models_domain.Produto.cross_docking == None)
     ).all()
     return produtos_criticos
 
