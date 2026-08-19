@@ -4,7 +4,7 @@ import { PageHeader } from './ui';
 import {
   colors, cardStyle, cardTitleStyle, cardDescStyle,
   inputStyle, btnNeutralStyle,
-  tableHeaderStyle, tableCellStyle
+  tableHeaderStyle, tableCellStyle, formatarMoeda
 } from './theme';
 import { SkeletonTable } from './Skeleton';
 
@@ -59,9 +59,9 @@ export function HistoricoEstoque() {
     const badgeBaseStyle = {
       display: 'inline-block',
       whiteSpace: 'nowrap' as const,
-      padding: '4px 10px',
-      borderRadius: '6px',
-      fontSize: '12px',
+      padding: '3px 8px',
+      borderRadius: '5px',
+      fontSize: '11.5px',
       fontWeight: 600,
     };
 
@@ -212,10 +212,11 @@ export function HistoricoEstoque() {
                   <th style={tableHeaderStyle}>Data & Hora</th>
                   <th style={tableHeaderStyle}>SKU</th>
                   <th style={tableHeaderStyle}>Nome do Produto</th>
-                  <th style={tableHeaderStyle}>Tipo</th>
+                  <th style={{ ...tableHeaderStyle, width: '95px', whiteSpace: 'nowrap' }}>Tipo</th>
                   <th style={tableHeaderStyle}>Qtd. Alterada</th>
                   <th style={tableHeaderStyle}>Estoque</th>
-                  <th style={tableHeaderStyle}>Motivo / Descrição</th>
+                  <th style={tableHeaderStyle}>Valor</th>
+                  <th style={tableHeaderStyle}>Descrição</th>
                   <th style={tableHeaderStyle}>Responsável</th>
                 </tr>
               </thead>
@@ -236,7 +237,7 @@ export function HistoricoEstoque() {
                         {m.produto_nome}
                       </td>
 
-                      <td style={{ ...tableCellStyle, whiteSpace: 'nowrap', minWidth: '140px' }}>
+                      <td style={{ ...tableCellStyle, whiteSpace: 'nowrap', width: '95px' }}>
                         {getTipoBadge(m.tipo)}
                       </td>
 
@@ -265,7 +266,22 @@ export function HistoricoEstoque() {
                         <strong style={{ color: colors.textPrimary }}>{m.estoque_novo} un.</strong>
                       </td>
 
-                      {/* Motivo Limpo (sem tags internas emb=S/N, etiq=S/N) */}
+                      {/* Nova Coluna: Valor de Venda (se houver/venda) */}
+                      <td style={{ ...tableCellStyle, fontSize: '13px', color: '#60a5fa', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        {(() => {
+                          let vNum = m.valor_venda;
+                          if (!vNum && m.motivo && m.motivo.toLowerCase().includes('r$')) {
+                            const match = m.motivo.match(/r\$\s*([\d\.,]+)/i);
+                            if (match) {
+                              let sVal = match[1].replace('.', '').replace(',', '.');
+                              vNum = parseFloat(sVal);
+                            }
+                          }
+                          return vNum && vNum > 0 ? formatarMoeda(vNum) : <span style={{ color: colors.textMuted, fontWeight: 'normal' }}>—</span>;
+                        })()}
+                      </td>
+
+                      {/* Descrição Limpa */}
                       <td style={{ ...tableCellStyle, fontSize: '13px', color: colors.textSecondary }}>
                         {motivoLimpo}
                       </td>

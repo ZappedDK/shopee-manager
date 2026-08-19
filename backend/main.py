@@ -861,10 +861,36 @@ def listar_movimentacoes_estoque(
     lim_val = min(1000, max(1, limite)) if limite else 500
     movs = query.order_by(models_domain.MovimentacaoEstoque.criado_em.desc()).limit(lim_val).all()
     
+    produtos = db.query(models_domain.Produto).all()
+    prod_map = {p.id: p for p in produtos}
+    sku_map = {p.sku.upper(): p for p in produtos if p.sku}
+
     resultados = []
     for m in movs:
         # Ajusta de UTC para o Horário de Brasília (UTC-3)
         data_local = (m.criado_em - timedelta(hours=3)) if m.criado_em else None
+        motivo_lower = (m.motivo or "").lower()
+
+        valor_venda = None
+        if m.tipo in ["VENDA", "VENDA_DIRETA", "VENDA_WEBHOOK"] or (m.tipo == "SAIDA" and "venda" in motivo_lower):
+            prod = prod_map.get(m.produto_id) or sku_map.get((m.produto_sku or "").upper())
+            if prod:
+                valor_venda = prod.preco_venda
+
+            if "r$" in motivo_lower:
+                import re
+                try:
+                    match_preco = re.search(r"r\$\s*([\d\.,]+)", motivo_lower)
+                    if match_preco:
+                        s_val = match_preco.group(1).strip()
+                        if "," in s_val:
+                            s_val = s_val.replace(".", "").replace(",", ".")
+                        val_num = float(s_val)
+                        if val_num > 0:
+                            valor_venda = val_num
+                except Exception:
+                    pass
+
         resultados.append({
             "id": m.id,
             "produto_id": m.produto_id,
@@ -874,6 +900,7 @@ def listar_movimentacoes_estoque(
             "quantidade_alterada": m.quantidade_alterada,
             "estoque_anterior": m.estoque_anterior,
             "estoque_novo": m.estoque_novo,
+            "valor_venda": valor_venda,
             "motivo": m.motivo,
             "usuario_nome": m.usuario_nome or "Sistema",
             "criado_em": data_local.strftime("%d/%m/%Y %H:%M") if data_local else ""
