@@ -266,18 +266,38 @@ export function HistoricoEstoque() {
                         <strong style={{ color: colors.textPrimary }}>{m.estoque_novo} un.</strong>
                       </td>
 
-                      {/* Nova Coluna: Valor de Venda (se houver/venda) */}
+                      {/* Nova Coluna: Valor Total de Venda */}
                       <td style={{ ...tableCellStyle, fontSize: '13px', color: '#60a5fa', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {(() => {
-                          let vNum = m.valor_venda;
-                          if (!vNum && m.motivo && m.motivo.toLowerCase().includes('r$')) {
+                          let qtd = Math.abs(m.qtd_alterada ?? m.quantidade_alterada ?? 1);
+                          let vUn = m.valor_unitario;
+                          let vTotal = m.valor_venda;
+
+                          if (!vUn && m.motivo && m.motivo.toLowerCase().includes('r$')) {
                             const match = m.motivo.match(/r\$\s*([\d\.,]+)/i);
                             if (match) {
                               let sVal = match[1].replace('.', '').replace(',', '.');
-                              vNum = parseFloat(sVal);
+                              vUn = parseFloat(sVal);
+                              vTotal = vUn * qtd;
                             }
                           }
-                          return vNum && vNum > 0 ? formatarMoeda(vNum) : <span style={{ color: colors.textMuted, fontWeight: 'normal' }}>—</span>;
+
+                          if (!vTotal && vUn) vTotal = vUn * qtd;
+
+                          if (vTotal && vTotal > 0) {
+                            return (
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                <span>{formatarMoeda(vTotal)}</span>
+                                {qtd > 1 && vUn ? (
+                                  <span style={{ fontSize: '10.5px', color: colors.textMuted, fontWeight: 500 }}>
+                                    ({formatarMoeda(vUn)}/un)
+                                  </span>
+                                ) : null}
+                              </div>
+                            );
+                          }
+
+                          return <span style={{ color: colors.textMuted, fontWeight: 'normal' }}>—</span>;
                         })()}
                       </td>
 

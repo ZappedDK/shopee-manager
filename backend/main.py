@@ -871,11 +871,12 @@ def listar_movimentacoes_estoque(
         data_local = (m.criado_em - timedelta(hours=3)) if m.criado_em else None
         motivo_lower = (m.motivo or "").lower()
 
-        valor_venda = None
+        valor_unitario = None
+        valor_total = None
         if m.tipo in ["VENDA", "VENDA_DIRETA", "VENDA_WEBHOOK"] or (m.tipo == "SAIDA" and "venda" in motivo_lower):
             prod = prod_map.get(m.produto_id) or sku_map.get((m.produto_sku or "").upper())
             if prod:
-                valor_venda = prod.preco_venda
+                valor_unitario = prod.preco_venda
 
             if "r$" in motivo_lower:
                 import re
@@ -887,9 +888,13 @@ def listar_movimentacoes_estoque(
                             s_val = s_val.replace(".", "").replace(",", ".")
                         val_num = float(s_val)
                         if val_num > 0:
-                            valor_venda = val_num
+                            valor_unitario = val_num
                 except Exception:
                     pass
+
+            if valor_unitario:
+                qtd = abs(m.quantidade_alterada) if m.quantidade_alterada is not None else 1
+                valor_total = valor_unitario * qtd
 
         resultados.append({
             "id": m.id,
@@ -900,7 +905,8 @@ def listar_movimentacoes_estoque(
             "quantidade_alterada": m.quantidade_alterada,
             "estoque_anterior": m.estoque_anterior,
             "estoque_novo": m.estoque_novo,
-            "valor_venda": valor_venda,
+            "valor_unitario": valor_unitario,
+            "valor_venda": valor_total,
             "motivo": m.motivo,
             "usuario_nome": m.usuario_nome or "Sistema",
             "criado_em": data_local.strftime("%d/%m/%Y %H:%M") if data_local else ""
