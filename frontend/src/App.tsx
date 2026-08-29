@@ -59,7 +59,30 @@ function App() {
   };
 
   const [plataformas, setPlataformas] = useState<any[]>([]);
-  const [view, setView] = useState<View>('dashboard');
+  const [view, setView] = useState<View>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get('view') as View;
+    const validViews: View[] = ['dashboard', 'cadastros', 'estoque', 'almoxarifado', 'plataformas', 'simulador', 'historico', 'usuarios', 'shopee', 'tiktok', 'venda_direta'];
+    if (v && validViews.includes(v)) return v;
+    return 'dashboard';
+  });
+
+  const mudarView = (novaView: View) => {
+    setView(novaView);
+    const url = new URL(window.location.href);
+    url.searchParams.set('view', novaView);
+    window.history.pushState({}, '', url.toString());
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get('view') as View;
+      if (v) setView(v);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
 
   const [embalagens, setEmbalagens] = useState<any[]>([]);
@@ -369,19 +392,30 @@ function App() {
     return abasLiberadas.includes(abaId.toLowerCase());
   };
 
-  // Item de menu com hover sutil (inline styles não têm :hover)
+  // Item de menu com tag <a> real para permitir botão direito ("Abrir em nova guia"), Ctrl+clique ou clique do meio
   const MenuItem = ({ icon, label, target }: { icon: React.ReactNode; label: string; target: View }) => {
     const ativo = view === target;
     return (
-      <div
-        style={menuItemStyle(ativo)}
-        onClick={() => { setView(target); setMenuAberto(false); }}
+      <a
+        href={`/?view=${target}`}
+        style={{
+          ...menuItemStyle(ativo),
+          textDecoration: 'none'
+        }}
+        onClick={(e) => {
+          if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) {
+            return;
+          }
+          e.preventDefault();
+          mudarView(target);
+          setMenuAberto(false);
+        }}
         onMouseEnter={e => { if (!ativo) e.currentTarget.style.backgroundColor = 'rgba(148,163,184,0.08)'; }}
         onMouseLeave={e => { if (!ativo) e.currentTarget.style.backgroundColor = 'transparent'; }}
       >
         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', flexShrink: 0 }}>{icon}</span>
         <span>{label}</span>
-      </div>
+      </a>
     );
   };
 

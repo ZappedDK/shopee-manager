@@ -228,6 +228,10 @@ export const hoverIn = (bg: string) => (e: React.MouseEvent<HTMLButtonElement>) 
 
 // --- TABLE ---
 export const tableHeaderStyle: CSSProperties = {
+  position: 'sticky',
+  top: 0,
+  zIndex: 10,
+  backgroundColor: colors.bgCard,
   padding: '6px 10px',
   textAlign: 'left',
   borderBottom: `2px solid ${colors.border}`,
