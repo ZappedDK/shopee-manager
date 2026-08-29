@@ -106,15 +106,18 @@ select::-ms-expand {
   .app-layout {
     flex-direction: column !important;
     width: 100% !important;
+    min-height: 100vh !important;
   }
 
-  /* Sidebar vira uma barra superior fixa com logo + hambúrguer */
+  /* Sidebar vira uma barra superior fixa com logo + hambúrguer (altura automática) */
   .app-sidebar {
     width: 100% !important;
+    height: auto !important;
+    min-height: unset !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 12px 16px !important;
+    padding: 10px 14px !important;
     border-right: none !important;
     border-bottom: 1px solid #243247;
     position: sticky;
@@ -154,8 +157,7 @@ select::-ms-expand {
     flex-shrink: 0;
   }
 
-  /* Menu de navegação some por padrão e aparece como um
-     dropdown ao clicar no hambúrguer */
+  /* Menu de navegação algumas vezes some por padrão e aparece como dropdown */
   .app-sidebar-nav {
     display: none;
   }
@@ -175,13 +177,46 @@ select::-ms-expand {
     overflow-y: auto;
   }
 
+  /* Conteúdo da página sem margens vazias gigantes no celular */
   .app-content {
-    padding: 18px 14px !important;
+    padding: 14px 10px !important;
     max-width: 100% !important;
+    width: 100% !important;
+    flex: 1 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Título da página compacto no celular */
+  .app-content h2 {
+    font-size: 19px !important;
+  }
+
+  .app-content p {
+    font-size: 13px !important;
+  }
+
+  /* Reduzir o espaço do cabeçalho da página no celular */
+  .app-content > div:first-child {
+    margin-bottom: 14px !important;
+  }
+
+  /* Tabelas ajustadas no celular */
+  .table-scroll {
+    max-height: calc(100vh - 180px) !important;
   }
 
   .table-scroll table {
     min-width: 640px;
+  }
+
+  /* Modals centralizados no celular */
+  div[style*="position: fixed"] > div[style*="backgroundColor"],
+  div[style*="position:fixed"] > div[style*="backgroundColor"] {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    padding: 16px 12px !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
   }
 }
 

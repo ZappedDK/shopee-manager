@@ -1,0 +1,19 @@
+{
+  "short_name": "Skold Stock",
+  "name": "Skold Stock - Controle de Estoque",
+  "description": "Sistema completo de controle de estoque, relatórios de vendas e gestão de marketplaces.",
+  "icons": [
+    {
+      "src": "/icone.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "display": "standalone",
+  "orientation": "any",
+  "categories": ["business", "utilities", "finance"]
+}

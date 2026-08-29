@@ -761,15 +761,15 @@ export function SimuladorPreco() {
 
           {/* Tabela Matriz Comparativa Padronizada */}
           <div style={cardStyle}>
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-scroll" style={{ maxHeight: 'calc(100vh - 260px)', overflowY: 'auto', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
-                  <tr>
-                    <th colSpan={2} style={{ ...tableHeaderStyle, minWidth: '300px', position: 'sticky', left: 0, zIndex: 12, backgroundColor: colors.bgCard }}>
+                  <tr style={{ height: '34px' }}>
+                    <th colSpan={2} style={{ ...tableHeaderStyle, minWidth: '300px', height: '34px', position: 'sticky', top: 0, left: 0, zIndex: 35, backgroundColor: colors.bgCard, padding: '0 8px', verticalAlign: 'middle', borderBottom: 'none' }}>
                       Identificação do Produto
                     </th>
                     <th
-                      style={{ ...tableHeaderStyle, width: '100px', textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}
+                      style={{ ...tableHeaderStyle, width: '100px', height: '34px', textAlign: 'right', cursor: 'pointer', userSelect: 'none', position: 'sticky', top: 0, zIndex: 30, backgroundColor: colors.bgCard, padding: '0 8px', verticalAlign: 'middle', borderBottom: 'none' }}
                       onClick={() => toggleSortComparativo('custo')}
                       title="Clique para ordenar por Custo Base"
                     >
@@ -784,9 +784,16 @@ export function SimuladorPreco() {
                           ...tableHeaderStyle,
                           minWidth: '225px',
                           width: '225px',
+                          height: '34px',
                           textAlign: 'center',
                           borderLeft: `2px solid ${colors.border}`,
-                          backgroundColor: 'rgba(30, 41, 59, 0.8)'
+                          backgroundColor: '#1e293b',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 30,
+                          padding: '0 8px',
+                          verticalAlign: 'middle',
+                          borderBottom: 'none'
                         }}
                       >
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
@@ -796,23 +803,23 @@ export function SimuladorPreco() {
                       </th>
                     ))}
                   </tr>
-                  <tr>
+                  <tr style={{ height: '32px' }}>
                     <th
-                      style={{ ...tableHeaderStyle, width: '40px', minWidth: '40px', position: 'sticky', left: 0, zIndex: 12, backgroundColor: colors.bgCard, fontSize: '11px', color: colors.accent, padding: '8px 2px', textAlign: 'center', cursor: 'pointer', userSelect: 'none' }}
+                      style={{ ...tableHeaderStyle, width: '40px', minWidth: '40px', height: '32px', position: 'sticky', top: '30px', left: 0, zIndex: 35, backgroundColor: colors.bgCard, fontSize: '11px', color: colors.accent, padding: '0 2px', textAlign: 'center', cursor: 'pointer', userSelect: 'none', verticalAlign: 'middle', boxShadow: `0 -3px 0 ${colors.bgCard}` }}
                       onClick={() => toggleSortComparativo('sku')}
                       title="Clique para ordenar por SKU"
                     >
                       SKU {renderSortIcon('sku')}
                     </th>
                     <th
-                      style={{ ...tableHeaderStyle, minWidth: '260px', position: 'sticky', left: '40px', zIndex: 12, backgroundColor: colors.bgCard, fontSize: '11px', color: colors.textSecondary, cursor: 'pointer', userSelect: 'none' }}
+                      style={{ ...tableHeaderStyle, minWidth: '260px', height: '32px', position: 'sticky', top: '30px', left: '40px', zIndex: 35, backgroundColor: colors.bgCard, fontSize: '11px', color: colors.textSecondary, cursor: 'pointer', userSelect: 'none', padding: '0 8px', verticalAlign: 'middle', boxShadow: `0 -3px 0 ${colors.bgCard}` }}
                       onClick={() => toggleSortComparativo('nome')}
                       title="Clique para ordenar de A-Z ou Z-A por Nome"
                     >
                       Nome do Produto {renderSortIcon('nome')}
                     </th>
                     <th
-                      style={{ ...tableHeaderStyle, width: '100px', fontSize: '11px', color: colors.textMuted, textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}
+                      style={{ ...tableHeaderStyle, width: '100px', height: '32px', fontSize: '11px', color: colors.textMuted, textAlign: 'right', cursor: 'pointer', userSelect: 'none', position: 'sticky', top: '30px', zIndex: 30, backgroundColor: colors.bgCard, padding: '0 8px', verticalAlign: 'middle', boxShadow: `0 -3px 0 ${colors.bgCard}` }}
                       onClick={() => toggleSortComparativo('custo')}
                       title="Clique para ordenar por Custo Insumos + Produto"
                     >
@@ -822,21 +829,21 @@ export function SimuladorPreco() {
                     {plataformas.map((plat) => (
                       <FragmentKey key={plat.id}>
                         <th
-                          style={{ ...tableHeaderStyle, width: '75px', minWidth: '75px', maxWidth: '75px', fontSize: '11px', textAlign: 'center', borderLeft: `2px solid ${colors.border}`, color: '#60a5fa', cursor: 'pointer', userSelect: 'none', padding: '6px 2px' }}
+                          style={{ ...tableHeaderStyle, width: '75px', minWidth: '75px', maxWidth: '75px', height: '32px', fontSize: '11px', textAlign: 'center', borderLeft: `2px solid ${colors.border}`, color: '#60a5fa', cursor: 'pointer', userSelect: 'none', padding: '0 2px', position: 'sticky', top: '30px', zIndex: 30, backgroundColor: colors.bgCard, verticalAlign: 'middle', boxShadow: `0 -3px 0 ${colors.bgCard}` }}
                           onClick={() => toggleSortComparativo(`preco_${plat.id}`)}
                           title={`Clique para ordenar por Preço Venda em ${plat.nome}`}
                         >
                           Preço {renderSortIcon(`preco_${plat.id}`)}
                         </th>
                         <th
-                          style={{ ...tableHeaderStyle, width: '75px', minWidth: '75px', maxWidth: '75px', fontSize: '11px', textAlign: 'center', color: '#34d399', cursor: 'pointer', userSelect: 'none', padding: '6px 2px' }}
+                          style={{ ...tableHeaderStyle, width: '75px', minWidth: '75px', maxWidth: '75px', height: '32px', fontSize: '11px', textAlign: 'center', color: '#34d399', cursor: 'pointer', userSelect: 'none', padding: '0 2px', position: 'sticky', top: '30px', zIndex: 30, backgroundColor: colors.bgCard, verticalAlign: 'middle', boxShadow: `0 -3px 0 ${colors.bgCard}` }}
                           onClick={() => toggleSortComparativo(`lucro_${plat.id}`)}
                           title={`Clique para ordenar por Lucro Líquido em ${plat.nome}`}
                         >
                           Lucro {renderSortIcon(`lucro_${plat.id}`)}
                         </th>
                         <th
-                          style={{ ...tableHeaderStyle, width: '75px', minWidth: '75px', maxWidth: '75px', fontSize: '11px', textAlign: 'center', color: colors.textSecondary, cursor: 'pointer', userSelect: 'none', padding: '6px 2px' }}
+                          style={{ ...tableHeaderStyle, width: '75px', minWidth: '75px', maxWidth: '75px', height: '32px', fontSize: '11px', textAlign: 'center', color: colors.textSecondary, cursor: 'pointer', userSelect: 'none', padding: '0 2px', position: 'sticky', top: '30px', zIndex: 30, backgroundColor: colors.bgCard, verticalAlign: 'middle', boxShadow: `0 -3px 0 ${colors.bgCard}` }}
                           onClick={() => toggleSortComparativo(`margem_${plat.id}`)}
                           title={`Clique para ordenar por Margem % em ${plat.nome}`}
                         >
