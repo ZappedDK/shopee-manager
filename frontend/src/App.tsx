@@ -485,43 +485,43 @@ function App() {
           {(userRole === 'admin' || temPermissaoAba('usuarios')) && (
             <MenuItem icon="👥" label="Gestão de Usuários" target="usuarios" />
           )}
-        </div>
 
-        {/* Rodapé com Informações do Usuário Logado & Logout */}
-        <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: `1px solid ${colors.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <div style={{ fontSize: '13px', color: colors.textPrimary, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              👤 {usuario?.nome || 'Usuário'}
+          {/* Rodapé com Informações do Usuário Logado & Logout */}
+          <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: `1px solid ${colors.border}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <div style={{ fontSize: '13px', color: colors.textPrimary, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                👤 {usuario?.nome || 'Usuário'}
+              </div>
+              <span
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  backgroundColor: userRole === 'admin' ? 'rgba(59, 130, 246, 0.2)' : userRole === 'editor' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(148, 163, 184, 0.2)',
+                  color: userRole === 'admin' ? colors.accent : userRole === 'editor' ? colors.successText : colors.textMuted,
+                  border: `1px solid ${userRole === 'admin' ? colors.accent : colors.border}`
+                }}
+              >
+                {userRole.toUpperCase()}
+              </span>
             </div>
-            <span
+            <div style={{ fontSize: '11.5px', color: colors.textMuted, marginBottom: '12px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {usuario?.email || ''}
+            </div>
+            <button
+              onClick={handleLogout}
               style={{
-                fontSize: '10px',
-                fontWeight: 700,
-                padding: '2px 6px',
-                borderRadius: '10px',
-                backgroundColor: userRole === 'admin' ? 'rgba(59, 130, 246, 0.2)' : userRole === 'editor' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(148, 163, 184, 0.2)',
-                color: userRole === 'admin' ? colors.accent : userRole === 'editor' ? colors.successText : colors.textMuted,
-                border: `1px solid ${userRole === 'admin' ? colors.accent : colors.border}`
+                ...btnNeutralStyle,
+                width: '100%',
+                backgroundColor: colors.dangerBg,
+                color: colors.dangerText,
+                border: `1px solid ${colors.dangerBorder}`
               }}
             >
-              {userRole.toUpperCase()}
-            </span>
+              🚪 Sair da Conta
+            </button>
           </div>
-          <div style={{ fontSize: '11.5px', color: colors.textMuted, marginBottom: '12px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {usuario?.email || ''}
-          </div>
-          <button
-            onClick={handleLogout}
-            style={{
-              ...btnNeutralStyle,
-              width: '100%',
-              backgroundColor: colors.dangerBg,
-              color: colors.dangerText,
-              border: `1px solid ${colors.dangerBorder}`
-            }}
-          >
-            🚪 Sair da Conta
-          </button>
         </div>
       </div>
 
