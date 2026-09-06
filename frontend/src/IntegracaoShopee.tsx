@@ -8,9 +8,10 @@ import {
 
 interface IntegracaoShopeeProps {
   onEstoqueAtualizado?: () => void;
+  ocultarHeader?: boolean;
 }
 
-export function IntegracaoShopee({}: IntegracaoShopeeProps) {
+export function IntegracaoShopee({ ocultarHeader = false }: IntegracaoShopeeProps) {
   const [partnerId, setPartnerId] = useState<string>('');
   const [partnerKey, setPartnerKey] = useState<string>('');
   const [shopId, setShopId] = useState<string>('');
@@ -68,15 +69,17 @@ export function IntegracaoShopee({}: IntegracaoShopeeProps) {
 
   return (
     <div>
-      <PageHeader
-        title={(
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/logos/shopee.png" alt="Shopee Logo" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }} />
-            Integração Shopee Open Platform
-          </span>
-        )}
-        subtitle="Receba notificações de vendas em tempo real e dê baixa automática no estoque do Skold Stock."
-      />
+      {!ocultarHeader && (
+        <PageHeader
+          title={(
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+              <img src="/logos/shopee.png" alt="Shopee Logo" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }} />
+              Integração Shopee Open Platform
+            </span>
+          )}
+          subtitle="Receba notificações de vendas em tempo real e dê baixa automática no estoque do Skold Stock."
+        />
+      )}
 
       <MessageBanner mensagem={mensagem} />
 

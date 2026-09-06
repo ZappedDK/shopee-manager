@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { colors } from './theme';
+import { PageHeader } from './ui';
 import { IntegracaoShopee } from './IntegracaoShopee';
 import { IntegracaoTikTok } from './IntegracaoTikTok';
 
@@ -13,12 +14,31 @@ export function Integracoes({ onEstoqueAtualizado, abaInicial = 'shopee' }: Inte
 
   return (
     <div>
-      {/* Seletor de Plataforma em Sub-Abas */}
+      {/* Título Principal no Topo */}
+      <PageHeader
+        title={(
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+            <img
+              src={abaAtiva === 'shopee' ? '/logos/shopee.png' : '/logos/tiktokshop.png'}
+              alt="Logo"
+              style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }}
+            />
+            {abaAtiva === 'shopee' ? 'Integração Shopee Open Platform' : 'Integração TikTok Shop Partner API'}
+          </span>
+        )}
+        subtitle={
+          abaAtiva === 'shopee'
+            ? 'Receba notificações de vendas em tempo real e dê baixa automática no estoque do Skold Stock.'
+            : 'Receba os webhooks de vendas do TikTok Shop e dê baixa imediata no estoque do Skold Stock.'
+        }
+      />
+
+      {/* Seletor de Plataforma em Sub-Abas logo abaixo do título */}
       <div
         style={{
           display: 'flex',
           gap: '8px',
-          marginBottom: '20px',
+          marginBottom: '24px',
           paddingBottom: '16px',
           borderBottom: `1px solid ${colors.border}`,
           flexWrap: 'wrap',
@@ -76,11 +96,11 @@ export function Integracoes({ onEstoqueAtualizado, abaInicial = 'shopee' }: Inte
 
       {/* Conteúdo da Integração */}
       {abaAtiva === 'shopee' && (
-        <IntegracaoShopee onEstoqueAtualizado={onEstoqueAtualizado} />
+        <IntegracaoShopee ocultarHeader onEstoqueAtualizado={onEstoqueAtualizado} />
       )}
 
       {abaAtiva === 'tiktok' && (
-        <IntegracaoTikTok onEstoqueAtualizado={onEstoqueAtualizado} />
+        <IntegracaoTikTok ocultarHeader onEstoqueAtualizado={onEstoqueAtualizado} />
       )}
     </div>
   );

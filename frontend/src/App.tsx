@@ -397,7 +397,9 @@ function App() {
 
   // Item de menu com tag <a> real para permitir botão direito ("Abrir em nova guia"), Ctrl+clique ou clique do meio
   const MenuItem = ({ icon, label, target }: { icon: React.ReactNode; label: string; target: View }) => {
-    const ativo = view === target || (target === 'integracoes' && (view === 'shopee' || view === 'tiktok'));
+    const ativo = view === target ||
+      (target === 'integracoes' && (view === 'shopee' || view === 'tiktok')) ||
+      (target === 'estoque' && view === 'almoxarifado');
     return (
       <a
         href={`/?view=${target}`}
@@ -463,7 +465,6 @@ function App() {
           {/* ── ESTOQUE ── */}
           <div style={sidebarGroupLabelStyle}>Estoque</div>
           {temPermissaoAba('estoque') && <MenuItem icon="📦" label="Controle de Estoque" target="estoque" />}
-          {(temPermissaoAba('insumos') || temPermissaoAba('almoxarifado')) && <MenuItem icon="🧺" label="Almoxarifado" target="almoxarifado" />}
           {temPermissaoAba('historico') && <MenuItem icon="📋" label="Histórico" target="historico" />}
           <MenuItem icon="📉" label="Produtos Parados" target="sem_venda" />
 
@@ -539,6 +540,65 @@ function App() {
           <div>
             <PageHeader title="Gestão de Almoxarifado" subtitle="Custos de embalagens e etiquetas usados no cálculo de margem." />
             <MessageBanner mensagem={mensagem} />
+
+            {/* Seletor de Sub-Abas em Estoque */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '8px',
+                marginBottom: '24px',
+                paddingBottom: '16px',
+                borderBottom: `1px solid ${colors.border}`,
+                flexWrap: 'wrap',
+                alignItems: 'center',
+              }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textMuted, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Estoque:
+              </span>
+
+              <button
+                type="button"
+                onClick={() => mudarView('estoque')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '13.5px',
+                  cursor: 'pointer',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: colors.bgCard,
+                  color: colors.textSecondary,
+                  transition: 'all 0.15s ease-in-out',
+                }}
+              >
+                📦 Produtos
+              </button>
+
+              <button
+                type="button"
+                onClick={() => mudarView('almoxarifado')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '13.5px',
+                  cursor: 'pointer',
+                  border: '1px solid #10b981',
+                  backgroundColor: 'rgba(16, 185, 129, 0.16)',
+                  color: '#34d399',
+                  transition: 'all 0.15s ease-in-out',
+                }}
+              >
+                🧺 Almoxarifado
+              </button>
+            </div>
 
             <div style={sectionGapStyle}>
               <div style={{ ...cardStyle, borderLeft: '4px solid #10b981' }}>
@@ -1120,6 +1180,65 @@ function App() {
           <div>
             <PageHeader title="Controle de Estoque" subtitle={`Consulte quantidades, custos e margem por plataforma (${produtosDetalhados.length} ${produtosDetalhados.length === 1 ? 'SKU cadastrado' : 'SKUs cadastrados'}).`} />
             <MessageBanner mensagem={mensagem} />
+
+            {/* Seletor de Sub-Abas em Estoque */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '8px',
+                marginBottom: '24px',
+                paddingBottom: '16px',
+                borderBottom: `1px solid ${colors.border}`,
+                flexWrap: 'wrap',
+                alignItems: 'center',
+              }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textMuted, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Estoque:
+              </span>
+
+              <button
+                type="button"
+                onClick={() => mudarView('estoque')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '13.5px',
+                  cursor: 'pointer',
+                  border: `1px solid ${colors.accent}`,
+                  backgroundColor: 'rgba(59, 130, 246, 0.16)',
+                  color: '#60a5fa',
+                  transition: 'all 0.15s ease-in-out',
+                }}
+              >
+                📦 Produtos
+              </button>
+
+              <button
+                type="button"
+                onClick={() => mudarView('almoxarifado')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  fontSize: '13.5px',
+                  cursor: 'pointer',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: colors.bgCard,
+                  color: colors.textSecondary,
+                  transition: 'all 0.15s ease-in-out',
+                }}
+              >
+                🧺 Almoxarifado
+              </button>
+            </div>
 
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' }}>

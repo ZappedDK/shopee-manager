@@ -8,9 +8,10 @@ import {
 
 interface IntegracaoTikTokProps {
   onEstoqueAtualizado?: () => void;
+  ocultarHeader?: boolean;
 }
 
-export function IntegracaoTikTok({}: IntegracaoTikTokProps) {
+export function IntegracaoTikTok({ ocultarHeader = false }: IntegracaoTikTokProps) {
   const [appKey, setAppKey] = useState<string>('');
   const [appSecret, setAppSecret] = useState<string>('');
   const [shopCipher, setShopCipher] = useState<string>('');
@@ -68,15 +69,17 @@ export function IntegracaoTikTok({}: IntegracaoTikTokProps) {
 
   return (
     <div>
-      <PageHeader
-        title={(
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/logos/tiktokshop.png" alt="TikTok Shop Logo" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }} />
-            Integração TikTok Shop Partner API
-          </span>
-        )}
-        subtitle="Receba os webhooks de vendas do TikTok Shop e dê baixa imediata no estoque do Skold Stock."
-      />
+      {!ocultarHeader && (
+        <PageHeader
+          title={(
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+              <img src="/logos/tiktokshop.png" alt="TikTok Shop Logo" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }} />
+              Integração TikTok Shop Partner API
+            </span>
+          )}
+          subtitle="Receba os webhooks de vendas do TikTok Shop e dê baixa imediata no estoque do Skold Stock."
+        />
+      )}
 
       <MessageBanner mensagem={mensagem} />
 

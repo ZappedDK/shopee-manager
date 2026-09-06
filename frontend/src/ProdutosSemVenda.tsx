@@ -144,14 +144,65 @@ export default function ProdutosSemVenda() {
     buscar(dataInicioCustom, dataFimCustom);
   };
 
-  const produtosFiltrados = (dados?.produtos ?? []).filter(p => {
-    if (p.cross_docking) return false;
-    const q = filtro.toLowerCase();
+  type SortField = 'sku' | 'nome' | 'custo_produto' | 'preco_venda' | 'quantidade_estoque' | 'capital_parado' | 'dias_sem_venda';
+  type SortDirection = 'asc' | 'desc';
+
+  const [sortField, setSortField] = useState<SortField>('dias_sem_venda');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'sku' || field === 'nome' ? 'asc' : 'desc');
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <span style={{ opacity: 0.3, marginLeft: '5px', fontSize: '11px' }}>↕</span>;
+    }
     return (
-      (p.sku ?? '').toLowerCase().includes(q) ||
-      (p.nome ?? '').toLowerCase().includes(q)
+      <span style={{ color: colors.accent, marginLeft: '5px', fontSize: '11px', fontWeight: 700 }}>
+        {sortDirection === 'asc' ? '▲' : '▼'}
+      </span>
     );
-  });
+  };
+
+  const produtosFiltrados = (dados?.produtos ?? [])
+    .filter(p => {
+      if (p.cross_docking) return false;
+      const q = filtro.toLowerCase();
+      return (
+        (p.sku ?? '').toLowerCase().includes(q) ||
+        (p.nome ?? '').toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      let valA: any;
+      let valB: any;
+
+      if (sortField === 'capital_parado') {
+        valA = (a.custo_produto || 0) * (a.quantidade_estoque || 0);
+        valB = (b.custo_produto || 0) * (b.quantidade_estoque || 0);
+      } else {
+        valA = a[sortField];
+        valB = b[sortField];
+      }
+
+      if (typeof valA === 'string') {
+        valA = (valA || '').toLowerCase();
+        valB = (valB || '').toLowerCase();
+        const res = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+        return sortDirection === 'asc' ? res : -res;
+      } else {
+        valA = Number(valA) || 0;
+        valB = Number(valB) || 0;
+        const res = valA - valB;
+        return sortDirection === 'asc' ? res : -res;
+      }
+    });
 
   const totalEstoque = produtosFiltrados.reduce((s, p) => s + (p.quantidade_estoque || 0), 0);
   const totalCapitalParado = produtosFiltrados.reduce((s, p) => s + (p.custo_produto || 0) * (p.quantidade_estoque || 0), 0);
@@ -277,6 +328,9 @@ export default function ProdutosSemVenda() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
               <h3 style={{ ...cardTitleStyle, marginBottom: 0 }}>
                 📋 Lista de Produtos ({produtosFiltrados.length})
+                <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 400, marginLeft: '8px' }}>
+                  (Clique nas colunas para ordenar)
+                </span>
               </h3>
               <input
                 type="text"
@@ -293,49 +347,114 @@ export default function ProdutosSemVenda() {
               </div>
             ) : (
               <div className="table-scroll">
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
                   <thead>
                     <tr>
-                      <th style={{ ...tableHeaderStyle, width: '90px' }}>SKU</th>
-                      <th style={tableHeaderStyle}>Nome do Produto</th>
-                      <th style={{ ...tableHeaderStyle, textAlign: 'right', width: '110px' }}>Custo</th>
-                      <th style={{ ...tableHeaderStyle, textAlign: 'right', width: '120px' }}>Preço Venda</th>
-                      <th style={{ ...tableHeaderStyle, textAlign: 'center', width: '80px' }}>Estoque</th>
-                      <th style={{ ...tableHeaderStyle, textAlign: 'center', width: '115px' }}>Última Venda</th>
-                      <th style={{ ...tableHeaderStyle, textAlign: 'center', width: '140px' }}>Status</th>
+                      <th
+                        style={{ ...tableHeaderStyle, width: '1%', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('sku')}
+                        title="Clique para ordenar por SKU"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                          SKU {renderSortIcon('sku')}
+                        </span>
+                      </th>
+                      <th
+                        style={{ ...tableHeaderStyle, whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('nome')}
+                        title="Clique para ordenar de A-Z ou Z-A por Nome"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                          Nome do Produto {renderSortIcon('nome')}
+                        </span>
+                      </th>
+                      <th
+                        style={{ ...tableHeaderStyle, textAlign: 'right', width: '110px', cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('custo_produto')}
+                        title="Clique para ordenar por Custo Unitário"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+                          Custo {renderSortIcon('custo_produto')}
+                        </span>
+                      </th>
+                      <th
+                        style={{ ...tableHeaderStyle, textAlign: 'right', width: '120px', cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('preco_venda')}
+                        title="Clique para ordenar por Preço de Venda"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+                          Preço Venda {renderSortIcon('preco_venda')}
+                        </span>
+                      </th>
+                      <th
+                        style={{ ...tableHeaderStyle, textAlign: 'center', width: '85px', cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('quantidade_estoque')}
+                        title="Clique para ordenar por Quantidade em Estoque"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                          Estoque {renderSortIcon('quantidade_estoque')}
+                        </span>
+                      </th>
+                      <th
+                        style={{ ...tableHeaderStyle, textAlign: 'right', width: '125px', cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('capital_parado')}
+                        title="Clique para ordenar por Capital Parado (Custo × Estoque)"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+                          Capital Parado {renderSortIcon('capital_parado')}
+                        </span>
+                      </th>
+                      <th style={{ ...tableHeaderStyle, textAlign: 'center', width: '115px' }}>
+                        Última Venda
+                      </th>
+                      <th
+                        style={{ ...tableHeaderStyle, textAlign: 'center', width: '140px', cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('dias_sem_venda')}
+                        title="Clique para ordenar por Dias sem Venda"
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                          Status {renderSortIcon('dias_sem_venda')}
+                        </span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {produtosFiltrados.map(p => (
-                      <tr key={p.id} style={{ backgroundColor: 'transparent' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                      >
-                        <td style={{ ...tableCellStyle, fontFamily: 'monospace', fontSize: '12px', color: colors.textMuted }}>
-                          {p.sku || '—'}
-                        </td>
-                        <td style={{ ...tableCellStyle }}>
-                          <div style={{ fontWeight: 500 }}>{p.nome}</div>
-                        </td>
-                        <td style={{ ...tableCellStyle, textAlign: 'right', color: colors.textSecondary }}>
-                          {formatarMoeda(p.custo_produto)}
-                        </td>
-                        <td style={{ ...tableCellStyle, textAlign: 'right', color: colors.successText, fontWeight: 600 }}>
-                          {p.preco_venda > 0 ? formatarMoeda(p.preco_venda) : <span style={{ color: colors.textMuted }}>—</span>}
-                        </td>
-                        <td style={{ ...tableCellStyle, textAlign: 'center' }}>
-                          <span style={{ color: p.quantidade_estoque > 0 ? colors.textPrimary : colors.danger, fontWeight: 600 }}>
-                            {p.quantidade_estoque}
-                          </span>
-                        </td>
-                        <td style={{ ...tableCellStyle, textAlign: 'center', fontSize: '12px', color: colors.textMuted }}>
-                          {p.ultima_venda}
-                        </td>
-                        <td style={{ ...tableCellStyle, textAlign: 'center' }}>
-                          {badgeDias(p.dias_sem_venda)}
-                        </td>
-                      </tr>
-                    ))}
+                    {produtosFiltrados.map(p => {
+                      const capitalItem = (p.custo_produto || 0) * (p.quantidade_estoque || 0);
+                      return (
+                        <tr key={p.id} style={{ backgroundColor: 'transparent' }}
+                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)')}
+                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <td style={{ ...tableCellStyle, fontFamily: 'monospace', fontSize: '12px', color: colors.textMuted, whiteSpace: 'nowrap', width: '1%' }}>
+                            {p.sku || '—'}
+                          </td>
+                          <td style={{ ...tableCellStyle, whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{p.nome}</div>
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: 'right', color: colors.textSecondary }}>
+                            {formatarMoeda(p.custo_produto)}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: 'right', color: colors.successText, fontWeight: 600 }}>
+                            {p.preco_venda > 0 ? formatarMoeda(p.preco_venda) : <span style={{ color: colors.textMuted }}>—</span>}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: 'center' }}>
+                            <span style={{ color: p.quantidade_estoque > 0 ? colors.textPrimary : colors.danger, fontWeight: 600 }}>
+                              {p.quantidade_estoque}
+                            </span>
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: 'right', fontWeight: 600, color: capitalItem > 0 ? colors.purple : colors.textMuted }}>
+                            {formatarMoeda(capitalItem)}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: 'center', fontSize: '12px', color: colors.textMuted }}>
+                            {p.ultima_venda}
+                          </td>
+                          <td style={{ ...tableCellStyle, textAlign: 'center' }}>
+                            {badgeDias(p.dias_sem_venda)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
