@@ -145,6 +145,7 @@ export default function ProdutosSemVenda() {
   };
 
   const produtosFiltrados = (dados?.produtos ?? []).filter(p => {
+    if (p.cross_docking) return false;
     const q = filtro.toLowerCase();
     return (
       (p.sku ?? '').toLowerCase().includes(q) ||
@@ -315,11 +316,6 @@ export default function ProdutosSemVenda() {
                         </td>
                         <td style={{ ...tableCellStyle }}>
                           <div style={{ fontWeight: 500 }}>{p.nome}</div>
-                          {p.cross_docking && (
-                            <span style={{ fontSize: '11px', color: colors.cyan, backgroundColor: 'rgba(56,189,248,0.1)', borderRadius: '4px', padding: '1px 6px' }}>
-                              Cross-Docking
-                            </span>
-                          )}
                         </td>
                         <td style={{ ...tableCellStyle, textAlign: 'right', color: colors.textSecondary }}>
                           {formatarMoeda(p.custo_produto)}

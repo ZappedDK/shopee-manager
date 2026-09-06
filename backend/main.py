@@ -1161,9 +1161,10 @@ def relatorio_produtos_sem_venda(
         if m.produto_id:
             ids_com_venda.add(m.produto_id)
 
-    # Todos produtos ativos
+    # Apenas produtos ativos (não pausados) e com estoque físico próprio (não cross-docking)
     produtos = db.query(models_domain.Produto).filter(
-        models_domain.Produto.ativo != False
+        models_domain.Produto.ativo == True,
+        (models_domain.Produto.cross_docking == False) | (models_domain.Produto.cross_docking == None)
     ).all()
 
     resultado = []
