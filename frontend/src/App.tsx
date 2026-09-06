@@ -9,9 +9,9 @@ import { ModalEditarPlataforma } from './ModalEditarPlataforma';
 import { HistoricoEstoque } from './HistoricoEstoque';
 import { ImportarProdutosModal } from './ImportarProdutosModal';
 import { GestaoUsuarios } from './GestaoUsuarios';
-import { IntegracaoShopee } from './IntegracaoShopee';
-import { IntegracaoTikTok } from './IntegracaoTikTok';
+import { Integracoes } from './Integracoes';
 import { VendaDireta } from './VendaDireta';
+import ProdutosSemVenda from './ProdutosSemVenda';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
 import { SkeletonTable } from './Skeleton';
 import {
@@ -21,7 +21,7 @@ import {
   tableHeaderStyle, tableCellStyle, formatarMoeda, formatarNumero
 } from './theme';
 
-type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas' | 'simulador' | 'historico' | 'usuarios' | 'shopee' | 'tiktok' | 'venda_direta';
+type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas' | 'simulador' | 'historico' | 'usuarios' | 'shopee' | 'tiktok' | 'venda_direta' | 'sem_venda' | 'integracoes';
 
 function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
@@ -389,12 +389,15 @@ function App() {
 
   const temPermissaoAba = (abaId: string) => {
     if (isAdmin) return true;
+    if (abaId === 'integracoes') {
+      return abasLiberadas.includes('integracoes') || abasLiberadas.includes('shopee') || abasLiberadas.includes('tiktok');
+    }
     return abasLiberadas.includes(abaId.toLowerCase());
   };
 
   // Item de menu com tag <a> real para permitir botão direito ("Abrir em nova guia"), Ctrl+clique ou clique do meio
   const MenuItem = ({ icon, label, target }: { icon: React.ReactNode; label: string; target: View }) => {
-    const ativo = view === target;
+    const ativo = view === target || (target === 'integracoes' && (view === 'shopee' || view === 'tiktok'));
     return (
       <a
         href={`/?view=${target}`}
@@ -452,36 +455,30 @@ function App() {
         </button>
 
         <div className={`app-sidebar-nav${menuAberto ? ' open' : ''}`}>
-          <div style={sidebarGroupLabelStyle}>Principal</div>
+
+          {/* ── DASHBOARD ── */}
+          <div style={sidebarGroupLabelStyle}>Dashboard</div>
           {temPermissaoAba('dashboard') && <MenuItem icon="📊" label="Visão Geral" target="dashboard" />}
+
+          {/* ── ESTOQUE ── */}
+          <div style={sidebarGroupLabelStyle}>Estoque</div>
           {temPermissaoAba('estoque') && <MenuItem icon="📦" label="Controle de Estoque" target="estoque" />}
           {(temPermissaoAba('insumos') || temPermissaoAba('almoxarifado')) && <MenuItem icon="🧺" label="Almoxarifado" target="almoxarifado" />}
+          {temPermissaoAba('historico') && <MenuItem icon="📋" label="Histórico" target="historico" />}
+          <MenuItem icon="📉" label="Produtos Parados" target="sem_venda" />
 
-          <div style={sidebarGroupLabelStyle}>Ferramentas</div>
+          {/* ── VENDAS ── */}
+          <div style={sidebarGroupLabelStyle}>Vendas</div>
           {(temPermissaoAba('calculadora') || temPermissaoAba('simulador')) && <MenuItem icon="🎯" label="Simulador de Preço" target="simulador" />}
-          {temPermissaoAba('historico') && <MenuItem icon="📋" label="Histórico de Estoque" target="historico" />}
-
-          <div style={sidebarGroupLabelStyle}>Integrações & Vendas</div>
-          {temPermissaoAba('shopee') && (
-            <MenuItem
-              icon={<img src="/logos/shopee.png" alt="Shopee" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 3 }} />}
-              label="Integração Shopee"
-              target="shopee"
-            />
-          )}
-          {temPermissaoAba('tiktok') && (
-            <MenuItem
-              icon={<img src="/logos/tiktokshop.png" alt="TikTok" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 3 }} />}
-              label="Integração TikTok"
-              target="tiktok"
-            />
-          )}
           <MenuItem icon="🤝" label="Baixa Venda Manual" target="venda_direta" />
 
+          {/* ── CONFIGURAÇÕES ── */}
           <div style={sidebarGroupLabelStyle}>Configurações</div>
+          {temPermissaoAba('integracoes') && (
+            <MenuItem icon="🔌" label="Integrações" target="integracoes" />
+          )}
           {temPermissaoAba('plataformas') && <MenuItem icon="🏪" label="Plataformas de Venda" target="plataformas" />}
           {(temPermissaoAba('insumos') || temPermissaoAba('cadastros')) && <MenuItem icon="⚙️" label="Cadastros e Config." target="cadastros" />}
-          
           {(userRole === 'admin' || temPermissaoAba('usuarios')) && (
             <MenuItem icon="👥" label="Gestão de Usuários" target="usuarios" />
           )}
@@ -532,6 +529,8 @@ function App() {
         {view === 'simulador' && <SimuladorPreco />}
 
         {view === 'historico' && <HistoricoEstoque />}
+
+        {view === 'sem_venda' && <ProdutosSemVenda />}
 
         {view === 'venda_direta' && <VendaDireta mostrarMensagem={mostrarMensagem} carregarEstoqueGlobal={carregarEstoque} />}
 
@@ -1641,12 +1640,11 @@ function App() {
           <GestaoUsuarios />
         )}
 
-        {view === 'shopee' && (
-          <IntegracaoShopee onEstoqueAtualizado={carregarEstoque} />
-        )}
-
-        {view === 'tiktok' && (
-          <IntegracaoTikTok onEstoqueAtualizado={carregarEstoque} />
+        {(view === 'integracoes' || view === 'shopee' || view === 'tiktok') && (
+          <Integracoes
+            onEstoqueAtualizado={carregarEstoque}
+            abaInicial={view === 'tiktok' ? 'tiktok' : 'shopee'}
+          />
         )}
       </div>
 

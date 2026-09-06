@@ -1114,6 +1114,141 @@ def exportar_relatorio_vendas_excel(
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+
+@app.get("/relatorios/produtos-sem-venda", tags=["Dashboard"])
+def relatorio_produtos_sem_venda(
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna produtos ativos que NÃO tiveram nenhuma venda no período informado.
+    Útil para identificar itens parados e criar anúncios.
+    """
+    agora_brt = datetime.utcnow() - timedelta(hours=3)
+
+    if data_inicio:
+        try:
+            dt_inicio_brt = datetime.strptime(data_inicio, "%Y-%m-%d").replace(hour=0, minute=0, second=0, microsecond=0)
+        except Exception:
+            dt_inicio_brt = (agora_brt - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        dt_inicio_brt = (agora_brt - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if data_fim:
+        try:
+            dt_fim_brt = datetime.strptime(data_fim, "%Y-%m-%d").replace(hour=23, minute=59, second=59, microsecond=999999)
+        except Exception:
+            dt_fim_brt = agora_brt.replace(hour=23, minute=59, second=59, microsecond=999999)
+    else:
+        dt_fim_brt = agora_brt.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    inicio_utc = dt_inicio_brt + timedelta(hours=3)
+    fim_utc = dt_fim_brt + timedelta(hours=3)
+
+    # SKUs que tiveram venda no período
+    movs_venda = db.query(models_domain.MovimentacaoEstoque).filter(
+        models_domain.MovimentacaoEstoque.tipo.in_(["VENDA", "VENDA_DIRETA", "VENDA_WEBHOOK"]),
+        models_domain.MovimentacaoEstoque.criado_em >= inicio_utc,
+        models_domain.MovimentacaoEstoque.criado_em <= fim_utc
+    ).all()
+
+    skus_com_venda = set()
+    ids_com_venda = set()
+    for m in movs_venda:
+        if m.produto_sku:
+            skus_com_venda.add(m.produto_sku.upper())
+        if m.produto_id:
+            ids_com_venda.add(m.produto_id)
+
+    # Todos produtos ativos
+    produtos = db.query(models_domain.Produto).filter(
+        models_domain.Produto.ativo != False
+    ).all()
+
+    resultado = []
+    for p in produtos:
+        sku_upper = (p.sku or "").upper()
+        if p.id in ids_com_venda or sku_upper in skus_com_venda:
+            continue
+
+        resultado.append({
+            "id": p.id,
+            "sku": p.sku,
+            "nome": p.nome,
+            "custo_produto": p.custo_produto or 0,
+            "preco_venda": p.preco_venda or 0,
+            "quantidade_estoque": p.quantidade_estoque or 0,
+            "cross_docking": p.cross_docking or False,
+            "dias_sem_venda": None,  # última venda histórica
+        })
+
+    # Enriquecer com a data da última venda de cada produto (histórico completo)
+    for item in resultado:
+        sku_upper = (item["sku"] or "").upper()
+        ultima = db.query(models_domain.MovimentacaoEstoque).filter(
+            models_domain.MovimentacaoEstoque.tipo.in_(["VENDA", "VENDA_DIRETA", "VENDA_WEBHOOK"]),
+            (
+                (models_domain.MovimentacaoEstoque.produto_id == item["id"]) |
+                (models_domain.MovimentacaoEstoque.produto_sku == item["sku"])
+            )
+        ).order_by(models_domain.MovimentacaoEstoque.criado_em.desc()).first()
+
+        if ultima and ultima.criado_em:
+            ultima_brt = ultima.criado_em - timedelta(hours=3)
+            delta = agora_brt - ultima_brt
+            item["ultima_venda"] = ultima_brt.strftime("%d/%m/%Y")
+            item["dias_sem_venda"] = delta.days
+        else:
+            item["ultima_venda"] = "Nunca vendido"
+            item["dias_sem_venda"] = 9999
+
+    # Ordenar por mais tempo sem vender
+    resultado.sort(key=lambda x: x["dias_sem_venda"], reverse=True)
+
+    return {
+        "periodo": {
+            "inicio": dt_inicio_brt.strftime("%d/%m/%Y"),
+            "fim": dt_fim_brt.strftime("%d/%m/%Y"),
+        },
+        "total": len(resultado),
+        "produtos": resultado
+    }
+
+
+@app.get("/relatorios/produtos-sem-venda/exportar", tags=["Dashboard"])
+def exportar_produtos_sem_venda(
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Exporta CSV dos produtos sem venda no período para anúncios Shopee."""
+    dados = relatorio_produtos_sem_venda(data_inicio=data_inicio, data_fim=data_fim, db=db)
+    produtos = dados["produtos"]
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(["SKU", "Nome do Produto", "Custo (R$)", "Preço Sugerido (R$)", "Estoque", "Cross-Docking", "Última Venda", "Dias Sem Venda"])
+
+    for p in produtos:
+        writer.writerow([
+            p["sku"],
+            p["nome"],
+            f"{p['custo_produto']:.2f}".replace('.', ','),
+            f"{p['preco_venda']:.2f}".replace('.', ','),
+            p["quantidade_estoque"],
+            "Sim" if p["cross_docking"] else "Não",
+            p["ultima_venda"],
+            p["dias_sem_venda"] if p["dias_sem_venda"] != 9999 else "Nunca"
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode('utf-8-sig')),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=produtos_sem_venda.csv"}
+    )
+
 @app.get("/produtos/alertas", tags=["Dashboard"])
 def alertas_de_estoque(limite: int = 0, db: Session = Depends(get_db)):
     produtos_criticos = db.query(models_domain.Produto).filter(
