@@ -5,6 +5,7 @@ import {
   colors, cardStyle, cardTitleStyle, cardDescStyle,
   inputStyle, btnStyle, btnNeutralStyle
 } from './theme';
+import { Link2, Check, Copy, Info, KeyRound, Eye, EyeOff, Save } from 'lucide-react';
 
 interface IntegracaoTikTokProps {
   onEstoqueAtualizado?: () => void;
@@ -52,10 +53,10 @@ export function IntegracaoTikTok({ ocultarHeader = false }: IntegracaoTikTokProp
         shop_cipher: shopCipher,
         ambiente
       });
-      setMensagem('✅ Credenciais do TikTok Shop salvas com sucesso!');
+      setMensagem('Credenciais do TikTok Shop salvas com sucesso!');
       setTimeout(() => setMensagem(''), 5000);
     } catch (err: any) {
-      setMensagem(`⚠️ ${err.response?.data?.detail || 'Erro ao salvar credenciais.'}`);
+      setMensagem(err.response?.data?.detail || 'Erro ao salvar credenciais.');
     } finally {
       setSalvando(false);
     }
@@ -74,7 +75,7 @@ export function IntegracaoTikTok({ ocultarHeader = false }: IntegracaoTikTokProp
           title={(
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
               <img src="/logos/tiktokshop.png" alt="TikTok Shop Logo" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }} />
-              Integração TikTok Shop Partner API
+              Integração TikTok Shop
             </span>
           )}
           subtitle="Receba os webhooks de vendas do TikTok Shop e dê baixa imediata no estoque do Skold Stock."
@@ -86,7 +87,9 @@ export function IntegracaoTikTok({ ocultarHeader = false }: IntegracaoTikTokProp
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start', marginBottom: '24px' }}>
         {/* Card 1: Webhook Endpoint */}
         <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.accent}` }}>
-          <h3 style={cardTitleStyle}>🔗 URL do Webhook do TikTok Shop</h3>
+          <h3 style={{ ...cardTitleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Link2 size={18} color={colors.accent} /> URL do Webhook do TikTok Shop
+          </h3>
           <p style={cardDescStyle}>
             Cole esta URL no TikTok Shop Partner Center na seção Webhooks / Event Notifications (Order Status Change).
           </p>
@@ -105,21 +108,29 @@ export function IntegracaoTikTok({ ocultarHeader = false }: IntegracaoTikTokProp
                 whiteSpace: 'nowrap',
                 backgroundColor: copiado ? colors.successBg : 'rgba(59, 130, 246, 0.16)',
                 color: copiado ? colors.successText : '#60a5fa',
-                border: `1px solid ${copiado ? colors.successBorder : colors.borderStrong}`
+                border: `1px solid ${copiado ? colors.successBorder : colors.borderStrong}`,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              {copiado ? '✓ Copiado!' : '📋 Copiar'}
+              {copiado ? <><Check size={14} /> Copiado!</> : <><Copy size={14} /> Copiar</>}
             </button>
           </div>
 
           <div style={{ marginTop: '16px', fontSize: '12.5px', color: colors.textMuted, lineHeight: '1.5', backgroundColor: colors.bgInput, padding: '12px 14px', borderRadius: '8px', border: `1px solid ${colors.border}` }}>
-            💡 <strong>Como funciona:</strong> Quando uma venda for concluída no TikTok Shop, o webhook avisa o sistema e o produto tem seu estoque baixado na hora.
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: colors.accent, fontWeight: 600, marginRight: '4px' }}>
+              <Info size={14} /> Como funciona:
+            </span>
+            Quando uma venda for concluída no TikTok Shop, o webhook avisa o sistema e o produto tem seu estoque baixado na hora.
           </div>
         </div>
 
         {/* Card 2: Credenciais da API */}
         <div style={cardStyle}>
-          <h3 style={cardTitleStyle}>🔑 Credenciais do App TikTok Shop</h3>
+          <h3 style={{ ...cardTitleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <KeyRound size={18} color={colors.accent} /> Credenciais do App TikTok Shop
+          </h3>
           <p style={cardDescStyle}>Informe sua App Key e App Secret para validar a assinatura SHA256 dos Webhooks.</p>
 
           <form onSubmit={salvarConfiguracao} style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -147,9 +158,9 @@ export function IntegracaoTikTok({ ocultarHeader = false }: IntegracaoTikTokProp
                 <button
                   type="button"
                   onClick={() => setMostrarSecret(!mostrarSecret)}
-                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '14px' }}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                 >
-                  {mostrarSecret ? '🙈' : '👁️'}
+                  {mostrarSecret ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -173,8 +184,8 @@ export function IntegracaoTikTok({ ocultarHeader = false }: IntegracaoTikTokProp
                   onChange={(e) => setAmbiente(e.target.value)}
                   style={{ ...inputStyle, width: '100%', margin: 0, color: colors.textPrimary }}
                 >
-                  <option value="PRODUCAO">🟢 Produção</option>
-                  <option value="SANDBOX">🧪 Testes (Sandbox)</option>
+                  <option value="PRODUCAO">Produção</option>
+                  <option value="SANDBOX">Testes (Sandbox)</option>
                 </select>
               </div>
             </div>
@@ -182,9 +193,9 @@ export function IntegracaoTikTok({ ocultarHeader = false }: IntegracaoTikTokProp
             <button
               type="submit"
               disabled={salvando}
-              style={{ ...btnStyle, marginTop: '6px', width: '100%' }}
+              style={{ ...btnStyle, marginTop: '6px', width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              {salvando ? 'Salvando...' : '💾 Salvar Credenciais TikTok'}
+              <Save size={15} /> {salvando ? 'Salvando...' : 'Salvar Credenciais TikTok'}
             </button>
           </form>
         </div>

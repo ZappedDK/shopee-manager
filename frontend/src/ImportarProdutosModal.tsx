@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { api } from './services/api';
 import { colors, cardStyle, cardTitleStyle, cardDescStyle, btnStyle, btnNeutralStyle } from './theme';
+import {
+  FileSpreadsheet, X, Download, AlertTriangle, RefreshCw,
+  SkipForward, CheckCircle2, Package, PlusCircle, Upload
+} from 'lucide-react';
 
 interface ImportarProdutosModalProps {
   onClose: () => void;
@@ -49,7 +53,7 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
 
       setResultado(res.data);
       if (res.data.criados > 0 || res.data.atualizados > 0) {
-        onSuccess(`✅ Importação concluída! ${res.data.criados} criados, ${res.data.atualizados} atualizados.`);
+        onSuccess(`Importação concluída! ${res.data.criados} criados, ${res.data.atualizados} atualizados.`);
       }
     } catch (err: any) {
       setErro(err.response?.data?.detail || 'Erro ao processar arquivo de planilha.');
@@ -88,8 +92,8 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ ...cardTitleStyle, margin: 0, fontSize: '18px' }}>
-            📊 Importação de Produtos em Massa
+          <h3 style={{ ...cardTitleStyle, margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileSpreadsheet size={20} color={colors.accent} /> Importação de Produtos em Massa
           </h3>
           <button
             onClick={onClose}
@@ -97,11 +101,13 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
               background: 'none',
               border: 'none',
               color: colors.textSecondary,
-              fontSize: '20px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '4px'
             }}
           >
-            ✕
+            <X size={20} />
           </button>
         </div>
         <p style={cardDescStyle}>Cadastre ou atualize dezenas de produtos de uma só vez enviando uma planilha Excel ou CSV.</p>
@@ -115,15 +121,16 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
           <button
             type="button"
             onClick={handleBaixarModelo}
-            style={{ ...btnNeutralStyle, fontSize: '13px', padding: '8px 14px' }}
+            style={{ ...btnNeutralStyle, fontSize: '13px', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            📥 Baixar Modelo (.CSV)
+            <Download size={14} /> Baixar Modelo (.CSV)
           </button>
         </div>
 
         {erro && (
-          <div style={{ padding: '10px 14px', backgroundColor: colors.dangerBg, color: colors.dangerText, border: `1px solid ${colors.dangerBorder}`, borderRadius: '8px', marginBottom: '18px', fontSize: '13px' }}>
-            ⚠️ {erro}
+          <div style={{ padding: '10px 14px', backgroundColor: colors.dangerBg, color: colors.dangerText, border: `1px solid ${colors.dangerBorder}`, borderRadius: '8px', marginBottom: '18px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertTriangle size={16} />
+            <span>{erro}</span>
           </div>
         )}
 
@@ -166,7 +173,9 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
                   onChange={() => setModoDuplicados('atualizar')}
                 />
                 <div>
-                  <strong>🔄 Atualizar dados</strong>
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <RefreshCw size={13} /> Atualizar dados
+                  </strong>
                   <div style={{ fontSize: '11.5px', color: colors.textMuted }}>Sobrescreve nome, custo, preço e estoque.</div>
                 </div>
               </label>
@@ -180,7 +189,9 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
                   onChange={() => setModoDuplicados('pular')}
                 />
                 <div>
-                  <strong>⏭️ Pular duplicados</strong>
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <SkipForward size={13} /> Pular duplicados
+                  </strong>
                   <div style={{ fontSize: '11.5px', color: colors.textMuted }}>Mantém os produtos atuais intactos.</div>
                 </div>
               </label>
@@ -190,12 +201,24 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
           {/* Resultado da Carga */}
           {resultado && (
             <div style={{ padding: '16px', backgroundColor: colors.bgCardAlt, borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '24px' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: colors.successText, fontSize: '15px' }}>🎉 Processamento Concluído!</h4>
+              <h4 style={{ margin: '0 0 10px 0', color: colors.successText, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={18} /> Processamento Concluído!
+              </h4>
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13.5px', marginBottom: '10px' }}>
-                <span>📦 Total: <strong>{resultado.total_processados}</strong></span>
-                <span>✨ Criados: <strong style={{ color: colors.successText }}>{resultado.criados}</strong></span>
-                <span>🔄 Atualizados: <strong style={{ color: colors.accent }}>{resultado.atualizados}</strong></span>
-                {resultado.pulados > 0 && <span>⏭️ Pulados: <strong>{resultado.pulados}</strong></span>}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <Package size={14} color={colors.accent} /> Total: <strong>{resultado.total_processados}</strong>
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <PlusCircle size={14} color={colors.successText} /> Criados: <strong style={{ color: colors.successText }}>{resultado.criados}</strong>
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <RefreshCw size={14} color={colors.accent} /> Atualizados: <strong style={{ color: colors.accent }}>{resultado.atualizados}</strong>
+                </span>
+                {resultado.pulados > 0 && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <SkipForward size={14} color={colors.textMuted} /> Pulados: <strong>{resultado.pulados}</strong>
+                  </span>
+                )}
               </div>
 
               {resultado.erros && resultado.erros.length > 0 && (
@@ -223,9 +246,9 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
             <button
               type="submit"
               disabled={carregando || !arquivo}
-              style={{ ...btnStyle, opacity: (carregando || !arquivo) ? 0.6 : 1 }}
+              style={{ ...btnStyle, opacity: (carregando || !arquivo) ? 0.6 : 1, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              {carregando ? 'Processando Planilha...' : '🚀 Processar e Importar'}
+              {carregando ? 'Processando Planilha...' : <><Upload size={15} /> Processar e Importar</>}
             </button>
           </div>
         </form>

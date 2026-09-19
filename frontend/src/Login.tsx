@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { colors, btnStyle, inputStyle } from './theme';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (token: string, usuario: any) => void;
@@ -222,9 +223,13 @@ export function Login({ onLoginSuccess }: LoginProps) {
               borderRadius: '8px',
               fontSize: '13px',
               marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
           >
-            ⚠️ {mensagemErro}
+            <AlertTriangle size={16} />
+            <span>{mensagemErro}</span>
           </div>
         )}
 
@@ -238,9 +243,13 @@ export function Login({ onLoginSuccess }: LoginProps) {
               borderRadius: '8px',
               fontSize: '13px',
               marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
           >
-            ✅ {mensagemSucesso}
+            <CheckCircle2 size={16} />
+            <span>{mensagemSucesso}</span>
           </div>
         )}
 

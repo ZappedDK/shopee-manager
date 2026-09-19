@@ -5,6 +5,7 @@ import {
   colors, cardStyle, cardTitleStyle, cardDescStyle,
   inputStyle, btnStyle, btnNeutralStyle
 } from './theme';
+import { Link2, Check, Copy, Info, KeyRound, Eye, EyeOff, Save } from 'lucide-react';
 
 interface IntegracaoShopeeProps {
   onEstoqueAtualizado?: () => void;
@@ -52,10 +53,10 @@ export function IntegracaoShopee({ ocultarHeader = false }: IntegracaoShopeeProp
         shop_id: shopId ? Number(shopId) : null,
         ambiente
       });
-      setMensagem('✅ Credenciais da Shopee salvas com sucesso!');
+      setMensagem('Credenciais da Shopee salvas com sucesso!');
       setTimeout(() => setMensagem(''), 5000);
     } catch (err: any) {
-      setMensagem(`⚠️ ${err.response?.data?.detail || 'Erro ao salvar credenciais.'}`);
+      setMensagem(err.response?.data?.detail || 'Erro ao salvar credenciais.');
     } finally {
       setSalvando(false);
     }
@@ -86,7 +87,9 @@ export function IntegracaoShopee({ ocultarHeader = false }: IntegracaoShopeeProp
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start', marginBottom: '24px' }}>
         {/* Card 1: Webhook Endpoint */}
         <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.accent}` }}>
-          <h3 style={cardTitleStyle}>🔗 URL do Webhook de Vendas</h3>
+          <h3 style={{ ...cardTitleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Link2 size={18} color={colors.accent} /> URL do Webhook de Vendas
+          </h3>
           <p style={cardDescStyle}>
             Cole esta URL no painel de desenvolvedor da Shopee (Open Platform) na seção Push Notifications (Order Status Update).
           </p>
@@ -105,21 +108,29 @@ export function IntegracaoShopee({ ocultarHeader = false }: IntegracaoShopeeProp
                 whiteSpace: 'nowrap',
                 backgroundColor: copiado ? colors.successBg : 'rgba(59, 130, 246, 0.16)',
                 color: copiado ? colors.successText : '#60a5fa',
-                border: `1px solid ${copiado ? colors.successBorder : colors.borderStrong}`
+                border: `1px solid ${copiado ? colors.successBorder : colors.borderStrong}`,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              {copiado ? '✓ Copiado!' : '📋 Copiar'}
+              {copiado ? <><Check size={14} /> Copiado!</> : <><Copy size={14} /> Copiar</>}
             </button>
           </div>
 
           <div style={{ marginTop: '16px', fontSize: '12.5px', color: colors.textMuted, lineHeight: '1.5', backgroundColor: colors.bgInput, padding: '12px 14px', borderRadius: '8px', border: `1px solid ${colors.border}` }}>
-            💡 <strong>Como funciona:</strong> Sempre que uma venda for concluída na Shopee, o pedido é lido, o SKU correspondente é localizado e a quantidade é abatida do estoque local instantaneamente.
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: colors.accent, fontWeight: 600, marginRight: '4px' }}>
+              <Info size={14} /> Como funciona:
+            </span>
+            Sempre que uma venda for concluída na Shopee, o pedido é lido, o SKU correspondente é localizado e a quantidade é abatida do estoque local instantaneamente.
           </div>
         </div>
 
         {/* Card 2: Credenciais da API */}
         <div style={cardStyle}>
-          <h3 style={cardTitleStyle}>🔑 Credenciais da Loja Shopee</h3>
+          <h3 style={{ ...cardTitleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <KeyRound size={18} color={colors.accent} /> Credenciais da Loja Shopee
+          </h3>
           <p style={cardDescStyle}>Informe os códigos de desenvolvedor para autenticar a leitura da API v2.</p>
 
           <form onSubmit={salvarConfiguracao} style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -147,9 +158,9 @@ export function IntegracaoShopee({ ocultarHeader = false }: IntegracaoShopeeProp
                 <button
                   type="button"
                   onClick={() => setMostrarKey(!mostrarKey)}
-                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '14px' }}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                 >
-                  {mostrarKey ? '🙈' : '👁️'}
+                  {mostrarKey ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -173,8 +184,8 @@ export function IntegracaoShopee({ ocultarHeader = false }: IntegracaoShopeeProp
                   onChange={(e) => setAmbiente(e.target.value)}
                   style={{ ...inputStyle, width: '100%', margin: 0, color: colors.textPrimary }}
                 >
-                  <option value="PRODUCAO">🟢 Produção</option>
-                  <option value="SANDBOX">🧪 Testes (Sandbox)</option>
+                  <option value="PRODUCAO">Produção</option>
+                  <option value="SANDBOX">Testes (Sandbox)</option>
                 </select>
               </div>
             </div>
@@ -182,9 +193,9 @@ export function IntegracaoShopee({ ocultarHeader = false }: IntegracaoShopeeProp
             <button
               type="submit"
               disabled={salvando}
-              style={{ ...btnStyle, marginTop: '6px', width: '100%' }}
+              style={{ ...btnStyle, marginTop: '6px', width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              {salvando ? 'Salvando...' : '💾 Salvar Credenciais Shopee'}
+              <Save size={15} /> {salvando ? 'Salvando...' : 'Salvar Credenciais Shopee'}
             </button>
           </form>
         </div>

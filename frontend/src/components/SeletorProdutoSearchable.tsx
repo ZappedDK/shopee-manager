@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Package, ChevronDown, ChevronUp, Search } from 'lucide-react';
 
 interface SeletorProdutoSearchableProps {
   produtos: any[];
@@ -51,11 +52,18 @@ export function SeletorProdutoSearchable({ produtos, skuSelecionado, onSelectSku
           boxSizing: 'border-box'
         }}
       >
-        <span style={{ color: produtoAtual ? (colors.textPrimary || '#fff') : (colors.textMuted || colors.textSecondary || '#9ca3af'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {produtoAtual ? `📦 ${produtoAtual.sku} — ${produtoAtual.nome} (Estoque: ${produtoAtual.quantidade_estoque ?? 0} un.)` : 'Selecione um produto...'}
+        <span style={{ color: produtoAtual ? (colors.textPrimary || '#fff') : (colors.textMuted || colors.textSecondary || '#9ca3af'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {produtoAtual ? (
+            <>
+              <Package size={15} style={{ flexShrink: 0, color: colors.accent }} />
+              <span>{produtoAtual.sku} — {produtoAtual.nome} (Estoque: {produtoAtual.quantidade_estoque ?? 0} un.)</span>
+            </>
+          ) : (
+            'Selecione um produto...'
+          )}
         </span>
-        <span style={{ fontSize: '12px', color: colors.textSecondary || '#9ca3af', marginLeft: '8px' }}>
-          {aberto ? '▲' : '▼'}
+        <span style={{ color: colors.textSecondary || '#9ca3af', marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
+          {aberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </span>
       </div>
 
@@ -76,23 +84,26 @@ export function SeletorProdutoSearchable({ produtos, skuSelecionado, onSelectSku
           }}
         >
           {/* Campo de Pesquisa Interno */}
-          <input
-            type="text"
-            placeholder="🔍 Digite para pesquisar SKU ou Nome..."
-            value={termoBusca}
-            onChange={(e) => setTermoBusca(e.target.value)}
-            autoFocus
-            style={{
-              ...inputStyle,
-              width: '100%',
-              maxWidth: 'none',
-              marginBottom: '8px',
-              padding: '8px 12px',
-              fontSize: '13px',
-              backgroundColor: colors.bgApp || colors.background || '#030712',
-              boxSizing: 'border-box'
-            }}
-          />
+          <div style={{ position: 'relative', marginBottom: '8px' }}>
+            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: colors.textMuted, pointerEvents: 'none' }} />
+            <input
+              type="text"
+              placeholder="Digite para pesquisar SKU ou Nome..."
+              value={termoBusca}
+              onChange={(e) => setTermoBusca(e.target.value)}
+              autoFocus
+              style={{
+                ...inputStyle,
+                width: '100%',
+                maxWidth: 'none',
+                margin: 0,
+                padding: '8px 12px 8px 32px',
+                fontSize: '13px',
+                backgroundColor: colors.bgApp || colors.background || '#030712',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
 
           {/* Lista de Opções */}
           <div style={{ maxHeight: '220px', overflowY: 'auto' }}>

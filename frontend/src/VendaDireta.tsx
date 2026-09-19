@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  Package, ChevronDown, ChevronUp, Search, Check, AlertOctagon, CheckCircle2,
+  Store, CreditCard, BarChart3, AlertTriangle, ArrowRight, DollarSign, X,
+  ClipboardEdit, Zap, Banknote, RefreshCw, TrendingDown
+} from 'lucide-react';
 import { api } from './services/api';
 import { PageHeader } from './ui';
 import {
@@ -166,15 +171,18 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
           userSelect: 'none'
         }}
       >
-        <span style={{ color: produtoAtual ? colors.textPrimary : colors.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ color: produtoAtual ? colors.textPrimary : colors.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
           {produtoAtual ? (
             <>
-              📦 <strong style={{ color: colors.accent }}>{produtoAtual.sku}</strong> — {produtoAtual.nome} (Estoque: <strong style={{ color: produtoAtual.quantidade_estoque > 0 ? '#34d399' : '#f87171' }}>{produtoAtual.quantidade_estoque} un</strong>)
+              <Package size={14} style={{ color: colors.accent, flexShrink: 0 }} />
+              <span>
+                <strong style={{ color: colors.accent }}>{produtoAtual.sku}</strong> — {produtoAtual.nome} (Estoque: <strong style={{ color: produtoAtual.quantidade_estoque > 0 ? '#34d399' : '#f87171' }}>{produtoAtual.quantidade_estoque} un</strong>)
+              </span>
             </>
           ) : 'Selecione um produto do estoque...'}
         </span>
-        <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px' }}>
-          {aberto ? '▲' : '▼'}
+        <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
+          {aberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </span>
       </div>
 
@@ -193,22 +201,24 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
             padding: '8px',
           }}
         >
-          <input
-            type="text"
-            placeholder="🔍 Digite para pesquisar SKU ou Nome..."
-            value={termoBusca}
-            onChange={(e) => setTermoBusca(e.target.value)}
-            autoFocus
-            style={{
-              ...inputStyle,
-              width: '100%',
-              maxWidth: 'none',
-              marginBottom: '8px',
-              padding: '8px 12px',
-              fontSize: '13px',
-              backgroundColor: colors.bgApp
-            }}
-          />
+          <div style={{ position: 'relative', marginBottom: '8px' }}>
+            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: colors.textMuted }} />
+            <input
+              type="text"
+              placeholder="Digite para pesquisar SKU ou Nome..."
+              value={termoBusca}
+              onChange={(e) => setTermoBusca(e.target.value)}
+              autoFocus
+              style={{
+                ...inputStyle,
+                width: '100%',
+                maxWidth: 'none',
+                padding: '8px 12px 8px 32px',
+                fontSize: '13px',
+                backgroundColor: colors.bgApp
+              }}
+            />
+          </div>
 
           <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
             {produtosFiltrados.length === 0 ? (
@@ -250,8 +260,15 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
                     <span>
                       <strong style={{ color: colors.accent }}>{p.sku}</strong> — {p.nome}
                     </span>
-                    <span style={{ fontSize: '12px', color: semEstoque ? '#f87171' : '#34d399', fontWeight: 600, marginLeft: '8px' }}>
-                      {semEstoque ? '⚠️ Zerado (0 un)' : `${p.quantidade_estoque} un em estoque`}
+                    <span style={{ fontSize: '12px', color: semEstoque ? '#f87171' : '#34d399', fontWeight: 600, marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {semEstoque ? (
+                        <>
+                          <AlertTriangle size={13} />
+                          <span>Zerado (0 un)</span>
+                        </>
+                      ) : (
+                        `${p.quantidade_estoque} un em estoque`
+                      )}
                     </span>
                   </div>
                 );
@@ -275,7 +292,7 @@ function SeletorPlataformaVenda({ plataformas, plataformaIdStr, onSelectPlatafor
   const containerRef = useRef<HTMLDivElement>(null);
 
   const opcaoAtual = plataformaIdStr === 'direta'
-    ? { id: 'direta', nome: '🤝 Venda Direta / Balcão (Sem Taxas)' }
+    ? { id: 'direta', nome: 'Venda Direta / Balcão (Sem Taxas)' }
     : plataformas.find(p => String(p.id) === plataformaIdStr);
 
   useEffect(() => {
@@ -289,8 +306,8 @@ function SeletorPlataformaVenda({ plataformas, plataformaIdStr, onSelectPlatafor
   }, []);
 
   const opcoes = [
-    { id: 'direta', nome: '🤝 Venda Direta / Balcão (Sem Taxas)' },
-    ...plataformas.map(p => ({ id: String(p.id), nome: `🛒 ${p.nome}` }))
+    { id: 'direta', nome: 'Venda Direta / Balcão (Sem Taxas)' },
+    ...plataformas.map(p => ({ id: String(p.id), nome: p.nome }))
   ];
 
   return (
@@ -314,8 +331,8 @@ function SeletorPlataformaVenda({ plataformas, plataformaIdStr, onSelectPlatafor
         <span style={{ color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
           {opcaoAtual ? opcaoAtual.nome : 'Selecione a plataforma...'}
         </span>
-        <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px' }}>
-          {aberto ? '▲' : '▼'}
+        <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
+          {aberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </span>
       </div>
 
@@ -364,7 +381,7 @@ function SeletorPlataformaVenda({ plataformas, plataformaIdStr, onSelectPlatafor
                 }}
               >
                 <span>{op.nome}</span>
-                {selecionado && <span style={{ color: colors.accent, fontWeight: 'bold' }}>✓</span>}
+                {selecionado && <Check size={14} style={{ color: colors.accent }} />}
               </div>
             );
           })}
@@ -394,11 +411,11 @@ function SeletorFormaPagamento({ formaPagamento, onSelectForma }: SeletorFormaPa
   }, []);
 
   const opcoes = [
-    { id: 'PIX', nome: '⚡ PIX' },
-    { id: 'Dinheiro', nome: '💵 Dinheiro' },
-    { id: 'Cartão de Crédito', nome: '💳 Cartão de Crédito' },
-    { id: 'Cartão de Débito', nome: '💳 Cartão de Débito' },
-    { id: 'Outros', nome: '🔄 Outros' }
+    { id: 'PIX', nome: 'PIX', icon: <Zap size={14} style={{ color: '#38bdf8' }} /> },
+    { id: 'Dinheiro', nome: 'Dinheiro', icon: <Banknote size={14} style={{ color: '#34d399' }} /> },
+    { id: 'Cartão de Crédito', nome: 'Cartão de Crédito', icon: <CreditCard size={14} style={{ color: '#a78bfa' }} /> },
+    { id: 'Cartão de Débito', nome: 'Cartão de Débito', icon: <CreditCard size={14} style={{ color: '#60a5fa' }} /> },
+    { id: 'Outros', nome: 'Outros', icon: <RefreshCw size={14} style={{ color: colors.textMuted }} /> }
   ];
 
   const opcaoAtual = opcoes.find(o => o.id === formaPagamento) || opcoes[0];
@@ -421,11 +438,12 @@ function SeletorFormaPagamento({ formaPagamento, onSelectForma }: SeletorFormaPa
           userSelect: 'none'
         }}
       >
-        <span style={{ color: '#60a5fa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
-          {opcaoAtual ? opcaoAtual.nome : formaPagamento}
+        <span style={{ color: '#60a5fa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {opcaoAtual?.icon}
+          <span>{opcaoAtual ? opcaoAtual.nome : formaPagamento}</span>
         </span>
-        <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px' }}>
-          {aberto ? '▲' : '▼'}
+        <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
+          {aberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </span>
       </div>
 
@@ -473,8 +491,11 @@ function SeletorFormaPagamento({ formaPagamento, onSelectForma }: SeletorFormaPa
                   if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
-                <span>{op.nome}</span>
-                {selecionado && <span style={{ color: colors.accent, fontWeight: 'bold' }}>✓</span>}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {op.icon}
+                  <span>{op.nome}</span>
+                </span>
+                {selecionado && <Check size={14} style={{ color: colors.accent }} />}
               </div>
             );
           })}
@@ -586,11 +607,11 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
   const handleSubmitVenda = (e: React.FormEvent) => {
     e.preventDefault();
     if (!skuSelecionado) {
-      mostrarMensagem('❌ Selecione um produto para dar baixa.', 4000);
+      mostrarMensagem('Selecione um produto para dar baixa.', 4000);
       return;
     }
     if (estoqueInsuficiente) {
-      mostrarMensagem(`❌ Trava de Estoque: Estoque insuficiente! (Atual: ${estoqueAtual} un, Solicitado: ${quantidade} un).`, 6000);
+      mostrarMensagem(`Trava de Estoque: Estoque insuficiente! (Atual: ${estoqueAtual} un, Solicitado: ${quantidade} un).`, 6000);
       return;
     }
     setModalConfirmacaoAberto(true);
@@ -611,7 +632,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
       };
 
       await api.post('/vendas/baixa-manual', payload);
-      mostrarMensagem(`🎉 Baixa de venda concluída com sucesso! ${quantidade} un. do SKU '${skuSelecionado}' abatidas no estoque.`, 6000);
+      mostrarMensagem(`Baixa de venda concluída com sucesso! ${quantidade} un. do SKU '${skuSelecionado}' abatidas no estoque.`, 6000);
 
       // Reseta formulário e fecha modal
       setModalConfirmacaoAberto(false);
@@ -624,7 +645,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
       if (carregarEstoqueGlobal) carregarEstoqueGlobal();
     } catch (err: any) {
       const erroMsg = err.response?.data?.detail || 'Erro ao registrar baixa de venda.';
-      mostrarMensagem(`❌ ${erroMsg}`, 7000);
+      mostrarMensagem(erroMsg, 7000);
     } finally {
       setSalvando(false);
     }
@@ -633,15 +654,15 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
   return (
     <div>
       <PageHeader
-        title="🤝 Baixa de Venda Manual"
+        title="Baixa de Venda Manual"
         subtitle="Registre vendas manuais e dê baixa imediata no estoque para Shopee, TikTok, Mercado Livre ou Venda Direta (balcão)."
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '28px' }}>
         {/* Formulário de Baixa */}
         <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.success}` }}>
-          <h3 style={{ ...cardTitleStyle, color: '#34d399', marginBottom: '4px' }}>
-            📝 Dar Baixa de Venda no Estoque
+          <h3 style={{ ...cardTitleStyle, color: '#34d399', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ClipboardEdit size={18} /> Dar Baixa de Venda no Estoque
           </h3>
           <p style={{ ...cardDescStyle, marginBottom: '20px' }}>
             Selecione a plataforma de venda ou opção direta e informe a quantidade vendida.
@@ -650,8 +671,8 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
           <form onSubmit={handleSubmitVenda} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Seleção do Produto */}
             <div>
-              <label style={{ display: 'block', color: colors.textSecondary, fontSize: '13px', marginBottom: '6px', fontWeight: 600 }}>
-                📦 Produto Vendido:
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: colors.textSecondary, fontSize: '13px', marginBottom: '6px', fontWeight: 600 }}>
+                <Package size={14} style={{ color: colors.accent }} /> Produto Vendido:
               </label>
               <SeletorProdutoVenda
                 produtos={produtos}
@@ -678,17 +699,17 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
               >
                 {estoqueInsuficiente ? (
                   <>
-                    <span>🛑</span>
+                    <AlertOctagon size={16} />
                     <span>TRAVA DE ESTOQUE: Estoque insuficiente! (Disponível: {estoqueAtual} un | Solicitado: {quantidade} un)</span>
                   </>
                 ) : isCrossDocking ? (
                   <>
-                    <span>📦</span>
+                    <Package size={16} />
                     <span>PRODUTO CROSS-DOCKING: Venda sob demanda liberada no fornecedor. (Estoque físico: {estoqueAtual} un)</span>
                   </>
                 ) : (
                   <>
-                    <span>✅</span>
+                    <CheckCircle2 size={16} />
                     <span>Estoque disponível: <strong>{estoqueAtual} un.</strong></span>
                   </>
                 )}
@@ -698,8 +719,8 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
             {/* Plataforma de Venda e Forma de Pagamento */}
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
               <div style={{ flex: plataformaIdStr === 'direta' ? 1 : '1 1 100%', width: '100%', minWidth: '180px' }}>
-                <label style={{ display: 'block', color: colors.textSecondary, fontSize: '13px', marginBottom: '6px', fontWeight: 600 }}>
-                  🏪 Plataforma da Venda:
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: colors.textSecondary, fontSize: '13px', marginBottom: '6px', fontWeight: 600 }}>
+                  <Store size={14} style={{ color: colors.accent }} /> Plataforma da Venda:
                 </label>
                 <SeletorPlataformaVenda
                   plataformas={plataformas}
@@ -711,8 +732,8 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
               {/* Opção de Forma de Pagamento (EXIBIDA APENAS PARA VENDA DIRETA) */}
               {plataformaIdStr === 'direta' && (
                 <div style={{ flex: 1, minWidth: '160px' }}>
-                  <label style={{ display: 'block', color: colors.textSecondary, fontSize: '13px', marginBottom: '6px', fontWeight: 600 }}>
-                    💳 Forma de Pagamento:
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: colors.textSecondary, fontSize: '13px', marginBottom: '6px', fontWeight: 600 }}>
+                    <CreditCard size={14} style={{ color: colors.accent }} /> Forma de Pagamento:
                   </label>
                   <SeletorFormaPagamento
                     formaPagamento={formaPagamento}
@@ -805,7 +826,11 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                 cursor: (salvando || !skuSelecionado || estoqueInsuficiente) ? 'not-allowed' : 'pointer'
               }}
             >
-              {salvando ? 'Processando Baixa...' : '🤝 Confirmar Venda & Dar Baixa no Estoque'}
+              {salvando ? 'Processando Baixa...' : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <Check size={16} /> Confirmar Venda & Dar Baixa no Estoque
+                </span>
+              )}
             </button>
           </form>
         </div>
@@ -813,8 +838,8 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
         {/* Resumo Financeiro */}
         <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderLeft: `4px solid ${colors.accent}` }}>
           <div>
-            <h3 style={{ ...cardTitleStyle, color: '#60a5fa', marginBottom: '4px' }}>
-              📊 Resumo da Precificação da Venda
+            <h3 style={{ ...cardTitleStyle, color: '#60a5fa', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChart3 size={18} /> Resumo da Precificação da Venda
             </h3>
             <p style={{ ...cardDescStyle, marginBottom: '20px' }}>
               Cálculo detalhado de receitas, taxas reais da plataforma, insumos e lucro líquido.
@@ -839,7 +864,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: plataformaSelecionada ? 'rgba(239, 68, 68, 0.12)' : 'rgba(59, 130, 246, 0.15)', borderRadius: '8px' }}>
                 <span style={{ color: colors.textSecondary, fontSize: '13px' }}>Taxa da Plataforma ({taxaInfo.taxaDesc}):</span>
                 <strong style={{ color: plataformaSelecionada ? '#f87171' : '#34d399', fontSize: '14px' }}>
-                  {plataformaSelecionada ? `- ${formatarMoeda(taxaTotal)}` : 'R$ 0,00 (ISENTO 🎉)'}
+                  {plataformaSelecionada ? `- ${formatarMoeda(taxaTotal)}` : 'R$ 0,00 (ISENTO)'}
                 </strong>
               </div>
 
@@ -886,7 +911,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <span style={{ fontSize: '28px' }}>⚠️</span>
+              <AlertTriangle size={28} color="#f59e0b" style={{ flexShrink: 0 }} />
               <div>
                 <h3 style={{ ...cardTitleStyle, fontSize: '18px', margin: 0, color: '#f59e0b' }}>
                   Confirmar Baixa no Estoque?
@@ -899,38 +924,50 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', backgroundColor: colors.bgInput, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: colors.textSecondary }}>📦 Produto:</span>
+                <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Package size={14} /> Produto:
+                </span>
                 <strong style={{ color: colors.textPrimary, textAlign: 'right', maxWidth: '250px' }}>
                   {prodSelecionado.sku} — {prodSelecionado.nome}
                 </strong>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: colors.textSecondary }}>🏪 Plataforma:</span>
+                <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Store size={14} /> Plataforma:
+                </span>
                 <span style={{ color: '#60a5fa', fontWeight: 600 }}>
                   {plataformaSelecionada ? plataformaSelecionada.nome : `Venda Direta [${formaPagamento}]`}
                 </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: colors.textSecondary }}>📉 Qtd. Vendida:</span>
+                <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <TrendingDown size={14} /> Qtd. Vendida:
+                </span>
                 <strong style={{ color: '#f87171' }}>- {quantidade} un.</strong>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: colors.textSecondary }}>📊 Novo Estoque:</span>
-                <span style={{ color: colors.textPrimary, fontWeight: 600 }}>
-                  {estoqueAtual} un. ➔ <strong style={{ color: '#34d399' }}>{estoqueAtual - quantidade} un.</strong>
+                <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <BarChart3 size={14} /> Novo Estoque:
+                </span>
+                <span style={{ color: colors.textPrimary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {estoqueAtual} un. <ArrowRight size={13} /> <strong style={{ color: '#34d399' }}>{estoqueAtual - quantidade} un.</strong>
                 </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: `1px dashed ${colors.border}`, paddingTop: '8px', marginTop: '4px' }}>
-                <span style={{ color: colors.textSecondary }}>💰 Receita Total:</span>
+                <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <DollarSign size={14} /> Receita Total:
+                </span>
                 <strong style={{ color: colors.textPrimary, fontSize: '15px' }}>{formatarMoeda(receitaTotal)}</strong>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: colors.textSecondary }}>💵 Lucro Líquido Real:</span>
+                <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <DollarSign size={14} /> Lucro Líquido Real:
+                </span>
                 <strong style={{ color: '#34d399', fontSize: '15px' }}>{formatarMoeda(lucroTotal)} ({margemPct.toFixed(1)}%)</strong>
               </div>
             </div>
@@ -940,9 +977,9 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                 type="button"
                 onClick={() => setModalConfirmacaoAberto(false)}
                 disabled={salvando}
-                style={{ ...btnNeutralStyle, padding: '10px 18px', fontSize: '13.5px' }}
+                style={{ ...btnNeutralStyle, padding: '10px 18px', fontSize: '13.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                ❌ Cancelar
+                <X size={14} /> Cancelar
               </button>
               <button
                 type="button"
@@ -954,10 +991,17 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                   fontSize: '13.5px',
                   fontWeight: 600,
                   opacity: salvando ? 0.6 : 1,
-                  cursor: salvando ? 'not-allowed' : 'pointer'
+                  cursor: salvando ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
-                {salvando ? 'Processando...' : '✅ Sim, Confirmar Baixa'}
+                {salvando ? 'Processando...' : (
+                  <>
+                    <Check size={14} /> Sim, Confirmar Baixa
+                  </>
+                )}
               </button>
             </div>
           </div>

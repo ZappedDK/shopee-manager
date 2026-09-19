@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { colors, cardTitleStyle, cardDescStyle, inputStyle, btnSuccessStyle, btnNeutralStyle, btnDangerStyle } from './theme';
+import { X, AlertTriangle, Layers, Trash2 } from 'lucide-react';
 
 interface ModalEditarPlataformaProps {
   plataforma: any;
@@ -88,7 +89,7 @@ export function ModalEditarPlataforma({ plataforma, onClose, onSuccess }: ModalE
       };
 
       await api.put(`/plataformas/${plataforma.id}`, payload);
-      onSuccess('✅ Plataforma e faixas de taxas atualizadas com sucesso!');
+      onSuccess('Plataforma e faixas de taxas atualizadas com sucesso!');
       onClose();
     } catch (err: any) {
       setErro(err.response?.data?.detail || 'Erro ao salvar plataforma.');
@@ -132,9 +133,9 @@ export function ModalEditarPlataforma({ plataforma, onClose, onSuccess }: ModalE
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
             <h3 style={{ ...cardTitleStyle, fontSize: '20px', marginBottom: '4px' }}>
-              Editar {icone} {nome}
+              Editar {nome}
             </h3>
-            <p style={{ ...cardDescStyle, margin: 0 }}>Configure o nome, emoji e as faixas de taxas progressivas.</p>
+            <p style={{ ...cardDescStyle, margin: 0 }}>Configure o nome e as faixas de taxas progressivas.</p>
           </div>
           <button
             onClick={onClose}
@@ -142,11 +143,13 @@ export function ModalEditarPlataforma({ plataforma, onClose, onSuccess }: ModalE
               background: 'transparent',
               border: 'none',
               color: colors.textMuted,
-              fontSize: '22px',
               cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '4px'
             }}
           >
-            ✕
+            <X size={20} />
           </button>
         </div>
 
@@ -160,9 +163,13 @@ export function ModalEditarPlataforma({ plataforma, onClose, onSuccess }: ModalE
               border: `1px solid ${colors.danger}`,
               marginBottom: '16px',
               fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
           >
-            ❌ {erro}
+            <AlertTriangle size={16} />
+            <span>{erro}</span>
           </div>
         )}
 
@@ -216,8 +223,8 @@ export function ModalEditarPlataforma({ plataforma, onClose, onSuccess }: ModalE
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div>
-                <label style={{ color: colors.accent, fontWeight: 700, fontSize: '14px' }}>
-                  📊 Faixas de Taxas Progressivas
+                <label style={{ color: colors.accent, fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Layers size={16} /> Faixas de Taxas Progressivas
                 </label>
                 <p style={{ fontSize: '12px', color: colors.textMuted, margin: '2px 0 0 0' }}>
                   Ex: No TikTok são 2 faixas, na Shopee 4 faixas. Deixe "Até R$" em branco na última linha para representar sem limite.
@@ -316,10 +323,10 @@ export function ModalEditarPlataforma({ plataforma, onClose, onSuccess }: ModalE
                   <button
                     type="button"
                     onClick={() => removerFaixa(idx)}
-                    style={{ ...btnDangerStyle, padding: '6px 10px', fontSize: '12px', marginTop: '16px' }}
+                    style={{ ...btnDangerStyle, padding: '6px 10px', fontSize: '12px', marginTop: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                     title="Remover faixa"
                   >
-                    🗑️
+                    <Trash2 size={13} />
                   </button>
                 )}
               </div>

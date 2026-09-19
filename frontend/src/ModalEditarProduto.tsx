@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { PlatformIcon } from './PlatformIcon';
 import { colors, cardStyle, cardTitleStyle, cardDescStyle, inputStyle, btnStyle, btnNeutralStyle, formatarMoeda } from './theme';
+import { Pencil, CheckCircle2, PauseCircle, X, AlertTriangle, Package } from 'lucide-react';
 
 interface ModalEditarProdutoProps {
   produto: any;
@@ -79,7 +80,7 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
       };
 
       await api.put(`/produtos/${produto.sku}`, payload);
-      onSuccess(`✅ Produto ${produto.sku} atualizado com sucesso!`);
+      onSuccess(`Produto ${produto.sku} atualizado com sucesso!`);
       onClose();
     } catch (err: any) {
       setErro(err.response?.data?.detail || 'Erro ao atualizar produto.');
@@ -118,8 +119,8 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
-          <h3 style={{ ...cardTitleStyle, margin: 0, fontSize: '18px' }}>
-            ✏️ Editar Produto (SKU: {produto.sku})
+          <h3 style={{ ...cardTitleStyle, margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Pencil size={18} color={colors.accent} /> Editar Produto (SKU: {produto.sku})
           </h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
@@ -141,7 +142,7 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
               }}
               title="Clique para alternar o status do produto (Ativo / Desativado)"
             >
-              <span style={{ fontSize: '10px' }}>{ativo ? '🟢' : '🔴'}</span>
+              {ativo ? <CheckCircle2 size={13} /> : <PauseCircle size={13} />}
               <span>{ativo ? 'Ativo' : 'Desativado'}</span>
             </button>
             <button
@@ -150,19 +151,22 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
                 background: 'none',
                 border: 'none',
                 color: colors.textSecondary,
-                fontSize: '20px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '4px'
               }}
             >
-              ✕
+              <X size={20} />
             </button>
           </div>
         </div>
         <p style={cardDescStyle}>Atualize os preços, custos, quantidade em estoque ou insumos vinculados a este SKU.</p>
 
         {erro && (
-          <div style={{ padding: '10px 14px', backgroundColor: colors.dangerBg, color: colors.dangerText, border: `1px solid ${colors.dangerBorder}`, borderRadius: '8px', marginBottom: '18px', fontSize: '13px' }}>
-            ⚠️ {erro}
+          <div style={{ padding: '10px 14px', backgroundColor: colors.dangerBg, color: colors.dangerText, border: `1px solid ${colors.dangerBorder}`, borderRadius: '8px', marginBottom: '18px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertTriangle size={16} />
+            <span>{erro}</span>
           </div>
         )}
 
@@ -242,8 +246,8 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
                 onChange={(e) => setCrossDocking(e.target.checked)}
                 style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
               />
-              <span>
-                📦 <strong>Produto Cross-docking</strong> <span style={{ color: colors.textSecondary, fontSize: '12px' }}>(Venda sob demanda)</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <Package size={15} color={colors.accent} /> <strong>Produto Cross-docking</strong> <span style={{ color: colors.textSecondary, fontSize: '12px' }}>(Venda sob demanda)</span>
               </span>
             </label>
           </div>

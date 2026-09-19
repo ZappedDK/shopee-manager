@@ -6,6 +6,11 @@ import {
   colors, cardStyle, cardTitleStyle, cardDescStyle,
   inputStyle, tableHeaderStyle, tableCellStyle, formatarMoeda
 } from './theme';
+import {
+  Globe, Handshake, ChevronDown, ChevronUp, Check, BarChart3,
+  Download, ShoppingCart, DollarSign, TrendingUp, Package,
+  ClipboardList, AlertTriangle, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown
+} from 'lucide-react';
 import { SkeletonBox, SkeletonList, SkeletonTable } from './Skeleton';
 
 interface SeletorFiltroCanalProps {
@@ -64,12 +69,12 @@ function SeletorFiltroCanal({ canalFiltro, onSelectCanal }: SeletorFiltroCanalPr
           {opcaoAtual.icone ? (
             <PlatformIcon nome={opcaoAtual.nome} size={16} />
           ) : (
-            <span style={{ fontSize: '13px' }}>{opcaoAtual.id === 'direta' ? '🤝' : '🌐'}</span>
+            opcaoAtual.id === 'direta' ? <Handshake size={16} /> : <Globe size={16} />
           )}
           <span>{opcaoAtual.nome}</span>
         </div>
-        <span style={{ fontSize: '11px', color: colors.textSecondary, marginLeft: '6px' }}>
-          {aberto ? '▲' : '▼'}
+        <span style={{ color: colors.textSecondary, marginLeft: '6px', display: 'flex', alignItems: 'center' }}>
+          {aberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </span>
       </div>
 
@@ -121,11 +126,11 @@ function SeletorFiltroCanal({ canalFiltro, onSelectCanal }: SeletorFiltroCanalPr
                   {op.icone ? (
                     <PlatformIcon nome={op.nome} size={16} />
                   ) : (
-                    <span style={{ fontSize: '13px' }}>{op.id === 'direta' ? '🤝' : '🌐'}</span>
+                    op.id === 'direta' ? <Handshake size={16} /> : <Globe size={16} />
                   )}
                   <span>{op.nome}</span>
                 </div>
-                {selecionado && <span style={{ color: colors.accent, fontWeight: 'bold' }}>✓</span>}
+                {selecionado && <Check size={14} style={{ color: colors.accent }} />}
               </div>
             );
           })}
@@ -243,8 +248,10 @@ export function Dashboard() {
   };
 
   const renderSortIcon = (field: SortFieldVendas) => {
-    if (sortField !== field) return <span style={{ opacity: 0.3, marginLeft: '4px' }}>↕</span>;
-    return <span style={{ color: colors.accent, marginLeft: '4px', fontWeight: 'bold' }}>{sortDirection === 'asc' ? '▲' : '▼'}</span>;
+    if (sortField !== field) return <ArrowUpDown size={12} style={{ opacity: 0.3, marginLeft: '4px', verticalAlign: 'middle' }} />;
+    return sortDirection === 'asc'
+      ? <ArrowUp size={12} style={{ color: colors.accent, marginLeft: '4px', verticalAlign: 'middle' }} />
+      : <ArrowDown size={12} style={{ color: colors.accent, marginLeft: '4px', verticalAlign: 'middle' }} />;
   };
 
   const statCardStyle = {
@@ -315,7 +322,9 @@ export function Dashboard() {
       <div style={{ ...cardStyle, marginBottom: '28px', borderLeft: `4px solid ${colors.accent}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
           <div>
-            <h3 style={cardTitleStyle}>📊 Relatório de Vendas & Desempenho</h3>
+            <h3 style={{ ...cardTitleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChart3 size={20} color={colors.accent} /> Relatório de Vendas & Desempenho
+            </h3>
             <p style={{ ...cardDescStyle, margin: 0 }}>Consolidado de vendas por intervalo de data personalizado e canal.</p>
           </div>
 
@@ -396,7 +405,7 @@ export function Dashboard() {
               }}
               title="Baixar relatório em formato Excel (.csv)"
             >
-              📥 Exportar Excel
+              <Download size={15} /> Exportar Excel
             </button>
           </div>
         </div>
@@ -408,29 +417,37 @@ export function Dashboard() {
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               <div style={{ backgroundColor: colors.bgApp, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
-                <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>🛒 Unidades Vendidas</span>
+                <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <ShoppingCart size={14} /> Unidades Vendidas
+                </span>
                 <strong style={{ fontSize: '22px', color: colors.textPrimary }}>{dadosResumo?.unidades_vendidas || 0} un.</strong>
               </div>
 
               <div style={{ backgroundColor: colors.bgApp, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
-                <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>💵 Faturamento Total</span>
+                <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <DollarSign size={14} /> Faturamento Total
+                </span>
                 <strong style={{ fontSize: '22px', color: '#60a5fa' }}>{formatarMoeda(dadosResumo?.faturamento || 0)}</strong>
               </div>
 
               <div style={{ backgroundColor: colors.bgApp, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
-                <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>📈 Lucro Líquido Estimado</span>
+                <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <TrendingUp size={14} /> Lucro Líquido Estimado
+                </span>
                 <strong style={{ fontSize: '22px', color: colors.successText }}>{formatarMoeda(dadosResumo?.lucro_estimado || 0)}</strong>
               </div>
 
               <div style={{ backgroundColor: colors.bgApp, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
-                <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>📋 Pedidos / Operações</span>
+                <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <Package size={14} /> Pedidos / Operações
+                </span>
                 <strong style={{ fontSize: '22px', color: colors.textPrimary }}>{dadosResumo?.total_pedidos || 0} vendas</strong>
               </div>
             </div>
 
             {/* Tabela de Vendas Recentes do Período com Ordenação */}
-            <h4 style={{ color: colors.textSecondary, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
-              📜 Detalhamento de Vendas (Clique nos cabeçalhos da tabela para ordenar)
+            <h4 style={{ color: colors.textSecondary, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <ClipboardList size={15} /> Detalhamento de Vendas (Clique nos cabeçalhos da tabela para ordenar)
             </h4>
 
             {(!vendasOrdenadas || vendasOrdenadas.length === 0) ? (
@@ -489,16 +506,16 @@ export function Dashboard() {
 
       {/* Radar de Estoque Zerado */}
       <div style={{ ...cardStyle, borderLeft: `4px solid ${alertas.length > 0 ? colors.danger : colors.success}` }}>
-        <h3 style={{ ...cardTitleStyle, color: alertas.length > 0 ? '#f87171' : colors.successText }}>
-          🚨 Radar de Produtos Zerados
+        <h3 style={{ ...cardTitleStyle, color: alertas.length > 0 ? '#f87171' : colors.successText, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertTriangle size={18} /> Radar de Produtos Zerados
         </h3>
         <p style={cardDescStyle}>Produtos cadastrados ativos que estão sem nenhuma unidade em estoque (estoque = 0).</p>
 
         {carregando ? (
           <SkeletonList count={3} />
         ) : alertas.length === 0 ? (
-          <p style={{ color: colors.successText, fontWeight: 500, margin: '16px 0 0 0' }}>
-            ✅ Nenhum produto com estoque zerado no momento.
+          <p style={{ color: colors.successText, fontWeight: 500, margin: '16px 0 0 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <CheckCircle2 size={16} /> Nenhum produto com estoque zerado no momento.
           </p>
         ) : (
           <ul style={{ listStyleType: 'none', padding: 0, margin: '16px 0 0 0' }}>

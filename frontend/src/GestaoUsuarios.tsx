@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { colors, cardStyle, cardTitleStyle, btnStyle } from './theme';
 import { SkeletonList } from './Skeleton';
+import {
+  Users, CheckCircle2, AlertTriangle, RefreshCw, Mail,
+  Pause, Play, Save, Trash2, ShieldCheck, Lock
+} from 'lucide-react';
 
 interface Usuario {
   id: number;
@@ -14,15 +18,15 @@ interface Usuario {
 }
 
 const TODAS_ABAS = [
-  { id: 'dashboard', nome: '📊 Visão Geral' },
-  { id: 'estoque', nome: '📦 Controle de Estoque' },
-  { id: 'calculadora', nome: '🧮 Simular / Precificar' },
-  { id: 'historico', nome: '📜 Histórico de Ajustes' },
-  { id: 'shopee', nome: '🟠 Integração Shopee' },
-  { id: 'tiktok', nome: '🎵 Integração TikTok Shop' },
-  { id: 'plataformas', nome: '🏷️ Taxas por Plataforma' },
-  { id: 'insumos', nome: '📦 Insumos & Embalagens' },
-  { id: 'usuarios', nome: '👥 Gestão de Usuários' },
+  { id: 'dashboard', nome: 'Visão Geral' },
+  { id: 'estoque', nome: 'Controle de Estoque' },
+  { id: 'calculadora', nome: 'Simular / Precificar' },
+  { id: 'historico', nome: 'Histórico de Ajustes' },
+  { id: 'shopee', nome: 'Integração Shopee' },
+  { id: 'tiktok', nome: 'Integração TikTok Shop' },
+  { id: 'plataformas', nome: 'Taxas por Plataforma' },
+  { id: 'insumos', nome: 'Insumos & Embalagens' },
+  { id: 'usuarios', nome: 'Gestão de Usuários' },
 ];
 
 export function GestaoUsuarios() {
@@ -91,8 +95,8 @@ export function GestaoUsuarios() {
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ color: colors.textPrimary, margin: '0 0 6px 0', fontSize: '22px', fontWeight: 700 }}>
-          👥 Gestão de Usuários & Permissões
+        <h2 style={{ color: colors.textPrimary, margin: '0 0 6px 0', fontSize: '22px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Users size={22} color={colors.accent} /> Gestão de Usuários & Permissões
         </h2>
         <p style={{ color: colors.textSecondary, margin: 0, fontSize: '14px' }}>
           Gerencie quem tem acesso ao sistema, defina papéis (Admin, Editor, Visualizador) e controle o acesso aba por aba.
@@ -109,18 +113,22 @@ export function GestaoUsuarios() {
             color: mensagem.tipo === 'sucesso' ? colors.successText : colors.dangerText,
             border: `1px solid ${mensagem.tipo === 'sucesso' ? colors.successBorder : colors.dangerBorder}`,
             fontSize: '13.5px',
-            fontWeight: 500
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          {mensagem.tipo === 'sucesso' ? '✅' : '⚠️'} {mensagem.texto}
+          {mensagem.tipo === 'sucesso' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+          <span>{mensagem.texto}</span>
         </div>
       )}
 
       <div style={cardStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3 style={{ ...cardTitleStyle, margin: 0 }}>Usuários Cadastrados ({usuarios.length})</h3>
-          <button onClick={carregarUsuarios} style={{ ...btnStyle, padding: '6px 14px', fontSize: '12px' }}>
-            🔄 Atualizar Lista
+          <button onClick={carregarUsuarios} style={{ ...btnStyle, padding: '6px 14px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <RefreshCw size={12} /> Atualizar Lista
           </button>
         </div>
 
@@ -165,8 +173,8 @@ export function GestaoUsuarios() {
                           </span>
                         )}
                       </div>
-                      <p style={{ margin: '4px 0 0 0', color: colors.textSecondary, fontSize: '13px' }}>
-                        📧 {user.email} {user.supabase_uid ? '• (Google Auth)' : ''}
+                      <p style={{ margin: '4px 0 0 0', color: colors.textSecondary, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Mail size={13} /> {user.email} {user.supabase_uid ? '• (Google Auth)' : ''}
                       </p>
                     </div>
 
@@ -184,9 +192,9 @@ export function GestaoUsuarios() {
                           fontWeight: 600
                         }}
                       >
-                        <option value="admin">👑 Administrador</option>
-                        <option value="editor">✏️ Editor (Leitura + Escrita)</option>
-                        <option value="viewer">👁️ Visualizador (Apenas Leitura)</option>
+                        <option value="admin">Administrador</option>
+                        <option value="editor">Editor (Leitura + Escrita)</option>
+                        <option value="viewer">Visualizador (Apenas Leitura)</option>
                       </select>
 
                       <button
@@ -199,10 +207,13 @@ export function GestaoUsuarios() {
                           cursor: 'pointer',
                           backgroundColor: user.ativo ? colors.dangerBg : colors.successBg,
                           color: user.ativo ? colors.dangerText : colors.successText,
-                          border: `1px solid ${user.ativo ? colors.dangerBorder : colors.successBorder}`
+                          border: `1px solid ${user.ativo ? colors.dangerBorder : colors.successBorder}`,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
                         }}
                       >
-                        {user.ativo ? '⏸️ Pausar Conta' : '▶️ Ativar Conta'}
+                        {user.ativo ? <><Pause size={13} /> Pausar Conta</> : <><Play size={13} /> Ativar Conta</>}
                       </button>
 
                       <button
@@ -212,10 +223,13 @@ export function GestaoUsuarios() {
                           ...btnStyle,
                           padding: '6px 14px',
                           fontSize: '12.5px',
-                          opacity: salvandoId === user.id ? 0.6 : 1
+                          opacity: salvandoId === user.id ? 0.6 : 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
                         }}
                       >
-                        {salvandoId === user.id ? 'Salvando...' : '💾 Salvar Alterações'}
+                        <Save size={13} /> {salvandoId === user.id ? 'Salvando...' : 'Salvar Alterações'}
                       </button>
 
                       <button
@@ -227,18 +241,21 @@ export function GestaoUsuarios() {
                           backgroundColor: 'transparent',
                           color: colors.dangerText,
                           border: `1px solid ${colors.dangerBorder}`,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
                         title="Excluir Usuário"
                       >
-                        🗑️
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
 
                   <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${colors.border}` }}>
-                    <label style={{ display: 'block', color: colors.textSecondary, fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>
-                      📋 Abas Liberadas para Acesso:
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: colors.textSecondary, fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>
+                      <ShieldCheck size={14} /> Abas Liberadas para Acesso:
                     </label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {TODAS_ABAS.map(aba => {
@@ -257,10 +274,13 @@ export function GestaoUsuarios() {
                               border: `1px solid ${estaLiberada ? colors.accent : colors.border}`,
                               backgroundColor: estaLiberada ? 'rgba(59, 130, 246, 0.2)' : colors.bgCard,
                               color: estaLiberada ? colors.accent : colors.textMuted,
-                              transition: '0.15s'
+                              transition: '0.15s',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
                             }}
                           >
-                            {estaLiberada ? '✅' : '🔒'} {aba.nome}
+                            {estaLiberada ? <CheckCircle2 size={13} /> : <Lock size={12} />} {aba.nome}
                           </button>
                         );
                       })}

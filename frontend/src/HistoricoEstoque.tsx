@@ -7,6 +7,10 @@ import {
   tableHeaderStyle, tableCellStyle, formatarMoeda
 } from './theme';
 import { SkeletonTable } from './Skeleton';
+import {
+  ArrowDownLeft, ArrowUpRight, ShoppingCart, Settings2,
+  Filter, RefreshCw, ClipboardList, ArrowRight, User
+} from 'lucide-react';
 
 export function HistoricoEstoque() {
   const [movimentacoes, setMovimentacoes] = useState<any[]>([]);
@@ -57,7 +61,9 @@ export function HistoricoEstoque() {
 
   const getTipoBadge = (tipo: string) => {
     const badgeBaseStyle = {
-      display: 'inline-block',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '4px',
       whiteSpace: 'nowrap' as const,
       padding: '3px 8px',
       borderRadius: '5px',
@@ -69,13 +75,13 @@ export function HistoricoEstoque() {
       case 'ENTRADA':
         return (
           <span style={{ ...badgeBaseStyle, backgroundColor: colors.successBg, color: colors.successText, border: `1px solid ${colors.successBorder}` }}>
-            📥 ENTRADA
+            <ArrowDownLeft size={13} /> ENTRADA
           </span>
         );
       case 'SAIDA':
         return (
           <span style={{ ...badgeBaseStyle, backgroundColor: colors.dangerBg, color: colors.dangerText, border: `1px solid ${colors.dangerBorder}` }}>
-            📤 SAÍDA
+            <ArrowUpRight size={13} /> SAÍDA
           </span>
         );
       case 'VENDA_WEBHOOK':
@@ -83,20 +89,20 @@ export function HistoricoEstoque() {
       case 'VENDA_DIRETA':
         return (
           <span style={{ ...badgeBaseStyle, backgroundColor: colors.dangerBg, color: colors.dangerText, border: `1px solid ${colors.dangerBorder}` }}>
-            🛒 VENDA
+            <ShoppingCart size={13} /> VENDA
           </span>
         );
       case 'AJUSTE':
       case 'REAJUSTE':
         return (
           <span style={{ ...badgeBaseStyle, backgroundColor: 'rgba(59, 130, 246, 0.2)', color: colors.accent, border: '1px solid #2563eb' }}>
-            ⚙️ REAJUSTE
+            <Settings2 size={13} /> REAJUSTE
           </span>
         );
       default:
         return (
           <span style={{ ...badgeBaseStyle, backgroundColor: colors.dangerBg, color: colors.dangerText, border: `1px solid ${colors.dangerBorder}` }}>
-            🛒 VENDA
+            <ShoppingCart size={13} /> VENDA
           </span>
         );
     }
@@ -113,13 +119,15 @@ export function HistoricoEstoque() {
   return (
     <div>
       <PageHeader
-        title="📋 Histórico de Movimentação de Estoque"
+        title="Histórico de Movimentação de Estoque"
         subtitle="Rastreabilidade completa de todas as alterações de estoque, vendas e reajustes de custos."
       />
 
       {/* Cards de Filtros e Resumo */}
       <div style={{ ...cardStyle, marginBottom: '24px' }}>
-        <h3 style={cardTitleStyle}>🔍 Filtrar Auditoria</h3>
+        <h3 style={{ ...cardTitleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Filter size={18} color={colors.accent} /> Filtrar Auditoria
+        </h3>
         <p style={cardDescStyle}>Filtre as movimentações por intervalo de datas, SKU do produto, tipo de alteração ou palavra-chave.</p>
 
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -180,18 +188,18 @@ export function HistoricoEstoque() {
               style={{ ...inputStyle, width: '100%', maxWidth: 'none', margin: 0, color: colors.textPrimary }}
             >
               <option value="">-- Todos os Tipos --</option>
-              <option value="ENTRADA">📥 Entradas de Estoque</option>
-              <option value="SAIDA">📤 Saídas / Baixas</option>
-              <option value="VENDA">🛒 Vendas de Produtos</option>
-              <option value="AJUSTE">⚙️ Reajustes / Alterações</option>
+              <option value="ENTRADA">Entradas de Estoque</option>
+              <option value="SAIDA">Saídas / Baixas</option>
+              <option value="VENDA">Vendas de Produtos</option>
+              <option value="AJUSTE">Reajustes / Alterações</option>
             </select>
           </div>
 
           <button
             onClick={carregarMovimentacoes}
-            style={{ ...btnNeutralStyle, padding: '10px 16px', fontSize: '13.5px' }}
+            style={{ ...btnNeutralStyle, padding: '10px 16px', fontSize: '13.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            🔄 Atualizar
+            <RefreshCw size={14} /> Atualizar
           </button>
         </div>
       </div>
@@ -199,7 +207,9 @@ export function HistoricoEstoque() {
       {/* Tabela de Histórico */}
       <div style={cardStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ ...cardTitleStyle, margin: 0 }}>📜 Registro de Alterações ({movimentacoesFiltradas.length})</h3>
+          <h3 style={{ ...cardTitleStyle, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ClipboardList size={18} color={colors.accent} /> Registro de Alterações ({movimentacoesFiltradas.length})
+          </h3>
         </div>
 
         {carregando ? (
@@ -259,10 +269,10 @@ export function HistoricoEstoque() {
                         )}
                       </td>
 
-                      {/* Coluna Ajustada: Estoque (Antes ➔ Depois) */}
+                      {/* Coluna Ajustada: Estoque (Antes -> Depois) */}
                       <td style={{ ...tableCellStyle, fontSize: '13px', whiteSpace: 'nowrap' }}>
                         <span style={{ color: colors.textMuted }}>{m.estoque_anterior}</span>
-                        {' ➔ '}
+                        <ArrowRight size={12} style={{ display: 'inline', verticalAlign: 'middle', margin: '0 6px', color: colors.textMuted }} />
                         <strong style={{ color: colors.textPrimary }}>{m.estoque_novo} un.</strong>
                       </td>
 
@@ -307,7 +317,9 @@ export function HistoricoEstoque() {
                       </td>
 
                       <td style={{ ...tableCellStyle, fontSize: '12.5px', color: colors.textMuted, whiteSpace: 'nowrap' }}>
-                        👤 {m.usuario_nome}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <User size={13} /> {m.usuario_nome}
+                        </span>
                       </td>
                     </tr>
                   );

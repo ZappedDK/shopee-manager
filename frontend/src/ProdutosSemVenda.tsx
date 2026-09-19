@@ -11,6 +11,10 @@ import {
   inputStyle,
   formatarMoeda,
 } from './theme';
+import {
+  TrendingDown, Calendar, Search, Loader2, ClipboardList,
+  CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown
+} from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL ?? '';
 
@@ -161,13 +165,11 @@ export default function ProdutosSemVenda() {
 
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <span style={{ opacity: 0.3, marginLeft: '5px', fontSize: '11px' }}>↕</span>;
+      return <ArrowUpDown size={12} style={{ opacity: 0.3, marginLeft: '5px', verticalAlign: 'middle' }} />;
     }
-    return (
-      <span style={{ color: colors.accent, marginLeft: '5px', fontSize: '11px', fontWeight: 700 }}>
-        {sortDirection === 'asc' ? '▲' : '▼'}
-      </span>
-    );
+    return sortDirection === 'asc'
+      ? <ArrowUp size={12} style={{ color: colors.accent, marginLeft: '5px', verticalAlign: 'middle' }} />
+      : <ArrowDown size={12} style={{ color: colors.accent, marginLeft: '5px', verticalAlign: 'middle' }} />;
   };
 
   const produtosFiltrados = (dados?.produtos ?? [])
@@ -212,7 +214,9 @@ export default function ProdutosSemVenda() {
     <div>
       {/* Cabeçalho */}
       <div style={{ marginBottom: '28px' }}>
-        <h2 style={pageTitleStyle}>📉 Produtos Sem Vendas</h2>
+        <h2 style={{ ...pageTitleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <TrendingDown size={24} color="#f87171" /> Produtos Sem Vendas
+        </h2>
         <p style={pageSubtitleStyle}>
           Identifique produtos parados no estoque para impulsionar as vendas.
         </p>
@@ -220,7 +224,9 @@ export default function ProdutosSemVenda() {
 
       {/* Seletor de Período */}
       <div style={{ ...cardStyle, marginBottom: '24px' }}>
-        <h3 style={{ ...cardTitleStyle, marginBottom: '16px' }}>🗓️ Período de Análise</h3>
+        <h3 style={{ ...cardTitleStyle, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Calendar size={18} color={colors.accent} /> Período de Análise
+        </h3>
 
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           {/* Dropdown */}
@@ -273,9 +279,17 @@ export default function ProdutosSemVenda() {
               <button
                 onClick={buscarCustom}
                 disabled={carregando}
-                style={{ ...btnStyle, padding: '10px 22px', fontSize: '13.5px', opacity: carregando ? 0.6 : 1 }}
+                style={{ ...btnStyle, padding: '10px 22px', fontSize: '13.5px', opacity: carregando ? 0.6 : 1, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                {carregando ? '⏳ Buscando...' : '🔍 Buscar'}
+                {carregando ? (
+                  <>
+                    <Loader2 size={14} className="spin" /> Buscando...
+                  </>
+                ) : (
+                  <>
+                    <Search size={14} /> Buscar
+                  </>
+                )}
               </button>
             </>
           )}
@@ -283,7 +297,9 @@ export default function ProdutosSemVenda() {
           {/* Indicador de carregamento nos períodos fixos */}
           {carregando && periodoSelecionado !== -1 && (
             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '10px' }}>
-              <span style={{ fontSize: '13px', color: colors.textMuted }}>⏳ Buscando...</span>
+              <span style={{ fontSize: '13px', color: colors.textMuted, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <Loader2 size={13} className="spin" /> Buscando...
+              </span>
             </div>
           )}
         </div>
@@ -326,15 +342,15 @@ export default function ProdutosSemVenda() {
           {/* Tabela */}
           <div style={cardStyle}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-              <h3 style={{ ...cardTitleStyle, marginBottom: 0 }}>
-                📋 Lista de Produtos ({produtosFiltrados.length})
+              <h3 style={{ ...cardTitleStyle, marginBottom: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ClipboardList size={18} color={colors.accent} /> Lista de Produtos ({produtosFiltrados.length})
                 <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 400, marginLeft: '8px' }}>
                   (Clique nas colunas para ordenar)
                 </span>
               </h3>
               <input
                 type="text"
-                placeholder="🔍 Filtrar por SKU ou nome..."
+                placeholder="Filtrar por SKU ou nome..."
                 value={filtro}
                 onChange={e => setFiltro(e.target.value)}
                 style={{ ...inputStyle, marginBottom: 0, width: '260px', maxWidth: '100%' }}
@@ -342,8 +358,18 @@ export default function ProdutosSemVenda() {
             </div>
 
             {produtosFiltrados.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: colors.textMuted }}>
-                {filtro ? '🔍 Nenhum produto encontrado com esse filtro.' : '✅ Nenhum produto sem venda no período selecionado!'}
+              <div style={{ textAlign: 'center', padding: '48px 0', color: colors.textMuted, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                {filtro ? (
+                  <>
+                    <Search size={28} style={{ opacity: 0.4 }} />
+                    <span>Nenhum produto encontrado com esse filtro.</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={28} color={colors.successText} />
+                    <span style={{ color: colors.successText }}>Nenhum produto sem venda no período selecionado!</span>
+                  </>
+                )}
               </div>
             ) : (
               <div className="table-scroll">
@@ -465,7 +491,9 @@ export default function ProdutosSemVenda() {
 
       {!dados && !carregando && (
         <div style={{ ...cardStyle, textAlign: 'center', padding: '60px 32px', color: colors.textMuted }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📉</div>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+            <TrendingDown size={48} color={colors.textMuted} />
+          </div>
           <div style={{ fontSize: '16px', fontWeight: 600, color: colors.textSecondary, marginBottom: '8px' }}>
             Selecione um período acima para ver os produtos parados
           </div>

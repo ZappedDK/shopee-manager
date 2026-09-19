@@ -1,4 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import {
+  Menu, X, LayoutDashboard, Package, ClipboardList, TrendingDown,
+  Calculator, Receipt, Plug, Store, Settings, Users, User, LogOut,
+  Archive, Tag, Pencil, Lock, Zap, Trash2, PackagePlus, FileSpreadsheet,
+  CheckCircle, PauseCircle, ChevronDown, Play, Pause, ChevronLeft, ChevronRight,
+  CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown
+} from 'lucide-react';
+
 import { PlatformIcon } from './PlatformIcon';
 import { api } from './services/api';
 import { Dashboard } from './Dashboard';
@@ -110,12 +118,12 @@ function App() {
 
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <span style={{ opacity: 0.4, marginLeft: '6px', fontSize: '11px', display: 'inline-block', lineHeight: 1 }}>↕</span>;
+      return <ArrowUpDown size={12} style={{ opacity: 0.4, marginLeft: '6px', verticalAlign: 'middle', display: 'inline-block' }} />;
     }
-    return (
-      <span style={{ color: colors.accent, marginLeft: '6px', fontSize: '11px', fontWeight: 'bold', display: 'inline-block', lineHeight: 1 }}>
-        {sortDirection === 'asc' ? '▲' : '▼'}
-      </span>
+    return sortDirection === 'asc' ? (
+      <ArrowUp size={12} style={{ color: colors.accent, marginLeft: '6px', verticalAlign: 'middle', display: 'inline-block' }} />
+    ) : (
+      <ArrowDown size={12} style={{ color: colors.accent, marginLeft: '6px', verticalAlign: 'middle', display: 'inline-block' }} />
     );
   };
 
@@ -254,44 +262,44 @@ function App() {
 
     try {
         await api.post(rota, payload);
-        mostrarMensagem(`✅ ${sucessoMsg}`);
+        mostrarMensagem(sucessoMsg);
         e.currentTarget.reset();
         carregarInsumos();
         carregarEstoque();
     } catch (err: any) {
         if (!err.response || (err.response.status >= 200 && err.response.status < 300)) {
-            mostrarMensagem(`✅ ${sucessoMsg}`);
+            mostrarMensagem(sucessoMsg);
             e.currentTarget.reset();
             carregarInsumos();
             carregarEstoque();
         } else {
             const erroBackend = err.response?.data?.detail || 'Erro ao processar cadastro.';
-            mostrarMensagem(`❌ ${erroBackend}`, 7000);
+            mostrarMensagem(erroBackend, 7000);
         }
     }
   };
 
   // --- EXCLUSÕES ---
   const excluirProduto = async (sku: string) => {
-    if (!window.confirm(`⚠️ Tem certeza que deseja excluir o produto SKU: ${sku}?`)) return;
+    if (!window.confirm(`Tem certeza que deseja excluir o produto SKU: ${sku}?`)) return;
     try {
       await api.delete(`/produtos/${sku}`);
-      mostrarMensagem(`✅ Produto ${sku} excluído com sucesso!`);
+      mostrarMensagem(`Produto ${sku} excluído com sucesso!`);
       carregarEstoque();
     } catch (err) {
-      mostrarMensagem('❌ Erro ao excluir produto.');
+      mostrarMensagem('Erro ao excluir produto.');
     }
   };
 
   const excluirEmbalagem = async (id: number, nome: string) => {
-    if (!window.confirm(`⚠️ Tem certeza que deseja excluir a embalagem "${nome}"?`)) return;
+    if (!window.confirm(`Tem certeza que deseja excluir a embalagem "${nome}"?`)) return;
     try {
       await api.delete(`/embalagens/${id}`);
-      mostrarMensagem(`✅ Embalagem excluída com sucesso!`);
+      mostrarMensagem(`Embalagem excluída com sucesso!`);
       carregarInsumos();
     } catch (err: any) {
       const erroBackend = err.response?.data?.detail || 'Erro ao excluir.';
-      mostrarMensagem(`❌ ${erroBackend}`, 7000);
+      mostrarMensagem(erroBackend, 7000);
     }
   };
 
@@ -317,21 +325,21 @@ function App() {
         qtd_unidades: Number(editandoEmbalagem.qtd_unidades),
       };
       await api.put(`/embalagens/${editandoEmbalagem.id}`, payload);
-      mostrarMensagem('✅ Embalagem atualizada com sucesso!');
+      mostrarMensagem('Embalagem atualizada com sucesso!');
       setEditandoEmbalagem(null);
       carregarInsumos();
     } catch (err: any) {
-      mostrarMensagem('❌ Erro ao editar embalagem: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000);
+      mostrarMensagem('Erro ao editar embalagem: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000);
     }
   };
 
   const toggleStatusProduto = async (sku: string) => {
     try {
       const res = await api.patch(`/produtos/${sku}/status`);
-      mostrarMensagem(`✅ Status do produto ${res.data.produto} alterado para ${res.data.ativo ? 'Ativo' : 'Desativado'}!`);
+      mostrarMensagem(`Status do produto ${res.data.produto} alterado para ${res.data.ativo ? 'Ativo' : 'Desativado'}!`);
       carregarEstoque();
     } catch (err: any) {
-      mostrarMensagem('❌ Erro ao alterar status do produto: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000);
+      mostrarMensagem('Erro ao alterar status do produto: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000);
     }
   };
 
@@ -453,42 +461,42 @@ function App() {
           aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}
           aria-expanded={menuAberto}
         >
-          {menuAberto ? '✕' : '☰'}
+          {menuAberto ? <X size={20} /> : <Menu size={20} />}
         </button>
 
         <div className={`app-sidebar-nav${menuAberto ? ' open' : ''}`}>
 
           {/* ── DASHBOARD ── */}
           <div style={sidebarGroupLabelStyle}>Dashboard</div>
-          {temPermissaoAba('dashboard') && <MenuItem icon="📊" label="Visão Geral" target="dashboard" />}
+          {temPermissaoAba('dashboard') && <MenuItem icon={<LayoutDashboard size={18} />} label="Visão Geral" target="dashboard" />}
 
           {/* ── ESTOQUE ── */}
           <div style={sidebarGroupLabelStyle}>Estoque</div>
-          {temPermissaoAba('estoque') && <MenuItem icon="📦" label="Controle de Estoque" target="estoque" />}
-          {temPermissaoAba('historico') && <MenuItem icon="📋" label="Histórico" target="historico" />}
-          <MenuItem icon="📉" label="Produtos Parados" target="sem_venda" />
+          {temPermissaoAba('estoque') && <MenuItem icon={<Package size={18} />} label="Controle de Estoque" target="estoque" />}
+          {temPermissaoAba('historico') && <MenuItem icon={<ClipboardList size={18} />} label="Histórico" target="historico" />}
+          <MenuItem icon={<TrendingDown size={18} />} label="Produtos Parados" target="sem_venda" />
 
           {/* ── VENDAS ── */}
           <div style={sidebarGroupLabelStyle}>Vendas</div>
-          {(temPermissaoAba('calculadora') || temPermissaoAba('simulador')) && <MenuItem icon="🎯" label="Simulador de Preço" target="simulador" />}
-          <MenuItem icon="🤝" label="Baixa Venda Manual" target="venda_direta" />
+          {(temPermissaoAba('calculadora') || temPermissaoAba('simulador')) && <MenuItem icon={<Calculator size={18} />} label="Simulador de Preço" target="simulador" />}
+          <MenuItem icon={<Receipt size={18} />} label="Baixa Venda Manual" target="venda_direta" />
 
           {/* ── CONFIGURAÇÕES ── */}
           <div style={sidebarGroupLabelStyle}>Configurações</div>
           {temPermissaoAba('integracoes') && (
-            <MenuItem icon="🔌" label="Integrações" target="integracoes" />
+            <MenuItem icon={<Plug size={18} />} label="Integrações" target="integracoes" />
           )}
-          {temPermissaoAba('plataformas') && <MenuItem icon="🏪" label="Plataformas de Venda" target="plataformas" />}
-          {(temPermissaoAba('insumos') || temPermissaoAba('cadastros')) && <MenuItem icon="⚙️" label="Cadastros e Config." target="cadastros" />}
+          {temPermissaoAba('plataformas') && <MenuItem icon={<Store size={18} />} label="Plataformas de Venda" target="plataformas" />}
+          {(temPermissaoAba('insumos') || temPermissaoAba('cadastros')) && <MenuItem icon={<Settings size={18} />} label="Cadastros e Config." target="cadastros" />}
           {(userRole === 'admin' || temPermissaoAba('usuarios')) && (
-            <MenuItem icon="👥" label="Gestão de Usuários" target="usuarios" />
+            <MenuItem icon={<Users size={18} />} label="Gestão de Usuários" target="usuarios" />
           )}
 
           {/* Rodapé com Informações do Usuário Logado & Logout */}
           <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: `1px solid ${colors.border}` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
               <div style={{ fontSize: '13px', color: colors.textPrimary, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                👤 {usuario?.nome || 'Usuário'}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><User size={14} /> {usuario?.nome || 'Usuário'}</span>
               </div>
               <span
                 style={{
@@ -517,7 +525,7 @@ function App() {
                 border: `1px solid ${colors.dangerBorder}`
               }}
             >
-              🚪 Sair da Conta
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}><LogOut size={15} /> Sair da Conta</span>
             </button>
           </div>
         </div>
@@ -575,7 +583,7 @@ function App() {
                   transition: 'all 0.15s ease-in-out',
                 }}
               >
-                📦 Produtos
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Package size={16} /> Produtos</span>
               </button>
 
               <button
@@ -596,13 +604,13 @@ function App() {
                   transition: 'all 0.15s ease-in-out',
                 }}
               >
-                🧺 Almoxarifado
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Archive size={16} /> Almoxarifado</span>
               </button>
             </div>
 
             <div style={sectionGapStyle}>
               <div style={{ ...cardStyle, borderLeft: '4px solid #10b981' }}>
-                <h3 style={cardTitleStyle}>🏷️ Etiqueta de Envio Padrão</h3>
+                <h3 style={{ ...cardTitleStyle, display: "inline-flex", alignItems: "center", gap: "8px" }}><Tag size={18} /> Etiqueta de Envio Padrão</h3>
                 {etiquetaPadrao ? (
                   <div style={{ display: 'flex', gap: '40px', marginTop: '18px', flexWrap: 'wrap' }}>
                     <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '13px' }}>Custo do Rolo</p><strong style={{ color: colors.textPrimary, fontSize: '18px' }}>{formatarMoeda(etiquetaPadrao.valor_pacote)}</strong></div>
@@ -616,7 +624,7 @@ function App() {
             </div>
 
             <div style={cardStyle}>
-              <h3 style={cardTitleStyle}>📦 Embalagens e Caixas</h3>
+              <h3 style={{ ...cardTitleStyle, display: "inline-flex", alignItems: "center", gap: "8px" }}><Package size={18} /> Embalagens e Caixas</h3>
               <p style={cardDescStyle}>Custo de cada embalagem usado para calcular o custo unitário por produto.</p>
               <div className="table-scroll">
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -700,7 +708,7 @@ function App() {
                                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
                                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
                                 >
-                                  ✏️ Editar
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Pencil size={12} /> Editar</span>
                                 </button>
                                 <button
                                   onClick={() => excluirEmbalagem(emb.id, emb.nome)}
@@ -712,7 +720,7 @@ function App() {
                                 </button>
                               </>
                             ) : (
-                              <span style={{ color: colors.textMuted, fontSize: '12px' }}>🔒 Somente Leitura</span>
+                              <span style={{ color: colors.textMuted, fontSize: '12px' }}><span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Lock size={12} /> Somente Leitura</span></span>
                             )}
                           </td>
                         </tr>
@@ -735,7 +743,7 @@ function App() {
 
             {isAdmin && (
               <CollapsibleCard
-                icon="🏪"
+                icon={<Store size={18} />}
                 title="Nova Plataforma"
                 description="Ex: Shopee, Mercado Livre, Shein — informe as taxas praticadas."
                 buttonLabel="+ Nova Plataforma"
@@ -767,16 +775,16 @@ function App() {
 
                     api.post('/plataformas/', payload)
                       .then(() => {
-                        mostrarMensagem('✅ Plataforma cadastrada com sucesso!');
+                        mostrarMensagem('Plataforma cadastrada com sucesso!');
                         carregarInsumos();
                         formElement.reset();
                         setNovasFaixas([{ de_valor: '0', ate_valor: '', taxa_percentual: '', taxa_fixa: '' }]);
                       })
-                      .catch(err => mostrarMensagem('❌ Erro: ' + (err.response?.data?.detail || 'Erro ao cadastrar'), 7000));
+                      .catch(err => mostrarMensagem('Erro: ' + (err.response?.data?.detail || 'Erro ao cadastrar'), 7000));
                 }}>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
                     <input name="nome" placeholder="Nome da Plataforma (Ex: Shopee, TikTok, Mercado Livre)" required style={{ ...inputStyle, flex: 2, marginBottom: 0, maxWidth: '100%', minWidth: '180px' }} />
-                    <input name="icone" placeholder="Emoji (Ex: 🟧, 🎵, 🟨)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '100px' }} />
+                    <input name="icone" placeholder="Sigla (Ex: SH, TK, ML)" required style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '100px' }} />
                     <input name="taxa_extra" type="number" step="0.1" placeholder="Taxa Extra % (Ex: 6 para Frete Grátis)" defaultValue="0" style={{ ...inputStyle, flex: 1, marginBottom: 0, maxWidth: '100%', minWidth: '140px' }} />
                   </div>
 
@@ -784,7 +792,7 @@ function App() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                       <div>
                         <label style={{ color: colors.accent, fontWeight: 700, fontSize: '13px' }}>
-                          📊 Faixas de Taxas Progressivas (De X até X ➔ % + Taxa Fixa)
+                          Faixas de Taxas Progressivas (De X até X → % + Taxa Fixa)
                         </label>
                         <span style={{ display: 'block', fontSize: '11px', color: colors.textMuted }}>
                           No TikTok adicione 2 linhas, na Shopee 4 linhas, Mercado Livre 1 linha. Deixe "Até R$" em branco na última faixa.
@@ -825,7 +833,7 @@ function App() {
                           />
                         </div>
 
-                        <span style={{ fontSize: '12px', color: colors.textMuted }}>➔ Taxa %:</span>
+                        <span style={{ fontSize: '12px', color: colors.textMuted }}>Taxa %:</span>
 
                         <div style={{ flex: 1, minWidth: '90px' }}>
                           <input
@@ -856,7 +864,7 @@ function App() {
                             style={{ ...btnDangerStyle, padding: '4px 8px', fontSize: '12px' }}
                             title="Remover linha"
                           >
-                            🗑️
+                            <Trash2 size={13} />
                           </button>
                         )}
                       </div>
@@ -904,7 +912,7 @@ function App() {
                             <PlatformIcon nome={plat.nome} icone={plat.icone} size={22} /> <strong>{plat.nome}</strong>
                             {eDinamico && (
                               <div style={{ fontSize: '11px', color: colors.accent, marginTop: '2px', fontWeight: 500 }}>
-                                ⚡ {temFaixas ? `${faixas.length} ${faixas.length === 1 ? 'faixa cadastrada' : 'faixas cadastradas'}` : 'Faixas dinâmicas ativas'}
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Zap size={12} /> {temFaixas ? `${faixas.length} ${faixas.length === 1 ? 'faixa cadastrada' : 'faixas cadastradas'}` : 'Faixas dinâmicas ativas'}</span>
                               </div>
                             )}
                           </td>
@@ -952,18 +960,18 @@ function App() {
                                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
                                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
                                 >
-                                  ✏️ Editar
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Pencil size={12} /> Editar</span>
                                 </button>
                                 <button
                                   onClick={() => {
                                     if (window.confirm(`Tem certeza que deseja excluir a plataforma "${plat.nome}"?`)) {
                                       api.delete(`/plataformas/${plat.id}`)
                                         .then(() => {
-                                          mostrarMensagem('✅ Plataforma excluída com sucesso!');
+                                          mostrarMensagem('Plataforma excluída com sucesso!');
                                           carregarInsumos();
                                           carregarEstoque();
                                         })
-                                        .catch(err => mostrarMensagem('❌ Erro ao excluir plataforma: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000));
+                                        .catch(err => mostrarMensagem('Erro ao excluir plataforma: ' + (err.response?.data?.detail || 'Erro inesperado'), 7000));
                                     }
                                   }}
                                   style={{ ...btnDangerStyle, padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
@@ -974,7 +982,7 @@ function App() {
                                 </button>
                               </div>
                             ) : (
-                              <span style={{ color: colors.textMuted, fontSize: '12px' }}>🔒 Somente Leitura</span>
+                              <span style={{ color: colors.textMuted, fontSize: '12px' }}><span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Lock size={12} /> Somente Leitura</span></span>
                             )}
                           </td>
                         </tr>
@@ -997,7 +1005,7 @@ function App() {
 
             {!podeEditar ? (
               <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.amber}` }}>
-                <h3 style={cardTitleStyle}>🔒 Acesso Restrito ao Perfil Leitor</h3>
+                <h3 style={{ ...cardTitleStyle, display: "inline-flex", alignItems: "center", gap: "8px" }}><Lock size={18} /> Acesso Restrito ao Perfil Leitor</h3>
                 <p style={{ color: colors.textSecondary, margin: '8px 0 0 0', fontSize: '14px' }}>
                   Sua conta possui perfil <strong>Leitor (Visualizador)</strong>. Para cadastrar novas embalagens, alterar custos de etiqueta ou cadastrar produtos, solicite autorização a um Administrador.
                 </p>
@@ -1049,7 +1057,7 @@ function App() {
             <div style={{ ...cardStyle, marginBottom: '24px', borderLeft: `4px solid ${colors.accent}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
                 <div>
-                  <h3 style={{ ...cardTitleStyle, margin: 0 }}>📦 Cadastro de Novo Produto</h3>
+                  <h3 style={{ ...cardTitleStyle, margin: 0, display: "inline-flex", alignItems: "center", gap: "8px" }}><PackagePlus size={18} /> Cadastro de Novo Produto</h3>
                   <p style={{ ...cardDescStyle, margin: '4px 0 0 0' }}>Cadastre produtos individualmente ou faça upload em lote por planilha.</p>
                 </div>
                 <button
@@ -1057,7 +1065,7 @@ function App() {
                   onClick={() => setModalImportarAberto(true)}
                   style={{ ...btnPurpleStyle, padding: '9px 16px', fontSize: '13.5px' }}
                 >
-                  📊 Importar em Massa (Excel / CSV)
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><FileSpreadsheet size={15} /> Importar em Massa (Excel / CSV)</span>
                 </button>
               </div>
               
@@ -1082,17 +1090,17 @@ function App() {
 
                   api.post('/produtos/', payload)
                     .then(() => {
-                      mostrarMensagem('✅ Produto cadastrado com sucesso!');
+                      mostrarMensagem('Produto cadastrado com sucesso!');
                       carregarEstoque();
                       formElement.reset();
                     })
-                    .catch(err => mostrarMensagem('❌ Erro: ' + (err.response?.data?.detail || 'Erro ao cadastrar'), 7000));
+                    .catch(err => mostrarMensagem('Erro: ' + (err.response?.data?.detail || 'Erro ao cadastrar'), 7000));
               }}>
 
                 {/* Bloco 1: Identificação */}
                 <div style={{ backgroundColor: colors.bgCardAlt, padding: '18px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: colors.accent, fontSize: '14px', fontWeight: 600 }}>
-                    1. 🏷️ Identificação do Produto
+                    1. Identificação do Produto
                   </h4>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: '180px' }}>
@@ -1109,7 +1117,7 @@ function App() {
                 {/* Bloco 2: Custos e Preços */}
                 <div style={{ backgroundColor: colors.bgCardAlt, padding: '18px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: colors.accent, fontSize: '14px', fontWeight: 600 }}>
-                    2. 💰 Custos & Preço de Venda
+                    2. Custos & Preço de Venda
                   </h4>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: '160px' }}>
@@ -1130,7 +1138,7 @@ function App() {
                 {/* Bloco 3: Insumos & Canais */}
                 <div style={{ backgroundColor: colors.bgCardAlt, padding: '18px', borderRadius: '10px', border: `1px solid ${colors.border}`, marginBottom: '24px' }}>
                   <h4 style={{ margin: '0 0 12px 0', color: colors.accent, fontSize: '14px', fontWeight: 600 }}>
-                    3. 🧺 Insumos & Canais de Venda
+                    3. Insumos & Canais de Venda
                   </h4>
 
                   <div style={{ marginBottom: '16px' }}>
@@ -1167,7 +1175,7 @@ function App() {
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.accentHover}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.accent}
                 >
-                  🚀 Finalizar Cadastro do Produto
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", justifyContent: "center" }}><CheckCircle2 size={16} /> Finalizar Cadastro do Produto</span>
                 </button>
               </form>
             </div>
@@ -1215,7 +1223,7 @@ function App() {
                   transition: 'all 0.15s ease-in-out',
                 }}
               >
-                📦 Produtos
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Package size={16} /> Produtos</span>
               </button>
 
               <button
@@ -1236,7 +1244,7 @@ function App() {
                   transition: 'all 0.15s ease-in-out',
                 }}
               >
-                🧺 Almoxarifado
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Archive size={16} /> Almoxarifado</span>
               </button>
             </div>
 
@@ -1245,7 +1253,7 @@ function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
                   <h3 style={{ ...cardTitleStyle, marginBottom: 0, fontSize: '16px' }}>Produtos Cadastrados</h3>
                   <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: colors.accent, border: `1px solid ${colors.borderStrong}`, padding: '2px 8px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 600 }}>
-                    📦 {produtosFiltrados.length} {produtosFiltrados.length === 1 ? 'SKU' : 'SKUs'} {buscaProduto || filtroStatus !== 'ativos' ? `(filtrado de ${produtosDetalhados.length})` : ''}
+                    {produtosFiltrados.length} {produtosFiltrados.length === 1 ? 'SKU' : 'SKUs'} {buscaProduto || filtroStatus !== 'ativos' ? `(filtrado de ${produtosDetalhados.length})` : ''}
                   </span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 600 }}>
                     <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#60a5fa', display: 'inline-block' }}></span>
@@ -1274,7 +1282,7 @@ function App() {
                         transition: '0.15s'
                       }}
                     >
-                      🟢 Ativos
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle size={12} /> Ativos</span>
                     </button>
                     <button
                       type="button"
@@ -1295,7 +1303,7 @@ function App() {
                         transition: '0.15s'
                       }}
                     >
-                      ⏸️ Pausados
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><PauseCircle size={12} /> Pausados</span>
                     </button>
                     <button
                       type="button"
@@ -1316,14 +1324,14 @@ function App() {
                         transition: '0.15s'
                       }}
                     >
-                      📋 Todos
+                      Todos
                     </button>
                   </div>
 
                   <input
                     value={buscaProduto}
                     onChange={e => setBuscaProduto(e.target.value)}
-                    placeholder="🔎 Buscar por nome ou SKU..."
+                    placeholder="Buscar por nome ou SKU..."
                     style={{
                       ...inputStyle,
                       height: '35px',
@@ -1502,7 +1510,7 @@ function App() {
                                         }
                                       }}
                                     >
-                                      ⚙️ Ações ▾
+                                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Settings size={12} /> Ações <ChevronDown size={11} /></span>
                                     </button>
 
                                     {isMenuAberto && (
@@ -1543,7 +1551,7 @@ function App() {
                                           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)'}
                                           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
-                                          ✏️ Editar
+                                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Pencil size={12} /> Editar</span>
                                         </button>
 
                                         <button
@@ -1566,7 +1574,7 @@ function App() {
                                           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.15)'}
                                           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
-                                          {item.ativo === false ? '▶️ Ativar Produto' : '⏸️ Pausar Produto'}
+                                          {item.ativo === false ? <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Play size={12} /> Ativar Produto</span> : <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Pause size={12} /> Pausar Produto</span>}
                                         </button>
 
                                         <div style={{ height: '1px', backgroundColor: colors.border, margin: '4px 0' }} />
@@ -1591,7 +1599,7 @@ function App() {
                                           onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerBg}
                                           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
-                                          🗑️ Excluir
+                                          <Trash2 size={13} /> Excluir
                                         </button>
                                       </div>
                                     )}
@@ -1731,7 +1739,7 @@ function App() {
                         cursor: (paginaAtual <= 1 || carregandoEstoque) ? 'not-allowed' : 'pointer'
                       }}
                     >
-                      ◀️ Anterior
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><ChevronLeft size={13} /> Anterior</span>
                     </button>
                     <button
                       disabled={paginaAtual >= totalPaginas || carregandoEstoque}
@@ -1744,7 +1752,7 @@ function App() {
                         cursor: (paginaAtual >= totalPaginas || carregandoEstoque) ? 'not-allowed' : 'pointer'
                       }}
                     >
-                      Próxima ▶️
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>Próxima <ChevronRight size={13} /></span>
                     </button>
                   </div>
                 </div>

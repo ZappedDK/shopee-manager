@@ -9,6 +9,11 @@ import {
   formatarMoeda, formatarNumero
 } from './theme';
 import { SkeletonTable } from './Skeleton';
+import {
+  Package, ChevronDown, ChevronUp, Search, ArrowUpDown, ArrowUp, ArrowDown,
+  Target, Lightbulb, BarChart3, CheckCircle2, AlertTriangle, XCircle,
+  Globe, ListFilter, DollarSign, Sliders
+} from 'lucide-react';
 
 interface SeletorProdutoComBuscaProps {
   produtos: any[];
@@ -57,11 +62,18 @@ function SeletorProdutoComBusca({ produtos, skuSelecionado, onSelectSku }: Selet
           userSelect: 'none'
         }}
       >
-        <span style={{ color: produtoAtual ? colors.textPrimary : colors.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {produtoAtual ? `📦 ${produtoAtual.sku} — ${produtoAtual.nome} (${formatarMoeda(produtoAtual.custo_produto)})` : 'Selecione um produto...'}
+        <span style={{ color: produtoAtual ? colors.textPrimary : colors.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {produtoAtual ? (
+            <>
+              <Package size={15} style={{ flexShrink: 0, color: colors.accent }} />
+              <span>{produtoAtual.sku} — {produtoAtual.nome} ({formatarMoeda(produtoAtual.custo_produto)})</span>
+            </>
+          ) : (
+            'Selecione um produto...'
+          )}
         </span>
-        <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px' }}>
-          {aberto ? '▲' : '▼'}
+        <span style={{ color: colors.textSecondary, marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
+          {aberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </span>
       </div>
 
@@ -80,22 +92,26 @@ function SeletorProdutoComBusca({ produtos, skuSelecionado, onSelectSku }: Selet
             padding: '8px',
           }}
         >
-          <input
-            type="text"
-            placeholder="🔍 Digite para pesquisar SKU ou Nome..."
-            value={termoBusca}
-            onChange={(e) => setTermoBusca(e.target.value)}
-            autoFocus
-            style={{
-              ...inputStyle,
-              width: '100%',
-              maxWidth: 'none',
-              marginBottom: '8px',
-              padding: '8px 12px',
-              fontSize: '13px',
-              backgroundColor: colors.bgApp
-            }}
-          />
+          <div style={{ position: 'relative', marginBottom: '8px' }}>
+            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: colors.textMuted, pointerEvents: 'none' }} />
+            <input
+              type="text"
+              placeholder="Digite para pesquisar SKU ou Nome..."
+              value={termoBusca}
+              onChange={(e) => setTermoBusca(e.target.value)}
+              autoFocus
+              style={{
+                ...inputStyle,
+                width: '100%',
+                maxWidth: 'none',
+                margin: 0,
+                padding: '8px 12px 8px 32px',
+                fontSize: '13px',
+                backgroundColor: colors.bgApp,
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
 
           <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
             {produtosFiltrados.length === 0 ? (
@@ -444,8 +460,10 @@ export function SimuladorPreco() {
   };
 
   const renderSortIcon = (campo: string) => {
-    if (sortComparativo.campo !== campo) return <span style={{ fontSize: '10px', color: colors.textMuted, marginLeft: '3px' }}>↕</span>;
-    return <span style={{ fontSize: '11px', color: colors.accent, marginLeft: '3px' }}>{sortComparativo.direcao === 'asc' ? '▲' : '▼'}</span>;
+    if (sortComparativo.campo !== campo) return <ArrowUpDown size={11} style={{ opacity: 0.3, marginLeft: '3px', verticalAlign: 'middle' }} />;
+    return sortComparativo.direcao === 'asc'
+      ? <ArrowUp size={11} style={{ color: colors.accent, marginLeft: '3px', verticalAlign: 'middle' }} />
+      : <ArrowDown size={11} style={{ color: colors.accent, marginLeft: '3px', verticalAlign: 'middle' }} />;
   };
 
   // Filtragem dos produtos para o Comparativo Geral
@@ -558,7 +576,7 @@ export function SimuladorPreco() {
   return (
     <div>
       <PageHeader
-        title="🎯 Simulador de Preço & Margem Ideal"
+        title="Simulador de Preço & Margem Ideal"
         subtitle="Simulação bidirecional: calcule o preço ideal a partir da margem desejada ou analise o comparativo geral de preços e margens em todas as plataformas."
       />
 
@@ -574,10 +592,13 @@ export function SimuladorPreco() {
             border: modo === 'existente' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid #334155',
             color: modo === 'existente' ? '#60a5fa' : '#cbd5e1',
             boxShadow: modo === 'existente' ? '0 2px 8px rgba(59, 130, 246, 0.15)' : 'none',
-            transition: '0.15s ease-in-out'
+            transition: '0.15s ease-in-out',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          📦 Usar Produto do Estoque
+          <Package size={16} /> Usar Produto do Estoque
         </button>
         <button
           onClick={() => setModo('livre')}
@@ -589,10 +610,13 @@ export function SimuladorPreco() {
             border: modo === 'livre' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid #334155',
             color: modo === 'livre' ? '#60a5fa' : '#cbd5e1',
             boxShadow: modo === 'livre' ? '0 2px 8px rgba(59, 130, 246, 0.15)' : 'none',
-            transition: '0.15s ease-in-out'
+            transition: '0.15s ease-in-out',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          💡 Simulação Livre (Novo Produto)
+          <Lightbulb size={16} /> Simulação Livre (Novo Produto)
         </button>
         <button
           onClick={() => setModo('comparativo')}
@@ -604,10 +628,13 @@ export function SimuladorPreco() {
             border: modo === 'comparativo' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #334155',
             color: modo === 'comparativo' ? '#34d399' : '#cbd5e1',
             boxShadow: modo === 'comparativo' ? '0 2px 8px rgba(16, 185, 129, 0.15)' : 'none',
-            transition: '0.15s ease-in-out'
+            transition: '0.15s ease-in-out',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          📊 Comparativo Geral
+          <BarChart3 size={16} /> Comparativo Geral
         </button>
       </div>
 
@@ -622,17 +649,23 @@ export function SimuladorPreco() {
             </div>
 
             <div style={{ ...cardStyle, padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '4px solid #34d399' }}>
-              <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 500 }}>🟢 Boa Margem (≥ 20%)</span>
+              <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={14} color="#34d399" /> Boa Margem (≥ 20%)
+              </span>
               <strong style={{ fontSize: '22px', color: '#34d399' }}>{totalComBoaMargem} SKUs</strong>
             </div>
 
             <div style={{ ...cardStyle, padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '4px solid #fbbf24' }}>
-              <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 500 }}>⚠️ Margem em Alerta (&lt; 10%)</span>
+              <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <AlertTriangle size={14} color="#fbbf24" /> Margem em Alerta (&lt; 10%)
+              </span>
               <strong style={{ fontSize: '22px', color: '#fbbf24' }}>{totalComAlerta} SKUs</strong>
             </div>
 
             <div style={{ ...cardStyle, padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '4px solid #f87171' }}>
-              <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 500 }}>❌ No Prejuízo (&lt; 0%)</span>
+              <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <XCircle size={14} color="#f87171" /> No Prejuízo (&lt; 0%)
+              </span>
               <strong style={{ fontSize: '22px', color: '#f87171' }}>{totalComPrejuizo} SKUs</strong>
             </div>
           </div>
@@ -653,10 +686,13 @@ export function SimuladorPreco() {
                     cursor: 'pointer',
                     border: filtroStatusComparativo === 'ativos' ? '1px solid #34d399' : '1px solid #334155',
                     backgroundColor: filtroStatusComparativo === 'ativos' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-                    color: filtroStatusComparativo === 'ativos' ? '#34d399' : colors.textMuted
+                    color: filtroStatusComparativo === 'ativos' ? '#34d399' : colors.textMuted,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
                   }}
                 >
-                  ✅ Ativos
+                  <CheckCircle2 size={13} /> Ativos
                 </button>
                 <button
                   onClick={() => setFiltroStatusComparativo('inativos')}
@@ -668,10 +704,13 @@ export function SimuladorPreco() {
                     cursor: 'pointer',
                     border: filtroStatusComparativo === 'inativos' ? '1px solid #f87171' : '1px solid #334155',
                     backgroundColor: filtroStatusComparativo === 'inativos' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-                    color: filtroStatusComparativo === 'inativos' ? '#f87171' : colors.textMuted
+                    color: filtroStatusComparativo === 'inativos' ? '#f87171' : colors.textMuted,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
                   }}
                 >
-                  🚫 Inativos
+                  <XCircle size={13} /> Inativos
                 </button>
                 <button
                   onClick={() => setFiltroStatusComparativo('todos')}
@@ -683,10 +722,13 @@ export function SimuladorPreco() {
                     cursor: 'pointer',
                     border: filtroStatusComparativo === 'todos' ? '1px solid #60a5fa' : '1px solid #334155',
                     backgroundColor: filtroStatusComparativo === 'todos' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                    color: filtroStatusComparativo === 'todos' ? '#60a5fa' : colors.textMuted
+                    color: filtroStatusComparativo === 'todos' ? '#60a5fa' : colors.textMuted,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
                   }}
                 >
-                  🌐 Todos
+                  <Globe size={13} /> Todos
                 </button>
               </div>
 
@@ -705,10 +747,13 @@ export function SimuladorPreco() {
                     cursor: 'pointer',
                     border: filtroMargemComparativo === 'todos' ? '1px solid #60a5fa' : '1px solid #334155',
                     backgroundColor: filtroMargemComparativo === 'todos' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                    color: filtroMargemComparativo === 'todos' ? '#60a5fa' : colors.textMuted
+                    color: filtroMargemComparativo === 'todos' ? '#60a5fa' : colors.textMuted,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
                   }}
                 >
-                  📋 Todas Margens
+                  <ListFilter size={13} /> Todas Margens
                 </button>
                 <button
                   onClick={() => setFiltroMargemComparativo('alerta')}
@@ -720,10 +765,13 @@ export function SimuladorPreco() {
                     cursor: 'pointer',
                     border: filtroMargemComparativo === 'alerta' ? '1px solid #fbbf24' : '1px solid #334155',
                     backgroundColor: filtroMargemComparativo === 'alerta' ? 'rgba(245, 158, 11, 0.2)' : 'transparent',
-                    color: filtroMargemComparativo === 'alerta' ? '#fbbf24' : colors.textMuted
+                    color: filtroMargemComparativo === 'alerta' ? '#fbbf24' : colors.textMuted,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
                   }}
                 >
-                  ⚠️ Alerta (&lt; 10%)
+                  <AlertTriangle size={13} /> Alerta (&lt; 10%)
                 </button>
                 <button
                   onClick={() => setFiltroMargemComparativo('prejuizo')}
@@ -735,17 +783,20 @@ export function SimuladorPreco() {
                     cursor: 'pointer',
                     border: filtroMargemComparativo === 'prejuizo' ? '1px solid #f87171' : '1px solid #334155',
                     backgroundColor: filtroMargemComparativo === 'prejuizo' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-                    color: filtroMargemComparativo === 'prejuizo' ? '#f87171' : colors.textMuted
+                    color: filtroMargemComparativo === 'prejuizo' ? '#f87171' : colors.textMuted,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
                   }}
                 >
-                  ❌ Prejuízo (&lt; 0%)
+                  <XCircle size={13} /> Prejuízo (&lt; 0%)
                 </button>
               </div>
             </div>
 
             <input
               type="text"
-              placeholder="🔎 Buscar produto por SKU ou nome..."
+              placeholder="Buscar produto por SKU ou nome..."
               value={buscaComparativo}
               onChange={(e) => setBuscaComparativo(e.target.value)}
               style={{
@@ -1003,10 +1054,13 @@ export function SimuladorPreco() {
                 backgroundColor: tipoCalculo === 'margem' ? 'rgba(59, 130, 246, 0.18)' : 'transparent',
                 color: tipoCalculo === 'margem' ? '#60a5fa' : colors.textMuted,
                 cursor: 'pointer',
-                transition: '0.15s'
+                transition: '0.15s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              🎯 Descobrir Preço (por Margem % Desejada)
+              <Target size={14} /> Descobrir Preço (por Margem % Desejada)
             </button>
             <button
               type="button"
@@ -1020,17 +1074,20 @@ export function SimuladorPreco() {
                 backgroundColor: tipoCalculo === 'preco' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
                 color: tipoCalculo === 'preco' ? '#34d399' : colors.textMuted,
                 cursor: 'pointer',
-                transition: '0.15s'
+                transition: '0.15s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              💰 Descobrir Lucro & Margem (por Preço R$ Informado)
+              <DollarSign size={14} /> Descobrir Lucro & Margem (por Preço R$ Informado)
             </button>
           </div>
 
           {/* Painel Principal de Simulação */}
           <div style={{ ...cardStyle, marginBottom: '24px' }}>
             <h3 style={{ ...cardTitleStyle, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>⚙️</span> {tipoCalculo === 'margem' ? 'Parâmetros da Simulação' : 'Informar Preço de Venda para Simulação'}
+              <Sliders size={18} color={colors.accent} /> {tipoCalculo === 'margem' ? 'Parâmetros da Simulação' : 'Informar Preço de Venda para Simulação'}
             </h3>
             <p style={{ ...cardDescStyle, marginBottom: '20px' }}>
               {tipoCalculo === 'margem'
@@ -1163,15 +1220,16 @@ export function SimuladorPreco() {
           {carregando ? (
             <SkeletonTable rows={4} cols={5} />
           ) : erro ? (
-            <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.dangerText}`, color: colors.dangerText }}>
-              ⚠️ {erro}
+            <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.dangerText}`, color: colors.dangerText, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle size={16} />
+              <span>{erro}</span>
             </div>
           ) : resultado ? (
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <h3 style={{ ...cardTitleStyle, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>📊</span> 2. Resultado da Precificação
+                    <BarChart3 size={18} color={colors.accent} /> 2. Resultado da Precificação
                   </h3>
                   <span style={{ fontSize: '13px', color: colors.textSecondary }}>
                     Produto: <strong>{resultado.nome || resultado.produto_nome || (modo === 'existente' ? skuSelecionado : 'Simulação Livre')}</strong> — Custo Total Base: <strong style={{ color: colors.accent }}>{formatarMoeda(resultado.custo_base_total !== undefined ? resultado.custo_base_total : ((resultado.custo_produto || 0) + (resultado.custo_embalagem || 0) + (resultado.custo_etiqueta || 0)))}</strong>
@@ -1270,12 +1328,12 @@ export function SimuladorPreco() {
 
                         <td style={tableCellStyle}>
                           {sim.inviavel ? (
-                            <span style={{ color: colors.dangerText, backgroundColor: '#7f1d1d', padding: '3px 8px', borderRadius: '6px', fontSize: '12px' }}>
-                              ⚠️ {tipoCalculo === 'preco' ? 'Prejuízo / Inviável' : 'Margem Inviável'}
+                            <span style={{ color: colors.dangerText, backgroundColor: '#7f1d1d', padding: '3px 8px', borderRadius: '6px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              <AlertTriangle size={12} /> {tipoCalculo === 'preco' ? 'Prejuízo / Inviável' : 'Margem Inviável'}
                             </span>
                           ) : (
-                            <span style={{ color: colors.successText, backgroundColor: colors.successBg, border: `1px solid ${colors.successBorder}`, padding: '3px 8px', borderRadius: '6px', fontSize: '12px' }}>
-                              ✅ {tipoCalculo === 'preco' ? 'Lucrativo' : 'Viável'}
+                            <span style={{ color: colors.successText, backgroundColor: colors.successBg, border: `1px solid ${colors.successBorder}`, padding: '3px 8px', borderRadius: '6px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              <CheckCircle2 size={12} /> {tipoCalculo === 'preco' ? 'Lucrativo' : 'Viável'}
                             </span>
                           )}
                         </td>
