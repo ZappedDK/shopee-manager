@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from './services/api';
+import { apiGet, apiGetSWR } from './services/api';
 import { PageHeader } from './ui';
 import {
   colors, cardStyle, cardTitleStyle, cardDescStyle,
@@ -32,20 +32,27 @@ export function HistoricoEstoque() {
     carregarMovimentacoes();
   }, [filtroTipo, dataInicio, dataFim]);
 
-  const carregarMovimentacoes = async () => {
-    try {
-      setCarregando(true);
-      const params = new URLSearchParams();
-      if (filtroTipo) params.append('tipo', filtroTipo);
-      if (dataInicio) params.append('data_inicio', dataInicio);
-      if (dataFim) params.append('data_fim', dataFim);
+  const carregarMovimentacoes = () => {
+    const params: Record<string, string> = {};
+    if (filtroTipo) params['tipo'] = filtroTipo;
+    if (dataInicio) params['data_inicio'] = dataInicio;
+    if (dataFim) params['data_fim'] = dataFim;
 
-      const res = await api.get(`/produtos/movimentacoes?${params.toString()}`);
-      setMovimentacoes(res.data || []);
-    } catch (err) {
-      console.error('Erro ao carregar histórico de movimentações:', err);
-    } finally {
+    // Stale-while-revalidate: serve do cache, revalida em background
+    const cached = apiGetSWR<any[]>('/produtos/movimentacoes', params, (fresh) => {
+      setMovimentacoes(fresh || []);
       setCarregando(false);
+    });
+
+    if (cached !== null) {
+      setMovimentacoes(cached || []);
+      setCarregando(false);
+    } else {
+      setCarregando(true);
+      apiGet<any[]>('/produtos/movimentacoes', params)
+        .then(data => setMovimentacoes(data || []))
+        .catch(err => console.error('Erro ao carregar histórico de movimentações:', err))
+        .finally(() => setCarregando(false));
     }
   };
 

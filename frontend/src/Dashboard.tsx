@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { api } from './services/api';
+import { api, apiGet, apiGetSWR } from './services/api';
 import { PageHeader } from './ui';
 import { PlatformIcon } from './PlatformIcon';
 import {
@@ -170,60 +170,78 @@ export function Dashboard() {
     carregarRelatorioVendas(dataInicio, dataFim, canalFiltro);
   }, []);
 
-  const carregarAlertas = async () => {
-    try {
-      setCarregando(true);
-      const res = await api.get('/produtos/alertas?limite=0');
-      setAlertas(res.data || []);
-    } catch (err) {
-      console.error('Erro ao carregar alertas:', err);
-    } finally {
+  const aplicarDadosProdutos = (produtos: any[]) => {
+    const totalCusto = produtos.reduce((soma: number, p: any) => soma + Math.max(0, p.valor_estoque || 0), 0);
+    setValorTotalEstoque(totalCusto);
+    const lucroTotal = produtos.reduce((soma: number, p: any) => {
+      if (!p.ativo) return soma;
+      const shopee = p.analises_plataformas?.find((plat: any) => plat.plataforma_nome?.toLowerCase().includes('shopee'));
+      const analise = shopee || p.analises_plataformas?.[0];
+      const lucroUn = analise?.lucro_liquido || 0;
+      return soma + (lucroUn * Math.max(0, p.quantidade_estoque || 0));
+    }, 0);
+    setLucroPotencialTotal(lucroTotal);
+  };
+
+  const carregarAlertas = () => {
+    // Stale-while-revalidate para alertas
+    const cached = apiGetSWR<any[]>('/produtos/alertas', { limite: '0' }, (fresh) => {
+      setAlertas(fresh || []);
       setCarregando(false);
+    });
+
+    if (cached !== null) {
+      setAlertas(cached || []);
+      setCarregando(false);
+    } else {
+      setCarregando(true);
+      apiGet<any[]>('/produtos/alertas', { limite: '0' })
+        .then(data => setAlertas(data || []))
+        .catch(err => console.error('Erro ao carregar alertas:', err))
+        .finally(() => setCarregando(false));
     }
   };
 
-  const carregarValorEstoque = async () => {
-    try {
-      const res = await api.get('/produtos/detalhados');
-      const produtos = res.data || [];
+  const carregarValorEstoque = () => {
+    // Stale-while-revalidate para valor do estoque
+    const cached = apiGetSWR<any[]>('/produtos/detalhados', undefined, (fresh) => {
+      aplicarDadosProdutos(fresh || []);
+    });
 
-      // Custo Total em Estoque
-      const totalCusto = produtos.reduce((soma: number, p: any) => soma + Math.max(0, p.valor_estoque || 0), 0);
-      setValorTotalEstoque(totalCusto);
-
-      // Lucro Potencial Total (Lucro da Shopee por padrão ou primeira plataforma disponível)
-      const lucroTotal = produtos.reduce((soma: number, p: any) => {
-        if (!p.ativo) return soma;
-        const shopee = p.analises_plataformas?.find((plat: any) => plat.plataforma_nome?.toLowerCase().includes('shopee'));
-        const analise = shopee || p.analises_plataformas?.[0];
-        const lucroUn = analise?.lucro_liquido || 0;
-        return soma + (lucroUn * Math.max(0, p.quantidade_estoque || 0));
-      }, 0);
-
-      setLucroPotencialTotal(lucroTotal);
-    } catch (err) {
-      console.error('Erro ao calcular valor do estoque:', err);
+    if (cached !== null) {
+      aplicarDadosProdutos(cached || []);
+    } else {
+      apiGet<any[]>('/produtos/detalhados')
+        .then(data => aplicarDadosProdutos(data || []))
+        .catch(err => console.error('Erro ao calcular valor do estoque:', err));
     }
   };
 
-  const carregarRelatorioVendas = async (inicio?: string, fim?: string, canal?: string) => {
-    try {
-      setCarregandoRelatorio(true);
-      const targetInicio = inicio !== undefined ? inicio : dataInicio;
-      const targetFim = fim !== undefined ? fim : dataFim;
-      const targetCanal = canal !== undefined ? canal : canalFiltro;
+  const carregarRelatorioVendas = (inicio?: string, fim?: string, canal?: string) => {
+    const targetInicio = inicio !== undefined ? inicio : dataInicio;
+    const targetFim = fim !== undefined ? fim : dataFim;
+    const targetCanal = canal !== undefined ? canal : canalFiltro;
 
-      const params = new URLSearchParams();
-      if (targetInicio) params.append('data_inicio', targetInicio);
-      if (targetFim) params.append('data_fim', targetFim);
-      if (targetCanal && targetCanal !== 'todos') params.append('canal', targetCanal);
+    const params: Record<string, string> = {};
+    if (targetInicio) params['data_inicio'] = targetInicio;
+    if (targetFim) params['data_fim'] = targetFim;
+    if (targetCanal && targetCanal !== 'todos') params['canal'] = targetCanal;
 
-      const res = await api.get(`/relatorios/vendas?${params.toString()}`);
-      setRelatorioVendas(res.data);
-    } catch (err) {
-      console.error('Erro ao carregar relatório de vendas:', err);
-    } finally {
+    // Stale-while-revalidate para relatório
+    const cached = apiGetSWR<any>('/relatorios/vendas', params, (fresh) => {
+      setRelatorioVendas(fresh);
       setCarregandoRelatorio(false);
+    });
+
+    if (cached !== null) {
+      setRelatorioVendas(cached);
+      setCarregandoRelatorio(false);
+    } else {
+      setCarregandoRelatorio(true);
+      apiGet<any>('/relatorios/vendas', params)
+        .then(data => setRelatorioVendas(data))
+        .catch(err => console.error('Erro ao carregar relatório de vendas:', err))
+        .finally(() => setCarregandoRelatorio(false));
     }
   };
 

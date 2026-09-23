@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { apiGet, apiGetSWR } from './services/api';
 import {
   colors,
   cardStyle,
@@ -15,8 +16,6 @@ import {
   TrendingDown, Calendar, Search, Loader2, ClipboardList,
   CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
-
-const API = import.meta.env.VITE_API_URL ?? '';
 
 interface ProdutoSemVenda {
   id: number;
@@ -116,21 +115,31 @@ export default function ProdutosSemVenda() {
   const [carregando, setCarregando] = useState(false);
   const [filtro, setFiltro] = useState('');
 
-  const buscar = useCallback(async (inicio: string, fim: string) => {
-    setCarregando(true);
-    try {
-      const params = new URLSearchParams();
-      params.set('data_inicio', inicio);
-      params.set('data_fim', fim);
-      const resp = await fetch(`${API}/relatorios/produtos-sem-venda?${params}`);
-      const json = await resp.json();
-      setDados(json);
-    } catch (e) {
-      console.error(e);
-    } finally {
+  const buscar = useCallback((inicio: string, fim: string) => {
+    const params: Record<string, string> = { data_inicio: inicio, data_fim: fim };
+
+    // Stale-while-revalidate: serve do cache, revalida em background
+    const cached = apiGetSWR<RelatorioDados>('/relatorios/produtos-sem-venda', params, (fresh) => {
+      setDados(fresh);
       setCarregando(false);
+    });
+
+    if (cached !== null) {
+      setDados(cached);
+      setCarregando(false);
+    } else {
+      setCarregando(true);
+      apiGet<RelatorioDados>('/relatorios/produtos-sem-venda', params)
+        .then(json => setDados(json))
+        .catch(e => console.error(e))
+        .finally(() => setCarregando(false));
     }
   }, []);
+
+  // Carrega automaticamente ao montar com o período padrão
+  useEffect(() => {
+    buscar(calcInicio(30), fmt(new Date()));
+  }, [buscar]);
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const dias = Number(e.target.value);

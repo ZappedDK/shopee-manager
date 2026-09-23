@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 import { PlatformIcon } from './PlatformIcon';
-import { api } from './services/api';
+import { api, apiGet, apiGetSWR } from './services/api';
 import { Dashboard } from './Dashboard';
 import { Login } from './Login';
 import { SimuladorPreco } from './SimuladorPreco';
@@ -177,11 +177,17 @@ function App() {
   // Menu mobile (hambúrguer) — só é usado em telas estreitas via CSS
   const [menuAberto, setMenuAberto] = useState(false);
 
-  // --- FUNÇÃO ÚNICA E CONSOLIDADA ---
+  // --- INSUMOS: carrega do cache imediatamente, revalida em background ---
   const carregarInsumos = () => {
-    api.get('/embalagens/').then(res => setEmbalagens(res.data)).catch(() => {});
-    api.get('/configuracoes/').then(res => setConfiguracoes(res.data)).catch(() => {});
-    api.get('/plataformas/').then(res => setPlataformas(res.data)).catch(() => {});
+    // Stale-while-revalidate: serve do cache instantaneamente, busca atualização em background
+    apiGetSWR<any[]>('/embalagens/', undefined, setEmbalagens);
+    apiGetSWR<any[]>('/configuracoes/', undefined, setConfiguracoes);
+    apiGetSWR<any[]>('/plataformas/', undefined, setPlataformas);
+
+    // Se não há cache ainda (primeira carga), busca de forma assíncrona normal
+    apiGet<any[]>('/embalagens/').then(setEmbalagens).catch(() => {});
+    apiGet<any[]>('/configuracoes/').then(setConfiguracoes).catch(() => {});
+    apiGet<any[]>('/plataformas/').then(setPlataformas).catch(() => {});
   };
 
   useEffect(() => {
@@ -201,30 +207,45 @@ function App() {
     status = filtroStatus
   ) => {
     if (view === 'estoque') {
-      setCarregandoEstoque(true);
-      const params = new URLSearchParams({
+      const params: Record<string, string> = {
         page: String(page),
         limit: String(limit),
-      });
-      if (busca) params.append('busca', busca);
-      if (status) params.append('status', status);
+      };
+      if (busca) params['busca'] = busca;
+      if (status) params['status'] = status;
 
-      api.get(`/produtos/detalhados?${params.toString()}`)
-         .then(res => {
-           if (res.data && typeof res.data === 'object' && 'produtos' in res.data) {
-             setProdutosDetalhados(res.data.produtos);
-             setTotalProdutos(res.data.total);
-             setTotalPaginas(res.data.total_pages);
-             setPaginaAtual(res.data.page);
-           } else {
-             setProdutosDetalhados(res.data || []);
-             setTotalProdutos(res.data ? res.data.length : 0);
-             setTotalPaginas(1);
-             setPaginaAtual(1);
-           }
-         })
-         .catch(err => console.error("Erro ao carregar estoque:", err))
-         .finally(() => setCarregandoEstoque(false));
+      const applyData = (data: any) => {
+        if (data && typeof data === 'object' && 'produtos' in data) {
+          setProdutosDetalhados(data.produtos);
+          setTotalProdutos(data.total);
+          setTotalPaginas(data.total_pages);
+          setPaginaAtual(data.page);
+        } else {
+          setProdutosDetalhados(data || []);
+          setTotalProdutos(data ? data.length : 0);
+          setTotalPaginas(1);
+          setPaginaAtual(1);
+        }
+      };
+
+      // Stale-while-revalidate: serve do cache sem mostrar skeleton
+      const cached = apiGetSWR<any>('/produtos/detalhados', params, (fresh) => {
+        applyData(fresh);
+        setCarregandoEstoque(false);
+      });
+
+      if (cached !== null) {
+        // Dados do cache disponíveis — exibe instantaneamente
+        applyData(cached);
+        setCarregandoEstoque(false);
+      } else {
+        // Sem cache: busca normal com loading
+        setCarregandoEstoque(true);
+        apiGet<any>('/produtos/detalhados', params)
+          .then(applyData)
+          .catch(err => console.error('Erro ao carregar estoque:', err))
+          .finally(() => setCarregandoEstoque(false));
+      }
     }
   };
 

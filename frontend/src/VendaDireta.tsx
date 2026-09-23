@@ -4,7 +4,7 @@ import {
   Store, CreditCard, BarChart3, AlertTriangle, ArrowRight, DollarSign, X,
   ClipboardEdit, Zap, Banknote, RefreshCw, TrendingDown
 } from 'lucide-react';
-import { api } from './services/api';
+import { api, apiGet, apiGetSWR } from './services/api';
 import { PageHeader } from './ui';
 import {
   colors, cardStyle, cardTitleStyle, cardDescStyle,
@@ -530,16 +530,22 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
 
   const carregarDados = async () => {
     try {
-      const [resProd, resPlat, resEmb, resCfg] = await Promise.all([
+      // Dados estáticos: serve do cache instantaneamente
+      apiGetSWR<any[]>('/plataformas/', undefined, setPlataformas);
+      apiGetSWR<any[]>('/embalagens/', undefined, setEmbalagens);
+      apiGetSWR<any[]>('/configuracoes/', undefined, setConfiguracoes);
+
+      // Busca dados garantidos (cache ou rede)
+      const [plat, emb, cfg, prod] = await Promise.all([
+        apiGet<any[]>('/plataformas/'),
+        apiGet<any[]>('/embalagens/'),
+        apiGet<any[]>('/configuracoes/'),
         api.get('/produtos/detalhados'),
-        api.get('/plataformas/'),
-        api.get('/embalagens/'),
-        api.get('/configuracoes/')
       ]);
-      setProdutos(resProd.data || []);
-      setPlataformas(resPlat.data || []);
-      setEmbalagens(resEmb.data || []);
-      setConfiguracoes(resCfg.data || []);
+      setPlataformas(plat || []);
+      setEmbalagens(emb || []);
+      setConfiguracoes(cfg || []);
+      setProdutos(prod.data || []);
     } catch (err) {
       console.error('Erro ao carregar dados para Baixa Venda Manual:', err);
     }
