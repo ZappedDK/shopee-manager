@@ -511,6 +511,44 @@ function App() {
     else dicaTimer.current = window.setTimeout(() => setDica(nova), 350);
   };
 
+  // --- MENU DO CELULAR (bottom sheet): arrastar para baixo fecha ---
+  // Acompanha o dedo 1:1 pelo cabeçalho do painel. Fecha se arrastou mais de
+  // 110px OU se foi um "peteleco" rápido (velocidade > 0.11 px/ms), mesmo curto.
+  const sheetRef = useRef<HTMLElement | null>(null);
+  const arraste = useRef<{ y0: number; t0: number; dy: number; id: number } | null>(null);
+
+  const iniciarArraste = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (arraste.current || (e.target as HTMLElement).closest('button')) return;
+    const sheet = sheetRef.current;
+    if (!sheet || !window.matchMedia('(max-width: 860px)').matches) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    arraste.current = { y0: e.clientY, t0: performance.now(), dy: 0, id: e.pointerId };
+    sheet.style.transition = 'none';
+  };
+
+  const moverArraste = (e: React.PointerEvent<HTMLDivElement>) => {
+    const a = arraste.current;
+    const sheet = sheetRef.current;
+    if (!a || !sheet || e.pointerId !== a.id) return;
+    const bruto = e.clientY - a.y0;
+    // Para cima o painel resiste (rubber-band); para baixo segue o dedo
+    a.dy = bruto >= 0 ? bruto : -Math.sqrt(-bruto) * 2;
+    sheet.style.transform = `translateY(${a.dy}px)`;
+  };
+
+  const soltarArraste = (e: React.PointerEvent<HTMLDivElement>) => {
+    const a = arraste.current;
+    const sheet = sheetRef.current;
+    if (!a || e.pointerId !== a.id) return;
+    arraste.current = null;
+    if (!sheet) return;
+    const velocidade = a.dy / Math.max(1, performance.now() - a.t0);
+    // Limpar os estilos inline faz a transição do CSS partir da posição atual
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+    if (a.dy > 110 || (velocidade > 0.11 && a.dy > 20)) setMenuAberto(false);
+  };
+
   // Fecha o menu mobile com Esc e trava o scroll da página enquanto ele está aberto
   useEffect(() => {
     if (!menuAberto) return;
@@ -623,25 +661,21 @@ function App() {
           </button>
         </div>
 
-        <button
-          type="button"
-          className="mobile-menu-toggle"
-          onClick={() => setMenuAberto(true)}
-          aria-label="Abrir menu"
-          aria-expanded={menuAberto}
-          aria-controls="menu-principal"
-        >
-          <Menu size={20} />
-        </button>
-
         <div
           className={`nav-scrim${menuAberto ? ' open' : ''}`}
           onClick={() => setMenuAberto(false)}
           aria-hidden="true"
         />
 
-        <nav id="menu-principal" aria-label="Menu principal" className={`app-sidebar-nav${menuAberto ? ' open' : ''}`}>
-          <div className="drawer-close">
+        <nav ref={sheetRef} id="menu-principal" aria-label="Menu principal" className={`app-sidebar-nav${menuAberto ? ' open' : ''}`}>
+          <div
+            className="drawer-close"
+            onPointerDown={iniciarArraste}
+            onPointerMove={moverArraste}
+            onPointerUp={soltarArraste}
+            onPointerCancel={soltarArraste}
+          >
+            <span className="sheet-grabber" aria-hidden="true" />
             <span className="nav-group-label" style={{ margin: 0 }}>Menu</span>
             <button type="button" onClick={() => setMenuAberto(false)} aria-label="Fechar menu">
               <X size={18} />
@@ -730,6 +764,8 @@ function App() {
           className="tab-item"
           onClick={() => setMenuAberto(true)}
           aria-label="Abrir menu completo"
+          aria-expanded={menuAberto}
+          aria-controls="menu-principal"
         >
           <Menu size={21} />
           <span>Menu</span>

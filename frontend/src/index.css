@@ -653,6 +653,33 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     white-space: nowrap;
   }
 
+  /* Ao expandir o menu, os rótulos aparecem deslizando para dentro enquanto a
+     barra alarga (eles voltam a existir ao sair do display:none, o que
+     reinicia a animação). Ao recolher, somem na hora: a barra encolhe limpa. */
+  .nav-item span,
+  .nav-group-label,
+  .app-sidebar-brand h1,
+  .user-info,
+  .logout-btn span {
+    animation: labelIn 260ms var(--ease-out) 60ms both;
+  }
+
+  @keyframes labelIn {
+    from {
+      opacity: 0;
+      transform: translateX(-6px);
+    }
+  }
+
+  /* Ícone do botão gira de leve ao alternar */
+  .sidebar-toggle svg {
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .sidebar-toggle:active svg {
+    transform: scale(0.88);
+  }
+
   /* Trilho de ícones */
   [data-collapsed="true"] .app-sidebar-brand {
     flex-direction: column;
@@ -954,7 +981,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   }
 
   .mobile-menu-toggle {
-    display: inline-flex;
+    display: none;
     align-items: center;
     justify-content: center;
     width: 38px;
@@ -968,23 +995,25 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     flex-shrink: 0;
   }
 
-  /* Menu vira gaveta lateral com véu */
+  /* Menu vira um painel que sobe de baixo (bottom sheet), saindo do mesmo
+     lugar do botão "Menu" da barra de abas — e volta pelo mesmo caminho. */
   .app-sidebar-nav {
     position: fixed;
-    top: 0;
-    bottom: 0;
     left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 2;
-    width: min(84vw, 320px);
+    max-height: 86dvh;
     display: flex;
     flex-direction: column;
-    padding: calc(14px + var(--safe-top)) 12px calc(14px + var(--safe-bottom)) calc(12px + var(--safe-left));
+    padding: 0 calc(12px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(12px + var(--safe-left));
     background: var(--bg-sidebar);
-    border-right: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
     box-shadow: var(--shadow-lg);
     overflow-y: auto;
     overscroll-behavior: contain;
-    transform: translateX(-104%);
+    transform: translateY(100%);
     visibility: hidden;
     transition:
       transform var(--dur-sheet) var(--ease-drawer),
@@ -992,11 +1021,39 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   }
 
   .app-sidebar-nav.open {
-    transform: translateX(0);
+    transform: translateY(0);
     visibility: visible;
     transition:
       transform var(--dur-sheet) var(--ease-drawer),
       visibility 0s;
+  }
+
+  /* Itens entram em cascata curta depois que o painel começa a subir */
+  .app-sidebar-nav.open > * {
+    animation: sheetItemIn 300ms var(--ease-out) both;
+  }
+
+  .app-sidebar-nav.open > *:nth-child(2)  { animation-delay: 40ms; }
+  .app-sidebar-nav.open > *:nth-child(3)  { animation-delay: 55ms; }
+  .app-sidebar-nav.open > *:nth-child(4)  { animation-delay: 70ms; }
+  .app-sidebar-nav.open > *:nth-child(5)  { animation-delay: 85ms; }
+  .app-sidebar-nav.open > *:nth-child(6)  { animation-delay: 100ms; }
+  .app-sidebar-nav.open > *:nth-child(7)  { animation-delay: 115ms; }
+  .app-sidebar-nav.open > *:nth-child(8)  { animation-delay: 130ms; }
+  .app-sidebar-nav.open > *:nth-child(9)  { animation-delay: 145ms; }
+  .app-sidebar-nav.open > *:nth-child(10) { animation-delay: 160ms; }
+  .app-sidebar-nav.open > *:nth-child(11) { animation-delay: 175ms; }
+  .app-sidebar-nav.open > *:nth-child(n+12) { animation-delay: 190ms; }
+
+  .app-sidebar-nav.open > .drawer-close {
+    animation: none;
+  }
+
+  @keyframes sheetItemIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
   }
 
   .sidebar-toggle,
@@ -1004,11 +1061,31 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     display: none;
   }
 
+  /* Cabeçalho do painel: alça para arrastar + título + fechar.
+     Fica preso no topo enquanto a lista rola. */
   .drawer-close {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 0 2px 10px;
+    padding: 22px 0 8px 10px;
+    margin: 0 -2px;
+    background: var(--bg-sidebar);
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .sheet-grabber {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 36px;
+    height: 5px;
+    margin-left: -18px;
+    border-radius: 3px;
+    background: var(--border-strong);
   }
 
   .drawer-close button {
@@ -1174,6 +1251,16 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
   .app-sidebar {
     transition: none !important;
+  }
+
+  .app-sidebar-nav.open > *,
+  .nav-item span,
+  .nav-group-label,
+  .app-sidebar-brand h1,
+  .user-info,
+  .logout-btn span {
+    animation-name: fadeOnly !important;
+    animation-delay: 0ms !important;
   }
 
   @keyframes fadeOnly {
