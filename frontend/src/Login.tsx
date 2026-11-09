@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { colors, btnStyle, inputStyle } from './theme';
-import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Sun, Moon } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (token: string, usuario: any) => void;
+  tema?: 'light' | 'dark';
+  onTrocarTema?: (tema: 'light' | 'dark') => void;
 }
 
-export function Login({ onLoginSuccess }: LoginProps) {
+export function Login({ onLoginSuccess, tema = 'light', onTrocarTema }: LoginProps) {
   const [modo, setModo] = useState<'login' | 'registro' | 'esqueci'>('login');
   
   // Estados do Formulário
@@ -174,6 +176,17 @@ export function Login({ onLoginSuccess }: LoginProps) {
         boxSizing: 'border-box'
       }}
     >
+      {onTrocarTema && (
+        <div className="theme-switch login-theme-switch" role="group" aria-label="Tema">
+          <button type="button" aria-pressed={tema === 'light'} aria-label="Tema claro" title="Tema claro" onClick={() => onTrocarTema('light')}>
+            <Sun size={15} />
+          </button>
+          <button type="button" aria-pressed={tema === 'dark'} aria-label="Tema escuro" title="Tema escuro" onClick={() => onTrocarTema('dark')}>
+            <Moon size={15} />
+          </button>
+        </div>
+      )}
+
       <div
         className="page-enter"
         style={{

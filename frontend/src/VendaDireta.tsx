@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Package, ChevronDown, ChevronUp, Search, Check, AlertOctagon, CheckCircle2,
   Store, CreditCard, BarChart3, AlertTriangle, ArrowRight, DollarSign, X,
-  ClipboardEdit, Zap, Banknote, RefreshCw, TrendingDown
+  ClipboardEdit, Zap, Banknote, RefreshCw, TrendingDown, Loader2
 } from 'lucide-react';
 import { api, apiGet, apiGetSWR } from './services/api';
 import { PageHeader } from './ui';
@@ -129,7 +129,7 @@ function calcularTaxasPlataforma(precoVenda: number, plataforma: any) {
   };
 }
 
-function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produtos: any[]; skuSelecionado: string; onSelectSku: (sku: string) => void }) {
+function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku, carregando = false }: { produtos: any[]; skuSelecionado: string; onSelectSku: (sku: string) => void; carregando?: boolean }) {
   const [aberto, setAberto] = useState(false);
   const [termoBusca, setTermoBusca] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -156,7 +156,8 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
       <div
-        onClick={() => setAberto(!aberto)}
+        onClick={() => { if (!carregando) setAberto(!aberto); }}
+        aria-busy={carregando}
         style={{
           ...inputStyle,
           width: '100%',
@@ -165,7 +166,7 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          cursor: 'pointer',
+          cursor: carregando ? 'progress' : 'pointer',
           border: `1px solid ${aberto ? colors.accent : colors.borderStrong}`,
           backgroundColor: colors.bgInput,
           userSelect: 'none'
@@ -179,6 +180,10 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
                 <strong style={{ color: colors.accent }}>{produtoAtual.sku}</strong> — {produtoAtual.nome} (Estoque: <strong style={{ color: produtoAtual.quantidade_estoque > 0 ? 'var(--positive)' : 'var(--negative)' }}>{produtoAtual.quantidade_estoque} un</strong>)
               </span>
             </>
+          ) : carregando ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <Loader2 size={14} className="spin" /> Carregando produtos…
+            </span>
           ) : 'Selecione um produto do estoque...'}
         </span>
         <span style={{ fontSize: '12px', color: colors.textSecondary, marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
@@ -505,12 +510,14 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
   const [observacao, setObservacao] = useState<string>('');
   const [salvando, setSalvando] = useState<boolean>(false);
   const [modalConfirmacaoAberto, setModalConfirmacaoAberto] = useState<boolean>(false);
+  const [carregandoProdutos, setCarregandoProdutos] = useState<boolean>(true);
 
   useEffect(() => {
     carregarDados();
   }, []);
 
   const carregarDados = async () => {
+    setCarregandoProdutos(true);
     try {
       // Dados estáticos: serve do cache instantaneamente
       apiGetSWR<any[]>('/plataformas/', undefined, setPlataformas);
@@ -522,14 +529,16 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
         apiGet<any[]>('/plataformas/'),
         apiGet<any[]>('/embalagens/'),
         apiGet<any[]>('/configuracoes/'),
-        api.get('/produtos/detalhados'),
+        apiGet<any[]>('/produtos/detalhados'),
       ]);
       setPlataformas(plat || []);
       setEmbalagens(emb || []);
       setConfiguracoes(cfg || []);
-      setProdutos(prod.data || []);
+      setProdutos(prod || []);
     } catch (err) {
       console.error('Erro ao carregar dados para Baixa Venda Manual:', err);
+    } finally {
+      setCarregandoProdutos(false);
     }
   };
 
@@ -663,6 +672,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                 <Package size={14} style={{ color: colors.accent }} /> Produto Vendido:
               </label>
               <SeletorProdutoVenda
+                carregando={carregandoProdutos}
                 produtos={produtos}
                 skuSelecionado={skuSelecionado}
                 onSelectSku={setSkuSelecionado}

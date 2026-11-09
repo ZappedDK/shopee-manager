@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { apiGet, apiGetSWR } from './services/api';
+import { SkeletonStatCard, SkeletonTable } from './Skeleton';
 import {
   colors,
   cardStyle,
@@ -321,6 +322,18 @@ export default function ProdutosSemVenda() {
           </p>
         )}
       </div>
+
+      {/* Primeiro carregamento: esqueleto no lugar dos cards e da lista */}
+      {carregando && !dados && (
+        <div aria-busy="true">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <SkeletonStatCard /><SkeletonStatCard /><SkeletonStatCard /><SkeletonStatCard />
+          </div>
+          <div style={{ ...cardStyle }}>
+            <SkeletonTable rows={6} cols={8} />
+          </div>
+        </div>
+      )}
 
       {/* Resumo */}
       {dados && (

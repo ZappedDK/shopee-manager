@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { CheckCircle2, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
 import {
   pageTitleStyle, pageSubtitleStyle, messageBannerStyle, sectionGapStyle,
@@ -86,6 +86,36 @@ export function CollapsibleCard({ icon, title, description, buttonLabel, default
           <div style={{ paddingTop: '20px' }}>{children}</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Barra fina no topo da tela enquanto há requisições ao servidor.
+ * Só aparece se a espera passar de 150ms — respostas rápidas (ou do cache)
+ * não piscam nada na tela.
+ */
+export function BarraProgresso() {
+  const [ativo, setAtivo] = useState(false);
+
+  useEffect(() => {
+    let timer: number | undefined;
+    const onCarregando = (e: Event) => {
+      const n = (e as CustomEvent<number>).detail;
+      window.clearTimeout(timer);
+      if (n > 0) timer = window.setTimeout(() => setAtivo(true), 150);
+      else setAtivo(false);
+    };
+    window.addEventListener('api-carregando', onCarregando);
+    return () => {
+      window.removeEventListener('api-carregando', onCarregando);
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  return (
+    <div className="top-progress" data-ativo={ativo} role="progressbar" aria-hidden={!ativo} aria-label="Carregando">
+      <span />
     </div>
   );
 }

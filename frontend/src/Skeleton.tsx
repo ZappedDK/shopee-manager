@@ -133,3 +133,18 @@ export const SkeletonList: React.FC<SkeletonListProps> = ({ count = 3 }) => {
     </div>
   );
 };
+
+/** Linhas de skeleton para usar dentro de um <tbody> que já existe */
+export const LinhasSkeleton: React.FC<{ linhas?: number; colunas: number }> = ({ linhas = 3, colunas }) => (
+  <>
+    {Array.from({ length: linhas }).map((_, r) => (
+      <tr key={r} aria-hidden="true">
+        {Array.from({ length: colunas }).map((_, c) => (
+          <td key={c} style={{ padding: '14px 12px', borderBottom: `1px solid ${colors.border}` }}>
+            <SkeletonBox width={c === 1 ? '75%' : c === colunas - 1 ? '90px' : '55%'} height="16px" />
+          </td>
+        ))}
+      </tr>
+    ))}
+  </>
+);

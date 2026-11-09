@@ -21,7 +21,7 @@ import { Integracoes } from './Integracoes';
 import { VendaDireta } from './VendaDireta';
 import ProdutosSemVenda from './ProdutosSemVenda';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
-import { SkeletonTable } from './Skeleton';
+import { SkeletonTable, SkeletonBox, LinhasSkeleton } from './Skeleton';
 import {
   colors, layoutStyle, sidebarStyle, contentStyle,
   cardStyle, sectionGapStyle, cardTitleStyle, cardDescStyle,
@@ -178,6 +178,10 @@ function App() {
   const [menuAberto, setMenuAberto] = useState(false);
 
   // --- INSUMOS: carrega do cache imediatamente, revalida em background ---
+  // Enquanto a primeira carga não chega, as tabelas mostram skeleton em vez
+  // de "Nenhuma cadastrada" (que seria mentira durante o carregamento).
+  const [insumosProntos, setInsumosProntos] = useState(false);
+
   const carregarInsumos = () => {
     // Stale-while-revalidate: serve do cache instantaneamente, busca atualização em background
     apiGetSWR<any[]>('/embalagens/', undefined, setEmbalagens);
@@ -185,9 +189,11 @@ function App() {
     apiGetSWR<any[]>('/plataformas/', undefined, setPlataformas);
 
     // Primeira carga sem cache: apiGet reaproveita a mesma requisição do SWR acima
-    apiGet<any[]>('/embalagens/').then(setEmbalagens).catch(() => {});
-    apiGet<any[]>('/configuracoes/').then(setConfiguracoes).catch(() => {});
-    apiGet<any[]>('/plataformas/').then(setPlataformas).catch(() => {});
+    Promise.allSettled([
+      apiGet<any[]>('/embalagens/').then(setEmbalagens),
+      apiGet<any[]>('/configuracoes/').then(setConfiguracoes),
+      apiGet<any[]>('/plataformas/').then(setPlataformas),
+    ]).finally(() => setInsumosProntos(true));
   };
 
   useEffect(() => {
@@ -634,7 +640,7 @@ function App() {
       : { bg: 'color-mix(in srgb, var(--text-muted) 14%, transparent)', fg: colors.textSecondary, bd: colors.border };
 
   if (!token) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+    return <Login onLoginSuccess={handleLoginSuccess} tema={tema} onTrocarTema={trocarTema} />;
   }
 
   return (
@@ -857,7 +863,9 @@ function App() {
                     <div style={{ borderLeft: `1px solid ${colors.border}`, paddingLeft: '40px' }}><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '13px' }}>Custo por Etiqueta</p><strong style={{ color: colors.success, fontSize: '20px' }}>{formatarMoeda(etiquetaPadrao.valor_pacote / etiquetaPadrao.qtd_unidades)}</strong></div>
                   </div>
                 ) : (
-                  <p style={{ color: 'var(--negative)' }}>Nenhuma etiqueta configurada.</p>
+                  insumosProntos
+                    ? <p style={{ color: 'var(--negative)' }}>Nenhuma etiqueta configurada.</p>
+                    : <div style={{ display: 'flex', gap: '40px', marginTop: '18px' }}><SkeletonBox width="110px" height="40px" /><SkeletonBox width="90px" height="40px" /><SkeletonBox width="120px" height="40px" /></div>
                 )}
               </div>
             </div>
@@ -958,7 +966,9 @@ function App() {
                       );
                     })}
                     {embalagens.length === 0 && (
-                      <tr><td colSpan={6} style={{ ...tableCellStyle, textAlign: 'center', color: colors.textMuted }}>Nenhuma embalagem cadastrada ainda.</td></tr>
+                      insumosProntos
+                        ? <tr><td colSpan={6} style={{ ...tableCellStyle, textAlign: 'center', color: colors.textMuted }}>Nenhuma embalagem cadastrada ainda.</td></tr>
+                        : <LinhasSkeleton linhas={3} colunas={6} />
                     )}
                   </tbody>
                 </table>
@@ -1214,7 +1224,9 @@ function App() {
                       );
                     })}
                     {plataformas.length === 0 && (
-                      <tr><td colSpan={5} style={{ ...tableCellStyle, textAlign: 'center', color: colors.textMuted }}>Nenhuma plataforma cadastrada.</td></tr>
+                      insumosProntos
+                        ? <tr><td colSpan={5} style={{ ...tableCellStyle, textAlign: 'center', color: colors.textMuted }}>Nenhuma plataforma cadastrada.</td></tr>
+                        : <LinhasSkeleton linhas={3} colunas={5} />
                     )}
                   </tbody>
                 </table>

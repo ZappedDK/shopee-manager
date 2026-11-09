@@ -11,12 +11,32 @@ export const api = axios.create({
   baseURL,
 });
 
+// ─── Indicador global de carregamento ─────────────────────────────────────────
+// Conta requisições em andamento e avisa a barra de progresso do topo
+// (evento 'api-carregando'). Requisições "silenciosas" — revalidação em segundo
+// plano e pré-carregamento — não acendem a barra.
+let pendentes = 0;
+const avisarCarregamento = () =>
+  window.dispatchEvent(new CustomEvent<number>('api-carregando', { detail: pendentes }));
+const encerrarContagem = (config: any) => {
+  if (config && config.__contado) {
+    config.__contado = false;
+    pendentes = Math.max(0, pendentes - 1);
+    avisarCarregamento();
+  }
+};
+
 // ─── Auth token em cada request ────────────────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (!(config as any).silencioso) {
+      (config as any).__contado = true;
+      pendentes += 1;
+      avisarCarregamento();
     }
     return config;
   },
@@ -26,6 +46,7 @@ api.interceptors.request.use(
 // ─── Cache interceptor (response) ──────────────────────────────────────────────
 api.interceptors.response.use(
   (response) => {
+    encerrarContagem(response.config);
     const method = response.config.method?.toLowerCase();
     const url = response.config.url || '';
 
@@ -42,6 +63,7 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    encerrarContagem(error.config);
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
@@ -63,12 +85,12 @@ function chaveDe(url: string, params?: Record<string, string>): string {
   return `${url}?${queryString}`;
 }
 
-function buscarCompartilhado<T>(url: string, params?: Record<string, string>): Promise<T> {
+function buscarCompartilhado<T>(url: string, params?: Record<string, string>, silencioso = false): Promise<T> {
   const chave = chaveDe(url, params);
   const existente = emAndamento.get(chave);
   if (existente) return existente as Promise<T>;
   const req = api
-    .get<T>(url, { params })
+    .get<T>(url, { params, silencioso } as any)
     .then((res) => res.data)
     .finally(() => emAndamento.delete(chave));
   emAndamento.set(chave, req);
@@ -102,7 +124,7 @@ export async function apiGet<T = unknown>(
  */
 export function apiPrefetch(url: string, params?: Record<string, string>): void {
   if (cacheGet(chaveDe(url, params)) !== null) return;
-  buscarCompartilhado(url, params).catch(() => {});
+  buscarCompartilhado(url, params, true).catch(() => {});
 }
 
 /**
@@ -124,7 +146,8 @@ export function apiGetSWR<T = unknown>(
     return cached;
   }
 
-  buscarCompartilhado<T>(url, params)
+  // Com cache na tela, a atualização é em segundo plano (sem barra de progresso)
+  buscarCompartilhado<T>(url, params, cached !== null)
     .then((data) => {
       // Só chama onUpdate se os dados são diferentes do cache atual
       const newJson = JSON.stringify(data);
