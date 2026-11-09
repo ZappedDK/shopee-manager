@@ -79,7 +79,7 @@ function SeletorFiltroCanal({ canalFiltro, onSelectCanal }: SeletorFiltroCanalPr
       </div>
 
       {aberto && (
-        <div
+        <div className="popover"
           style={{
             position: 'absolute',
             top: 'calc(100% + 4px)',
@@ -88,7 +88,7 @@ function SeletorFiltroCanal({ canalFiltro, onSelectCanal }: SeletorFiltroCanalPr
             backgroundColor: colors.bgSidebar,
             border: `1px solid ${colors.borderStrong}`,
             borderRadius: '8px',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 1000,
             padding: '4px',
           }}
@@ -107,19 +107,13 @@ function SeletorFiltroCanal({ canalFiltro, onSelectCanal }: SeletorFiltroCanalPr
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '13px',
-                  backgroundColor: selecionado ? 'rgba(59,130,246,0.2)' : 'transparent',
-                  color: selecionado ? '#fff' : colors.textPrimary,
+                  backgroundColor: selecionado ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+                  color: selecionado ? 'var(--text-primary)' : colors.textPrimary,
                   fontWeight: selecionado ? 600 : 400,
                   marginBottom: '2px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between'
-                }}
-                onMouseEnter={(e) => {
-                  if (!selecionado) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -275,8 +269,6 @@ export function Dashboard() {
   const statCardStyle = {
     ...cardStyle,
     padding: '20px 24px',
-    flex: 1,
-    minWidth: '220px',
   };
 
   const dadosResumo = relatorioVendas?.resumo || relatorioVendas;
@@ -306,38 +298,38 @@ export function Dashboard() {
       />
 
       {/* Faixa de estatísticas principais */}
-      <div style={{ display: 'flex', gap: '20px', marginBottom: '28px', flexWrap: 'wrap' }}>
-        <div style={{ ...statCardStyle, borderLeft: `4px solid ${colors.success}` }}>
-          <p style={{ margin: '0 0 6px 0', color: colors.textSecondary, fontSize: '13px' }}>Valor Total em Estoque (Custo)</p>
-          <strong style={{ color: colors.successText, fontSize: '26px', display: 'flex', alignItems: 'center', minHeight: '34px' }}>
-            {valorTotalEstoque === null ? <SkeletonBox width="140px" height="28px" /> : formatarMoeda(valorTotalEstoque)}
+      <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        <div style={{ ...statCardStyle }}>
+          <p style={{ margin: '0 0 8px 0', color: colors.textSecondary, fontSize: '13px', fontWeight: 500 }}>Valor Total em Estoque (Custo)</p>
+          <strong style={{ color: colors.textPrimary, fontSize: '28px', fontWeight: 500, letterSpacing: '-0.025em', display: 'flex', alignItems: 'center', minHeight: '36px' }}>
+            {valorTotalEstoque === null ? <SkeletonBox width="140px" height="28px" /> : <span className="value-in">{formatarMoeda(valorTotalEstoque)}</span>}
           </strong>
         </div>
 
-        <div style={{ ...statCardStyle, borderLeft: `4px solid ${colors.accent}` }}>
-          <p style={{ margin: '0 0 6px 0', color: colors.textSecondary, fontSize: '13px' }}>Lucro Potencial Estimado</p>
-          <strong style={{ color: '#60a5fa', fontSize: '26px', display: 'flex', alignItems: 'center', minHeight: '34px' }}>
-            {lucroPotencialTotal === null ? <SkeletonBox width="140px" height="28px" /> : formatarMoeda(lucroPotencialTotal)}
+        <div style={{ ...statCardStyle }}>
+          <p style={{ margin: '0 0 8px 0', color: colors.textSecondary, fontSize: '13px', fontWeight: 500 }}>Lucro Potencial Estimado</p>
+          <strong style={{ color: colors.textPrimary, fontSize: '28px', fontWeight: 500, letterSpacing: '-0.025em', display: 'flex', alignItems: 'center', minHeight: '36px' }}>
+            {lucroPotencialTotal === null ? <SkeletonBox width="140px" height="28px" /> : <span className="value-in">{formatarMoeda(lucroPotencialTotal)}</span>}
           </strong>
         </div>
 
-        <div style={{ ...statCardStyle, borderLeft: `4px solid ${colors.purple}` }}>
-          <p style={{ margin: '0 0 6px 0', color: colors.textSecondary, fontSize: '13px' }}>Faturamento no Mês (Vendas)</p>
-          <strong style={{ color: '#c084fc', fontSize: '26px', display: 'flex', alignItems: 'center', minHeight: '34px' }}>
-            {carregandoRelatorio ? <SkeletonBox width="140px" height="28px" /> : formatarMoeda(relatorioVendas?.mes?.faturamento || 0)}
+        <div style={{ ...statCardStyle }}>
+          <p style={{ margin: '0 0 8px 0', color: colors.textSecondary, fontSize: '13px', fontWeight: 500 }}>Faturamento no Mês (Vendas)</p>
+          <strong style={{ color: colors.textPrimary, fontSize: '28px', fontWeight: 500, letterSpacing: '-0.025em', display: 'flex', alignItems: 'center', minHeight: '36px' }}>
+            {carregandoRelatorio ? <SkeletonBox width="140px" height="28px" /> : <span className="value-in">{formatarMoeda(relatorioVendas?.mes?.faturamento || 0)}</span>}
           </strong>
         </div>
 
-        <div style={{ ...statCardStyle, borderLeft: `4px solid ${alertas.length > 0 ? colors.danger : colors.success}` }}>
-          <p style={{ margin: '0 0 6px 0', color: colors.textSecondary, fontSize: '13px' }}>Produtos Zerados</p>
-          <strong style={{ color: alertas.length > 0 ? colors.dangerText : colors.successText, fontSize: '26px', display: 'flex', alignItems: 'center', minHeight: '34px' }}>
-            {carregando ? <SkeletonBox width="50px" height="28px" /> : alertas.length}
+        <div style={{ ...statCardStyle }}>
+          <p style={{ margin: '0 0 8px 0', color: colors.textSecondary, fontSize: '13px', fontWeight: 500 }}>Produtos Zerados</p>
+          <strong style={{ color: alertas.length > 0 ? colors.dangerText : colors.successText, fontSize: '28px', fontWeight: 500, letterSpacing: '-0.025em', display: 'flex', alignItems: 'center', minHeight: '36px' }}>
+            {carregando ? <SkeletonBox width="50px" height="28px" /> : <span className="value-in">{alertas.length}</span>}
           </strong>
         </div>
       </div>
 
       {/* Relatório Interativo de Vendas com Intervalo de Data Personalizado */}
-      <div style={{ ...cardStyle, marginBottom: '28px', borderLeft: `4px solid ${colors.accent}` }}>
+      <div style={{ ...cardStyle, marginBottom: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
           <div>
             <h3 style={{ ...cardTitleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -348,7 +340,7 @@ export function Dashboard() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             {/* Seletor de Intervalo de Datas (De / Até) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: colors.bgApp, padding: '4px 10px', borderRadius: '8px', border: `1px solid ${colors.borderStrong}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', maxWidth: '100%', backgroundColor: colors.bgApp, padding: '4px 10px', borderRadius: '8px', border: `1px solid ${colors.borderStrong}` }}>
               <label style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600 }}>De:</label>
               <input
                 type="date"
@@ -412,14 +404,13 @@ export function Dashboard() {
                 borderRadius: '8px',
                 fontSize: '13px',
                 fontWeight: 600,
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                color: '#34d399',
+                border: '1px solid color-mix(in srgb, var(--positive) 40%, transparent)',
+                backgroundColor: 'color-mix(in srgb, var(--positive) 15%, transparent)',
+                color: 'var(--positive)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                transition: '0.15s'
               }}
               title="Baixar relatório em formato Excel (.csv)"
             >
@@ -433,7 +424,7 @@ export function Dashboard() {
           <SkeletonTable rows={4} cols={4} />
         ) : (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               <div style={{ backgroundColor: colors.bgApp, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
                 <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                   <ShoppingCart size={14} /> Unidades Vendidas
@@ -445,7 +436,7 @@ export function Dashboard() {
                 <span style={{ fontSize: '12.5px', color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                   <DollarSign size={14} /> Faturamento Total
                 </span>
-                <strong style={{ fontSize: '22px', color: '#60a5fa' }}>{formatarMoeda(dadosResumo?.faturamento || 0)}</strong>
+                <strong style={{ fontSize: '22px', color: 'var(--accent-text)' }}>{formatarMoeda(dadosResumo?.faturamento || 0)}</strong>
               </div>
 
               <div style={{ backgroundColor: colors.bgApp, padding: '16px', borderRadius: '10px', border: `1px solid ${colors.border}` }}>
@@ -464,7 +455,7 @@ export function Dashboard() {
             </div>
 
             {/* Tabela de Vendas Recentes do Período com Ordenação */}
-            <h4 style={{ color: colors.textSecondary, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <h4 style={{ color: colors.textSecondary, fontSize: '13px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <ClipboardList size={15} /> Detalhamento de Vendas (Clique nos cabeçalhos da tabela para ordenar)
             </h4>
 
@@ -505,12 +496,12 @@ export function Dashboard() {
                       <tr key={v.id}>
                         <td style={{ ...tableCellStyle, fontSize: '12.5px', color: colors.textSecondary, whiteSpace: 'nowrap' }}>{v.data}</td>
                         <td style={{ ...tableCellStyle, fontWeight: 'bold', color: colors.accent, whiteSpace: 'nowrap' }}>{v.sku}</td>
-                        <td style={tableCellStyle}>{v.nome}</td>
+                        <td className="col-wrap" style={tableCellStyle}>{v.nome}</td>
                         <td style={{ ...tableCellStyle, color: colors.textPrimary, whiteSpace: 'nowrap', fontWeight: 500 }}>
                           {v.canal}
                         </td>
                         <td style={{ ...tableCellStyle, fontWeight: 'bold' }}>{v.quantidade} un.</td>
-                        <td style={{ ...tableCellStyle, color: '#60a5fa', fontWeight: 600 }}>{formatarMoeda(v.faturamento)}</td>
+                        <td style={{ ...tableCellStyle, color: 'var(--accent-text)', fontWeight: 600 }}>{formatarMoeda(v.faturamento)}</td>
                         <td style={{ ...tableCellStyle, color: colors.successText, fontWeight: 600 }}>{formatarMoeda(v.lucro_estimado)}</td>
                       </tr>
                     ))}
@@ -523,8 +514,8 @@ export function Dashboard() {
       </div>
 
       {/* Radar de Estoque Zerado */}
-      <div style={{ ...cardStyle, borderLeft: `4px solid ${alertas.length > 0 ? colors.danger : colors.success}` }}>
-        <h3 style={{ ...cardTitleStyle, color: alertas.length > 0 ? '#f87171' : colors.successText, display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ ...cardStyle }}>
+        <h3 style={{ ...cardTitleStyle, color: alertas.length > 0 ? 'var(--negative)' : colors.successText, display: 'flex', alignItems: 'center', gap: '8px' }}>
           <AlertTriangle size={18} /> Radar de Produtos Zerados
         </h3>
         <p style={cardDescStyle}>Produtos cadastrados ativos que estão sem nenhuma unidade em estoque (estoque = 0).</p>
@@ -555,9 +546,9 @@ export function Dashboard() {
                 </span>
                 <span
                   style={{
-                    color: '#fecaca',
+                    color: 'var(--negative)',
                     fontWeight: 'bold',
-                    backgroundColor: '#7f1d1d',
+                    backgroundColor: 'var(--negative-border)',
                     padding: '4px 10px',
                     borderRadius: '6px',
                     fontSize: '13px',

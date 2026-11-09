@@ -45,7 +45,7 @@ export function Integracoes({ onEstoqueAtualizado, abaInicial = 'shopee' }: Inte
           alignItems: 'center',
         }}
       >
-        <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textMuted, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textMuted, marginRight: '4px' }}>
           Canal:
         </span>
 
@@ -64,7 +64,6 @@ export function Integracoes({ onEstoqueAtualizado, abaInicial = 'shopee' }: Inte
             border: abaAtiva === 'shopee' ? '1px solid #ee4d2d' : `1px solid ${colors.border}`,
             backgroundColor: abaAtiva === 'shopee' ? 'rgba(238, 77, 45, 0.16)' : colors.bgCard,
             color: abaAtiva === 'shopee' ? '#ff6b4a' : colors.textSecondary,
-            transition: 'all 0.15s ease-in-out',
           }}
         >
           <img src="/logos/shopee.png" alt="Shopee" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 3 }} />
@@ -85,8 +84,7 @@ export function Integracoes({ onEstoqueAtualizado, abaInicial = 'shopee' }: Inte
             cursor: 'pointer',
             border: abaAtiva === 'tiktok' ? '1px solid #00f2fe' : `1px solid ${colors.border}`,
             backgroundColor: abaAtiva === 'tiktok' ? 'rgba(0, 242, 254, 0.14)' : colors.bgCard,
-            color: abaAtiva === 'tiktok' ? '#38bdf8' : colors.textSecondary,
-            transition: 'all 0.15s ease-in-out',
+            color: abaAtiva === 'tiktok' ? 'var(--info)' : colors.textSecondary,
           }}
         >
           <img src="/logos/tiktokshop.png" alt="TikTok" style={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 3 }} />

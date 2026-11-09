@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Menu, X, LayoutDashboard, Package, ClipboardList, TrendingDown,
   Calculator, Receipt, Plug, Store, Settings, Users, User, LogOut,
   Archive, Tag, Pencil, Lock, Zap, Trash2, PackagePlus, FileSpreadsheet,
   CheckCircle, PauseCircle, ChevronDown, Play, Pause, ChevronLeft, ChevronRight,
-  CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown
+  CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, Sun, Moon, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 
 import { PlatformIcon } from './PlatformIcon';
@@ -23,7 +23,7 @@ import ProdutosSemVenda from './ProdutosSemVenda';
 import { PageHeader, MessageBanner, CollapsibleCard } from './ui';
 import { SkeletonTable } from './Skeleton';
 import {
-  colors, layoutStyle, sidebarStyle, contentStyle, sidebarGroupLabelStyle, menuItemStyle,
+  colors, layoutStyle, sidebarStyle, contentStyle,
   cardStyle, sectionGapStyle, cardTitleStyle, cardDescStyle,
   inputStyle, btnStyle, btnSuccessStyle, btnPurpleStyle, btnDangerStyle, btnNeutralStyle,
   tableHeaderStyle, tableCellStyle, formatarMoeda, formatarNumero
@@ -70,7 +70,7 @@ function App() {
   const [view, setView] = useState<View>(() => {
     const params = new URLSearchParams(window.location.search);
     const v = params.get('view') as View;
-    const validViews: View[] = ['dashboard', 'cadastros', 'estoque', 'almoxarifado', 'plataformas', 'simulador', 'historico', 'usuarios', 'shopee', 'tiktok', 'venda_direta'];
+    const validViews: View[] = ['dashboard', 'cadastros', 'estoque', 'almoxarifado', 'plataformas', 'simulador', 'historico', 'usuarios', 'shopee', 'tiktok', 'venda_direta', 'sem_venda', 'integracoes'];
     if (v && validViews.includes(v)) return v;
     return 'dashboard';
   });
@@ -424,34 +424,143 @@ function App() {
     return abasLiberadas.includes(abaId.toLowerCase());
   };
 
-  // Item de menu com tag <a> real para permitir botão direito ("Abrir em nova guia"), Ctrl+clique ou clique do meio
-  const MenuItem = ({ icon, label, target }: { icon: React.ReactNode; label: string; target: View }) => {
-    const ativo = view === target ||
-      (target === 'integracoes' && (view === 'shopee' || view === 'tiktok')) ||
-      (target === 'estoque' && view === 'almoxarifado');
-    return (
-      <a
-        href={`/?view=${target}`}
-        style={{
-          ...menuItemStyle(ativo),
-          textDecoration: 'none'
-        }}
-        onClick={(e) => {
-          if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) {
-            return;
-          }
-          e.preventDefault();
-          mudarView(target);
-          setMenuAberto(false);
-        }}
-        onMouseEnter={e => { if (!ativo) e.currentTarget.style.backgroundColor = 'rgba(148,163,184,0.08)'; }}
-        onMouseLeave={e => { if (!ativo) e.currentTarget.style.backgroundColor = 'transparent'; }}
-      >
-        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', flexShrink: 0 }}>{icon}</span>
-        <span>{label}</span>
-      </a>
-    );
+  // --- TEMA CLARO / ESCURO ---
+  // Claro por padrão; a escolha fica salva no navegador. O index.html aplica o
+  // atributo antes do React carregar, então a tela não "pisca" no tema errado.
+  const [tema, setTema] = useState<'light' | 'dark'>(() => {
+    try { return localStorage.getItem('tema') === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = tema;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tema === 'dark' ? '#0f0f13' : '#f7f7f9');
+    try { localStorage.setItem('tema', tema); } catch { /* modo privado */ }
+  }, [tema]);
+
+  const trocarTema = (novo: 'light' | 'dark') => {
+    if (novo === tema) return;
+    const aplicar = () => {
+      document.documentElement.dataset.theme = novo;
+      setTema(novo);
+    };
+    const reduzir = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+    if (doc.startViewTransition && !reduzir) doc.startViewTransition(aplicar);
+    else aplicar();
   };
+
+  // --- MENU LATERAL RECOLHÍVEL (desktop) ---
+  // Vira um trilho só de ícones para liberar espaço. Sem preferência salva,
+  // começa recolhido em telas de notebook (< 1280px).
+  const [menuRecolhido, setMenuRecolhido] = useState<boolean>(() => {
+    try {
+      const salvo = localStorage.getItem('menuRecolhido');
+      if (salvo !== null) return salvo === '1';
+    } catch { /* modo privado */ }
+    return window.innerWidth < 1280;
+  });
+
+  const alternarMenuRecolhido = () => {
+    setMenuRecolhido(r => {
+      try { localStorage.setItem('menuRecolhido', r ? '0' : '1'); } catch { /* modo privado */ }
+      return !r;
+    });
+  };
+
+  // --- DICAS (tooltips) DO MENU LATERAL ---
+  // Renderizadas fora da barra (position: fixed) porque a barra corta o que
+  // passa da borda. Primeira dica espera 350ms; as seguintes aparecem na hora
+  // enquanto o mouse percorre o menu.
+  const [dica, setDica] = useState<{ texto: string; top: number; left: number; imediata: boolean } | null>(null);
+  const dicaAlvo = useRef<HTMLElement | null>(null);
+  const dicaTimer = useRef<number | undefined>(undefined);
+  const dicaUltima = useRef(0);
+
+  const esconderDica = () => {
+    window.clearTimeout(dicaTimer.current);
+    if (dicaAlvo.current) dicaUltima.current = Date.now();
+    dicaAlvo.current = null;
+    setDica(null);
+  };
+
+  const mostrarDica = (e: React.MouseEvent) => {
+    const alvo = (e.target as HTMLElement).closest<HTMLElement>('[data-tooltip]');
+    if (alvo === dicaAlvo.current) return;
+    if (!alvo || !alvo.dataset.tooltip || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      esconderDica();
+      return;
+    }
+    window.clearTimeout(dicaTimer.current);
+    const imediata = dicaAlvo.current !== null || Date.now() - dicaUltima.current < 400;
+    dicaAlvo.current = alvo;
+    const r = alvo.getBoundingClientRect();
+    const nova = { texto: alvo.dataset.tooltip, top: r.top + r.height / 2, left: r.right + 10, imediata };
+    if (imediata) setDica(nova);
+    else dicaTimer.current = window.setTimeout(() => setDica(nova), 350);
+  };
+
+  // Fecha o menu mobile com Esc e trava o scroll da página enquanto ele está aberto
+  useEffect(() => {
+    if (!menuAberto) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuAberto(false); };
+    const overflowAnterior = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.documentElement.style.overflow = overflowAnterior;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menuAberto]);
+
+  const isViewAtiva = (target: View) =>
+    view === target ||
+    (target === 'integracoes' && (view === 'shopee' || view === 'tiktok')) ||
+    (target === 'estoque' && view === 'almoxarifado');
+
+  // Navegação com <a> real: permite botão direito ("Abrir em nova guia"), Ctrl+clique ou clique do meio
+  const irPara = (e: React.MouseEvent<HTMLAnchorElement>, target: View) => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
+    e.preventDefault();
+    if (target !== view) mudarView(target);
+    setMenuAberto(false);
+    window.scrollTo({ top: 0 });
+  };
+
+  // Função (não componente) para não remontar os links a cada render
+  const navItem = (icon: React.ReactNode, label: string, target: View) => (
+    <a
+      key={target}
+      href={`/?view=${target}`}
+      className="nav-item"
+      data-tooltip={menuRecolhido ? label : undefined}
+      aria-current={isViewAtiva(target) ? 'page' : undefined}
+      onClick={(e) => irPara(e, target)}
+    >
+      {icon}
+      <span>{label}</span>
+    </a>
+  );
+
+  // Abas fixas no rodapé do celular (as 4 telas mais usadas, respeitando permissões)
+  const abasRodape = ([
+    { target: 'dashboard', label: 'Início', icon: <LayoutDashboard size={21} />, ok: temPermissaoAba('dashboard') },
+    { target: 'estoque', label: 'Estoque', icon: <Package size={21} />, ok: temPermissaoAba('estoque') },
+    { target: 'venda_direta', label: 'Venda', icon: <Receipt size={21} />, ok: true },
+    { target: 'simulador', label: 'Simulador', icon: <Calculator size={21} />, ok: temPermissaoAba('calculadora') || temPermissaoAba('simulador') },
+  ] as { target: View; label: string; icon: React.ReactNode; ok: boolean }[]).filter(a => a.ok).slice(0, 4);
+
+  const iniciais = (usuario?.nome || usuario?.email || 'U')
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p: string) => p[0]?.toUpperCase())
+    .join('');
+
+  const corPapel = userRole === 'admin'
+    ? { bg: 'color-mix(in srgb, var(--accent) 12%, transparent)', fg: 'var(--accent-text)', bd: 'transparent' }
+    : userRole === 'editor'
+      ? { bg: 'color-mix(in srgb, var(--positive) 16%, transparent)', fg: colors.successText, bd: 'color-mix(in srgb, var(--positive) 40%, transparent)' }
+      : { bg: 'color-mix(in srgb, var(--text-muted) 14%, transparent)', fg: colors.textSecondary, bd: colors.border };
 
   if (!token) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
@@ -459,101 +568,142 @@ function App() {
 
   return (
     <div style={layoutStyle} className="app-layout">
-      <div style={sidebarStyle} className="app-sidebar">
-        <div style={{ marginBottom: '16px', textAlign: 'center' }} className="app-sidebar-brand">
-          <img src="/icone.png" alt="Skold Stock Icon" style={{ maxWidth: '90px', maxHeight: '100px', objectFit: 'contain', marginBottom: '12px' }} />
-          <h1
-            className="brand-title"
-            style={{
-              fontSize: '20px',
-              color: colors.textPrimary,
-              fontWeight: 600,
-              margin: '8px 0 0 0',
-              fontFamily: "'Rostex-Regular', 'Inter', sans-serif"
-            }}
+      <header
+        style={{ ...sidebarStyle, width: menuRecolhido ? '72px' : sidebarStyle.width }}
+        className="app-sidebar"
+        data-collapsed={menuRecolhido ? 'true' : 'false'}
+        onMouseOver={mostrarDica}
+        onMouseLeave={esconderDica}
+      >
+        <div className="app-sidebar-brand">
+          <img src="/icone.png" alt="" />
+          <h1 className="brand-title">Skold Stock</h1>
+          <button
+            type="button"
+            className="sidebar-toggle"
+            onClick={() => { esconderDica(); alternarMenuRecolhido(); }}
+            data-tooltip={menuRecolhido ? 'Expandir menu' : 'Recolher menu'}
+            aria-label={menuRecolhido ? 'Expandir menu' : 'Recolher menu'}
+            aria-expanded={!menuRecolhido}
           >
-            Skold Stock
-          </h1>
+            {menuRecolhido ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+          </button>
         </div>
 
         <button
+          type="button"
           className="mobile-menu-toggle"
-          onClick={() => setMenuAberto(aberto => !aberto)}
-          aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}
+          onClick={() => setMenuAberto(true)}
+          aria-label="Abrir menu"
           aria-expanded={menuAberto}
+          aria-controls="menu-principal"
         >
-          {menuAberto ? <X size={20} /> : <Menu size={20} />}
+          <Menu size={20} />
         </button>
 
-        <div className={`app-sidebar-nav${menuAberto ? ' open' : ''}`}>
+        <div
+          className={`nav-scrim${menuAberto ? ' open' : ''}`}
+          onClick={() => setMenuAberto(false)}
+          aria-hidden="true"
+        />
 
-          {/* ── DASHBOARD ── */}
-          <div style={sidebarGroupLabelStyle}>Dashboard</div>
-          {temPermissaoAba('dashboard') && <MenuItem icon={<LayoutDashboard size={18} />} label="Visão Geral" target="dashboard" />}
-
-          {/* ── ESTOQUE ── */}
-          <div style={sidebarGroupLabelStyle}>Estoque</div>
-          {temPermissaoAba('estoque') && <MenuItem icon={<Package size={18} />} label="Controle de Estoque" target="estoque" />}
-          {temPermissaoAba('historico') && <MenuItem icon={<ClipboardList size={18} />} label="Histórico" target="historico" />}
-          <MenuItem icon={<TrendingDown size={18} />} label="Produtos Parados" target="sem_venda" />
-
-          {/* ── VENDAS ── */}
-          <div style={sidebarGroupLabelStyle}>Vendas</div>
-          {(temPermissaoAba('calculadora') || temPermissaoAba('simulador')) && <MenuItem icon={<Calculator size={18} />} label="Simulador de Preço" target="simulador" />}
-          <MenuItem icon={<Receipt size={18} />} label="Baixa Venda Manual" target="venda_direta" />
-
-          {/* ── CONFIGURAÇÕES ── */}
-          <div style={sidebarGroupLabelStyle}>Configurações</div>
-          {temPermissaoAba('integracoes') && (
-            <MenuItem icon={<Plug size={18} />} label="Integrações" target="integracoes" />
-          )}
-          {temPermissaoAba('plataformas') && <MenuItem icon={<Store size={18} />} label="Plataformas de Venda" target="plataformas" />}
-          {(temPermissaoAba('insumos') || temPermissaoAba('cadastros')) && <MenuItem icon={<Settings size={18} />} label="Cadastros e Config." target="cadastros" />}
-          {(userRole === 'admin' || temPermissaoAba('usuarios')) && (
-            <MenuItem icon={<Users size={18} />} label="Gestão de Usuários" target="usuarios" />
-          )}
-
-          {/* Rodapé com Informações do Usuário Logado & Logout */}
-          <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: `1px solid ${colors.border}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <div style={{ fontSize: '13px', color: colors.textPrimary, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><User size={14} /> {usuario?.nome || 'Usuário'}</span>
-              </div>
-              <span
-                style={{
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  padding: '2px 6px',
-                  borderRadius: '10px',
-                  backgroundColor: userRole === 'admin' ? 'rgba(59, 130, 246, 0.2)' : userRole === 'editor' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(148, 163, 184, 0.2)',
-                  color: userRole === 'admin' ? colors.accent : userRole === 'editor' ? colors.successText : colors.textMuted,
-                  border: `1px solid ${userRole === 'admin' ? colors.accent : colors.border}`
-                }}
-              >
-                {userRole.toUpperCase()}
-              </span>
-            </div>
-            <div style={{ fontSize: '11.5px', color: colors.textMuted, marginBottom: '12px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {usuario?.email || ''}
-            </div>
-            <button
-              onClick={handleLogout}
-              style={{
-                ...btnNeutralStyle,
-                width: '100%',
-                backgroundColor: colors.dangerBg,
-                color: colors.dangerText,
-                border: `1px solid ${colors.dangerBorder}`
-              }}
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}><LogOut size={15} /> Sair da Conta</span>
+        <nav id="menu-principal" aria-label="Menu principal" className={`app-sidebar-nav${menuAberto ? ' open' : ''}`}>
+          <div className="drawer-close">
+            <span className="nav-group-label" style={{ margin: 0 }}>Menu</span>
+            <button type="button" onClick={() => setMenuAberto(false)} aria-label="Fechar menu">
+              <X size={18} />
             </button>
           </div>
+
+          <div className="nav-group-label">Dashboard</div>
+          {temPermissaoAba('dashboard') && navItem(<LayoutDashboard size={18} />, 'Visão Geral', 'dashboard')}
+
+          <div className="nav-group-label">Estoque</div>
+          {temPermissaoAba('estoque') && navItem(<Package size={18} />, 'Controle de Estoque', 'estoque')}
+          {temPermissaoAba('historico') && navItem(<ClipboardList size={18} />, 'Histórico', 'historico')}
+          {navItem(<TrendingDown size={18} />, 'Produtos Parados', 'sem_venda')}
+
+          <div className="nav-group-label">Vendas</div>
+          {(temPermissaoAba('calculadora') || temPermissaoAba('simulador')) && navItem(<Calculator size={18} />, 'Simulador de Preço', 'simulador')}
+          {navItem(<Receipt size={18} />, 'Baixa Venda Manual', 'venda_direta')}
+
+          <div className="nav-group-label">Configurações</div>
+          {temPermissaoAba('integracoes') && navItem(<Plug size={18} />, 'Integrações', 'integracoes')}
+          {temPermissaoAba('plataformas') && navItem(<Store size={18} />, 'Plataformas de Venda', 'plataformas')}
+          {(temPermissaoAba('insumos') || temPermissaoAba('cadastros')) && navItem(<Settings size={18} />, 'Cadastros e Config.', 'cadastros')}
+          {(userRole === 'admin' || temPermissaoAba('usuarios')) && navItem(<Users size={18} />, 'Gestão de Usuários', 'usuarios')}
+
+          {/* Rodapé com o usuário logado & logout */}
+          <div className="user-card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+              <span className="user-avatar" aria-hidden="true" title={usuario?.nome || undefined}>{iniciais || <User size={15} />}</span>
+              <div className="user-info" style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                  <span style={{ fontSize: '13.5px', color: colors.textPrimary, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {usuario?.nome || 'Usuário'}
+                  </span>
+                  <span className="role-badge" style={{ backgroundColor: corPapel.bg, color: corPapel.fg, borderColor: corPapel.bd }}>
+                    {userRole.toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: colors.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
+                  {usuario?.email || ''}
+                </div>
+              </div>
+            </div>
+            <div className="sidebar-actions">
+              <button type="button" onClick={handleLogout} className="logout-btn" data-tooltip={menuRecolhido ? 'Sair' : undefined} aria-label="Sair da conta">
+                <LogOut size={15} /> <span>Sair</span>
+              </button>
+              <div className="theme-switch" role="group" aria-label="Tema">
+                <button type="button" aria-pressed={tema === 'light'} aria-label="Tema claro" title="Tema claro" onClick={() => trocarTema('light')}>
+                  <Sun size={15} />
+                </button>
+                <button type="button" aria-pressed={tema === 'dark'} aria-label="Tema escuro" title="Tema escuro" onClick={() => trocarTema('dark')}>
+                  <Moon size={15} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </nav>
+      </header>
+
+      {dica && (
+        <div
+          role="tooltip"
+          className={`sidebar-tooltip${dica.imediata ? ' imediata' : ''}`}
+          style={{ top: dica.top, left: dica.left }}
+        >
+          {dica.texto}
         </div>
-      </div>
+      )}
 
+      <nav className="tab-bar" aria-label="Atalhos">
+        {abasRodape.map(aba => (
+          <a
+            key={aba.target}
+            href={`/?view=${aba.target}`}
+            className="tab-item"
+            aria-current={isViewAtiva(aba.target) ? 'page' : undefined}
+            onClick={(e) => irPara(e, aba.target)}
+          >
+            {aba.icon}
+            <span>{aba.label}</span>
+          </a>
+        ))}
+        <button
+          type="button"
+          className="tab-item"
+          onClick={() => setMenuAberto(true)}
+          aria-label="Abrir menu completo"
+        >
+          <Menu size={21} />
+          <span>Menu</span>
+        </button>
+      </nav>
 
-      <div style={contentStyle} className="app-content">
+      <main style={contentStyle} className="app-content">
+        <div key={view} className="page-enter">
         {view === 'dashboard' && <Dashboard />}
 
         {view === 'simulador' && <SimuladorPreco />}
@@ -582,7 +732,7 @@ function App() {
                 alignItems: 'center',
               }}
             >
-              <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textMuted, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textMuted, marginRight: '4px' }}>
                 Estoque:
               </span>
 
@@ -601,7 +751,6 @@ function App() {
                   border: `1px solid ${colors.border}`,
                   backgroundColor: colors.bgCard,
                   color: colors.textSecondary,
-                  transition: 'all 0.15s ease-in-out',
                 }}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Package size={16} /> Produtos</span>
@@ -619,10 +768,9 @@ function App() {
                   fontWeight: 600,
                   fontSize: '13.5px',
                   cursor: 'pointer',
-                  border: '1px solid #10b981',
-                  backgroundColor: 'rgba(16, 185, 129, 0.16)',
-                  color: '#34d399',
-                  transition: 'all 0.15s ease-in-out',
+                  border: '1px solid var(--positive)',
+                  backgroundColor: 'color-mix(in srgb, var(--positive) 16%, transparent)',
+                  color: 'var(--positive)',
                 }}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Archive size={16} /> Almoxarifado</span>
@@ -630,7 +778,7 @@ function App() {
             </div>
 
             <div style={sectionGapStyle}>
-              <div style={{ ...cardStyle, borderLeft: '4px solid #10b981' }}>
+              <div style={{ ...cardStyle }}>
                 <h3 style={{ ...cardTitleStyle, display: "inline-flex", alignItems: "center", gap: "8px" }}><Tag size={18} /> Etiqueta de Envio Padrão</h3>
                 {etiquetaPadrao ? (
                   <div style={{ display: 'flex', gap: '40px', marginTop: '18px', flexWrap: 'wrap' }}>
@@ -639,7 +787,7 @@ function App() {
                     <div style={{ borderLeft: `1px solid ${colors.border}`, paddingLeft: '40px' }}><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '13px' }}>Custo por Etiqueta</p><strong style={{ color: colors.success, fontSize: '20px' }}>{formatarMoeda(etiquetaPadrao.valor_pacote / etiquetaPadrao.qtd_unidades)}</strong></div>
                   </div>
                 ) : (
-                  <p style={{ color: '#f87171' }}>Nenhuma etiqueta configurada.</p>
+                  <p style={{ color: 'var(--negative)' }}>Nenhuma etiqueta configurada.</p>
                 )}
               </div>
             </div>
@@ -663,7 +811,7 @@ function App() {
                     {embalagens.map(emb => {
                       if (editandoEmbalagem && editandoEmbalagem.id === emb.id) {
                         return (
-                          <tr key={emb.id} style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
+                          <tr key={emb.id} style={{ backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)' }}>
                             <td style={tableCellStyle}>#{emb.id}</td>
                             <td style={tableCellStyle}>
                               <input
@@ -695,16 +843,12 @@ function App() {
                               <button
                                 onClick={salvarEdicaoEmbalagem}
                                 style={{ ...btnSuccessStyle, padding: '5px 10px', fontSize: '12px' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.28)'}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.16)'}
                               >
                                 Salvar
                               </button>
                               <button
                                 onClick={cancelarEdicaoEmbalagem}
                                 style={{ ...btnNeutralStyle, padding: '5px 10px', fontSize: '12px' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
                               >
                                 Cancelar
                               </button>
@@ -716,7 +860,7 @@ function App() {
                       return (
                         <tr key={emb.id}>
                           <td style={tableCellStyle}>#{emb.id}</td>
-                          <td style={tableCellStyle}>{emb.nome}</td>
+                          <td className="col-wrap" style={tableCellStyle}>{emb.nome}</td>
                           <td style={tableCellStyle}>{formatarMoeda(emb.custo_pacote)}</td>
                           <td style={tableCellStyle}>{emb.qtd_unidades} un.</td>
                           <td style={{ ...tableCellStyle, color: colors.cyan, fontWeight: 'bold' }}>{formatarMoeda(emb.custo_pacote / emb.qtd_unidades)}</td>
@@ -726,16 +870,12 @@ function App() {
                                 <button
                                   onClick={() => iniciarEdicaoEmbalagem(emb)}
                                   style={{ ...btnNeutralStyle, padding: '5px 10px', fontSize: '12px' }}
-                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
-                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
                                 >
                                   <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Pencil size={12} /> Editar</span>
                                 </button>
                                 <button
                                   onClick={() => excluirEmbalagem(emb.id, emb.nome)}
                                   style={{ ...btnDangerStyle, padding: '5px 10px', fontSize: '12px' }}
-                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.28)'}
-                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.14)'}
                                 >
                                   Excluir
                                 </button>
@@ -895,8 +1035,6 @@ function App() {
                   <button
                     type="submit"
                     style={btnPurpleStyle}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.purpleHover}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.purple}
                   >
                     Salvar Plataforma
                   </button>
@@ -978,8 +1116,6 @@ function App() {
                                 <button
                                   onClick={() => setEditandoPlataformaModal(plat)}
                                   style={{ ...btnNeutralStyle, padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#334155'}
-                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)'}
                                 >
                                   <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Pencil size={12} /> Editar</span>
                                 </button>
@@ -996,8 +1132,6 @@ function App() {
                                     }
                                   }}
                                   style={{ ...btnDangerStyle, padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
-                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.28)'}
-                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.14)'}
                                 >
                                   Excluir
                                 </button>
@@ -1025,7 +1159,7 @@ function App() {
             <MessageBanner mensagem={mensagem} />
 
             {!podeEditar ? (
-              <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.amber}` }}>
+              <div style={{ ...cardStyle }}>
                 <h3 style={{ ...cardTitleStyle, display: "inline-flex", alignItems: "center", gap: "8px" }}><Lock size={18} /> Acesso Restrito ao Perfil Leitor</h3>
                 <p style={{ color: colors.textSecondary, margin: '8px 0 0 0', fontSize: '14px' }}>
                   Sua conta possui perfil <strong>Leitor (Visualizador)</strong>. Para cadastrar novas embalagens, alterar custos de etiqueta ou cadastrar produtos, solicite autorização a um Administrador.
@@ -1033,7 +1167,7 @@ function App() {
               </div>
             ) : (
               <div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px', alignItems: 'start' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '24px', marginBottom: '24px', alignItems: 'start' }}>
               <CollapsibleCard
                 title="Nova Embalagem"
                 description="Caixas, sacos ou envelopes usados para enviar os produtos."
@@ -1046,8 +1180,6 @@ function App() {
                   <button
                     type="submit"
                     style={btnStyle}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.28)'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.16)'}
                   >
                     Salvar Embalagem
                   </button>
@@ -1066,8 +1198,6 @@ function App() {
                   <button
                     type="submit"
                     style={btnSuccessStyle}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.28)'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.16)'}
                   >
                     Atualizar Custo
                   </button>
@@ -1075,7 +1205,7 @@ function App() {
               </CollapsibleCard>
             </div>
 
-            <div style={{ ...cardStyle, marginBottom: '24px', borderLeft: `4px solid ${colors.accent}` }}>
+            <div style={{ ...cardStyle, marginBottom: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
                 <div>
                   <h3 style={{ ...cardTitleStyle, margin: 0, display: "inline-flex", alignItems: "center", gap: "8px" }}><PackagePlus size={18} /> Cadastro de Novo Produto</h3>
@@ -1193,8 +1323,6 @@ function App() {
                 <button
                   type="submit"
                   style={{ ...btnStyle, padding: '12px 24px', fontSize: '15px', width: '100%' }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.accentHover}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = colors.accent}
                 >
                   <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", justifyContent: "center" }}><CheckCircle2 size={16} /> Finalizar Cadastro do Produto</span>
                 </button>
@@ -1222,7 +1350,7 @@ function App() {
                 alignItems: 'center',
               }}
             >
-              <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textMuted, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textMuted, marginRight: '4px' }}>
                 Estoque:
               </span>
 
@@ -1239,9 +1367,8 @@ function App() {
                   fontSize: '13.5px',
                   cursor: 'pointer',
                   border: `1px solid ${colors.accent}`,
-                  backgroundColor: 'rgba(59, 130, 246, 0.16)',
-                  color: '#60a5fa',
-                  transition: 'all 0.15s ease-in-out',
+                  backgroundColor: 'color-mix(in srgb, var(--accent) 16%, transparent)',
+                  color: 'var(--accent-text)',
                 }}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Package size={16} /> Produtos</span>
@@ -1262,7 +1389,6 @@ function App() {
                   border: `1px solid ${colors.border}`,
                   backgroundColor: colors.bgCard,
                   color: colors.textSecondary,
-                  transition: 'all 0.15s ease-in-out',
                 }}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Archive size={16} /> Almoxarifado</span>
@@ -1273,11 +1399,11 @@ function App() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
                   <h3 style={{ ...cardTitleStyle, marginBottom: 0, fontSize: '16px' }}>Produtos Cadastrados</h3>
-                  <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: colors.accent, border: `1px solid ${colors.borderStrong}`, padding: '2px 8px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 600 }}>
+                  <span style={{ backgroundColor: 'color-mix(in srgb, var(--accent) 15%, transparent)', color: colors.accent, border: `1px solid ${colors.borderStrong}`, padding: '2px 8px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 600 }}>
                     {produtosFiltrados.length} {produtosFiltrados.length === 1 ? 'SKU' : 'SKUs'} {buscaProduto || filtroStatus !== 'ativos' ? `(filtrado de ${produtosDetalhados.length})` : ''}
                   </span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 600 }}>
-                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#60a5fa', display: 'inline-block' }}></span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'color-mix(in srgb, var(--accent) 12%, transparent)', color: 'var(--accent-text)', border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)', padding: '2px 8px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 600 }}>
+                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'var(--accent-text)', display: 'inline-block' }}></span>
                     Cross-docking
                   </span>
                 </div>
@@ -1293,14 +1419,13 @@ function App() {
                         fontSize: '11.5px',
                         fontWeight: 600,
                         borderRadius: '6px',
-                        border: filtroStatus === 'ativos' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
+                        border: filtroStatus === 'ativos' ? '1px solid color-mix(in srgb, var(--positive) 40%, transparent)' : '1px solid transparent',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: filtroStatus === 'ativos' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
-                        color: filtroStatus === 'ativos' ? '#34d399' : colors.textMuted,
-                        transition: '0.15s'
+                        backgroundColor: filtroStatus === 'ativos' ? 'color-mix(in srgb, var(--positive) 18%, transparent)' : 'transparent',
+                        color: filtroStatus === 'ativos' ? 'var(--positive)' : colors.textMuted,
                       }}
                     >
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><CheckCircle size={12} /> Ativos</span>
@@ -1314,14 +1439,13 @@ function App() {
                         fontSize: '11.5px',
                         fontWeight: 600,
                         borderRadius: '6px',
-                        border: filtroStatus === 'inativos' ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid transparent',
+                        border: filtroStatus === 'inativos' ? '1px solid color-mix(in srgb, var(--warning) 40%, transparent)' : '1px solid transparent',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: filtroStatus === 'inativos' ? 'rgba(245, 158, 11, 0.18)' : 'transparent',
-                        color: filtroStatus === 'inativos' ? '#fbbf24' : colors.textMuted,
-                        transition: '0.15s'
+                        backgroundColor: filtroStatus === 'inativos' ? 'color-mix(in srgb, var(--warning) 18%, transparent)' : 'transparent',
+                        color: filtroStatus === 'inativos' ? 'var(--warning)' : colors.textMuted,
                       }}
                     >
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><PauseCircle size={12} /> Pausados</span>
@@ -1335,14 +1459,13 @@ function App() {
                         fontSize: '11.5px',
                         fontWeight: 600,
                         borderRadius: '6px',
-                        border: filtroStatus === 'todos' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
+                        border: filtroStatus === 'todos' ? '1px solid color-mix(in srgb, var(--accent) 40%, transparent)' : '1px solid transparent',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: filtroStatus === 'todos' ? 'rgba(59, 130, 246, 0.18)' : 'transparent',
-                        color: filtroStatus === 'todos' ? '#60a5fa' : colors.textMuted,
-                        transition: '0.15s'
+                        backgroundColor: filtroStatus === 'todos' ? 'color-mix(in srgb, var(--accent) 18%, transparent)' : 'transparent',
+                        color: filtroStatus === 'todos' ? 'var(--accent-text)' : colors.textMuted,
                       }}
                     >
                       Todos
@@ -1442,22 +1565,21 @@ function App() {
                             backgroundColor: linhaExpandida === item.sku ? colors.bgCardAlt : 'transparent',
                             position: 'relative',
                             zIndex: isMenuAberto ? 100 : 1,
-                            transition: '0.2s'
                           }}>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 {item.ativo === false ? (
-                                  <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.2)', color: colors.amber, padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>PAUSADO</span>
+                                  <span style={{ fontSize: '10px', backgroundColor: 'color-mix(in srgb, var(--warning) 20%, transparent)', color: colors.amber, padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>PAUSADO</span>
                                 ) : null}
                                 <strong>{item.sku}</strong>
                               </div>
                             </td>
-                            <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{item.nome}</td>
+                            <td className="col-wrap" style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{item.nome}</td>
                             <td style={{ ...tableCellStyle, opacity: item.ativo === false ? 0.65 : 1 }}>{formatarMoeda(item.custo_produto)}</td>
                             <td style={{
                               ...tableCellStyle,
                               opacity: item.ativo === false ? 0.65 : 1,
-                              color: item.cross_docking ? '#60a5fa' : (item.quantidade_estoque === 0 ? '#f87171' : '#34d399'),
+                              color: item.cross_docking ? 'var(--accent-text)' : (item.quantidade_estoque === 0 ? 'var(--negative)' : 'var(--positive)'),
                               fontWeight: 'bold'
                             }}>
                               {item.quantidade_estoque} un.
@@ -1470,9 +1592,9 @@ function App() {
                                 const mPct = shopee.margem_final * 100;
                                 const isAlto = mPct >= 20;
                                 const isMedio = mPct >= 10 && mPct < 20;
-                                const bg = isAlto ? 'rgba(16, 185, 129, 0.18)' : isMedio ? 'rgba(245, 158, 11, 0.18)' : 'rgba(239, 68, 68, 0.18)';
-                                const textCol = isAlto ? '#34d399' : isMedio ? '#fbbf24' : '#f87171';
-                                const borderCol = isAlto ? 'rgba(16, 185, 129, 0.35)' : isMedio ? 'rgba(245, 158, 11, 0.35)' : 'rgba(239, 68, 68, 0.35)';
+                                const bg = isAlto ? 'color-mix(in srgb, var(--positive) 18%, transparent)' : isMedio ? 'color-mix(in srgb, var(--warning) 18%, transparent)' : 'color-mix(in srgb, var(--negative) 18%, transparent)';
+                                const textCol = isAlto ? 'var(--positive)' : isMedio ? 'var(--warning)' : 'var(--negative)';
+                                const borderCol = isAlto ? 'color-mix(in srgb, var(--positive) 35%, transparent)' : isMedio ? 'color-mix(in srgb, var(--warning) 35%, transparent)' : 'color-mix(in srgb, var(--negative) 35%, transparent)';
 
                                 return (
                                   <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
@@ -1506,7 +1628,7 @@ function App() {
                                         fontSize: '12px',
                                         fontWeight: 500,
                                         borderRadius: '6px',
-                                        border: '1px solid #334155',
+                                        border: '1px solid var(--border-strong)',
                                         cursor: 'pointer',
                                         whiteSpace: 'nowrap',
                                         display: 'inline-flex',
@@ -1514,28 +1636,15 @@ function App() {
                                         gap: '4px',
                                         height: '28px',
                                         lineHeight: 1,
-                                        backgroundColor: isMenuAberto ? '#334155' : 'rgba(30, 41, 59, 0.75)',
-                                        color: isMenuAberto ? '#ffffff' : '#cbd5e1',
-                                        transition: '0.15s'
-                                      }}
-                                      onMouseEnter={e => {
-                                        if (!isMenuAberto) {
-                                          e.currentTarget.style.backgroundColor = '#334155';
-                                          e.currentTarget.style.color = '#ffffff';
-                                        }
-                                      }}
-                                      onMouseLeave={e => {
-                                        if (!isMenuAberto) {
-                                          e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.75)';
-                                          e.currentTarget.style.color = '#cbd5e1';
-                                        }
+                                        backgroundColor: isMenuAberto ? 'var(--border-strong)' : 'var(--surface-neutral)',
+                                        color: isMenuAberto ? 'var(--text-primary)' : 'var(--text-secondary)',
                                       }}
                                     >
                                       <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Settings size={12} /> Ações <ChevronDown size={11} /></span>
                                     </button>
 
                                     {isMenuAberto && (
-                                      <div
+                                      <div className="popover popover-right"
                                         style={{
                                           position: 'absolute',
                                           right: 0,
@@ -1544,7 +1653,7 @@ function App() {
                                           backgroundColor: colors.bgCard,
                                           border: `1px solid ${colors.borderStrong}`,
                                           borderRadius: '8px',
-                                          boxShadow: '0 10px 30px rgba(0,0,0,0.85)',
+                                          boxShadow: 'var(--shadow-lg)',
                                           zIndex: 1000,
                                           minWidth: '160px',
                                           padding: '4px 0',
@@ -1567,10 +1676,7 @@ function App() {
                                             alignItems: 'center',
                                             gap: '8px',
                                             width: '100%',
-                                            transition: '0.15s'
                                           }}
-                                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)'}
-                                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
                                           <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Pencil size={12} /> Editar</span>
                                         </button>
@@ -1590,10 +1696,7 @@ function App() {
                                             alignItems: 'center',
                                             gap: '8px',
                                             width: '100%',
-                                            transition: '0.15s'
                                           }}
-                                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.15)'}
-                                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
                                           {item.ativo === false ? <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Play size={12} /> Ativar Produto</span> : <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Pause size={12} /> Pausar Produto</span>}
                                         </button>
@@ -1606,7 +1709,7 @@ function App() {
                                             padding: '8px 14px',
                                             backgroundColor: 'transparent',
                                             border: 'none',
-                                            color: '#f87171',
+                                            color: 'var(--negative)',
                                             fontSize: '12.5px',
                                             fontWeight: 500,
                                             textAlign: 'left',
@@ -1615,10 +1718,7 @@ function App() {
                                             alignItems: 'center',
                                             gap: '8px',
                                             width: '100%',
-                                            transition: '0.15s'
                                           }}
-                                          onMouseEnter={e => e.currentTarget.style.backgroundColor = colors.dangerBg}
-                                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
                                           <Trash2 size={13} /> Excluir
                                         </button>
@@ -1634,7 +1734,7 @@ function App() {
                                     fontSize: '12px',
                                     fontWeight: 600,
                                     borderRadius: '6px',
-                                    border: '1px solid rgba(59, 130, 246, 0.35)',
+                                    border: '1px solid color-mix(in srgb, var(--accent) 35%, transparent)',
                                     cursor: 'pointer',
                                     whiteSpace: 'nowrap',
                                     display: 'inline-flex',
@@ -1642,19 +1742,8 @@ function App() {
                                     gap: '4px',
                                     height: '28px',
                                     lineHeight: 1,
-                                    backgroundColor: linhaExpandida === item.sku ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.14)',
-                                    color: '#60a5fa',
-                                    transition: '0.15s'
-                                  }}
-                                  onMouseEnter={e => {
-                                    e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.28)';
-                                    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.6)';
-                                    e.currentTarget.style.color = '#93c5fd';
-                                  }}
-                                  onMouseLeave={e => {
-                                    e.currentTarget.style.backgroundColor = linhaExpandida === item.sku ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.14)';
-                                    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.35)';
-                                    e.currentTarget.style.color = '#60a5fa';
+                                    backgroundColor: linhaExpandida === item.sku ? 'color-mix(in srgb, var(--accent) 30%, transparent)' : 'color-mix(in srgb, var(--accent) 14%, transparent)',
+                                    color: 'var(--accent-text)',
                                   }}
                                 >
                                   {linhaExpandida === item.sku ? 'Ocultar' : '+ Info'}
@@ -1666,9 +1755,9 @@ function App() {
                           {linhaExpandida === item.sku && (
                             <tr>
                               <td colSpan={7} style={{ padding: '0', borderBottom: `1px solid ${colors.border}` }}>
-                                <div style={{ padding: '22px', backgroundColor: colors.bgCardAlt }}>
+                                <div className="row-expand" style={{ padding: '22px', backgroundColor: colors.bgCardAlt }}>
                                   {!item.analises_plataformas || item.analises_plataformas.length === 0 ? (
-                                     <p style={{ color: '#f87171' }}>Nenhuma plataforma vinculada a este produto.</p>
+                                     <p style={{ color: 'var(--negative)' }}>Nenhuma plataforma vinculada a este produto.</p>
                                   ) : (
                                       item.analises_plataformas.map((ana: any, index: number) => (
                                         <div key={index} style={{ marginBottom: '16px', borderBottom: `1px solid ${colors.border}`, paddingBottom: '16px' }}>
@@ -1677,29 +1766,29 @@ function App() {
                                           </h4>
 
                                           <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>ROAS Mín.</p><strong style={{ color: '#e2e8f0' }}>{formatarNumero(ana.roas_minimo)}</strong></div>
-                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Plat.</p><strong style={{ color: '#EE6C6D' }}>{formatarMoeda(ana.taxa_plataforma_real)}</strong></div>
-                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Fixa</p><strong style={{ color: '#EE6C6D' }}>{formatarMoeda(ana.taxa_fixa)}</strong></div>
-                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Emb.</p><strong style={{ color: '#EE6C6D' }}>{formatarMoeda(ana.custo_embalagem)}</strong></div>
-                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Etiq.</p><strong style={{ color: '#EE6C6D' }}>{formatarMoeda(ana.custo_etiqueta)}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>ROAS Mín.</p><strong style={{ color: 'var(--text-primary)' }}>{formatarNumero(ana.roas_minimo)}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Plat.</p><strong style={{ color: 'var(--negative)' }}>{formatarMoeda(ana.taxa_plataforma_real)}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Taxa Fixa</p><strong style={{ color: 'var(--negative)' }}>{formatarMoeda(ana.taxa_fixa)}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Emb.</p><strong style={{ color: 'var(--negative)' }}>{formatarMoeda(ana.custo_embalagem)}</strong></div>
+                                            <div><p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '12.5px' }}>Custo Etiq.</p><strong style={{ color: 'var(--negative)' }}>{formatarMoeda(ana.custo_etiqueta)}</strong></div>
 
                                             <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
-                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custo Total</p>
+                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px' }}>Custo Total</p>
                                                <strong style={{ color: colors.amber, fontSize: '16px' }}>{formatarMoeda(ana.custo_total)}</strong>
                                             </div>
 
                                             <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
-                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Preço Venda</p>
+                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px' }}>Preço Venda</p>
                                                <strong style={{ color: colors.cyan, fontSize: '16px' }}>{formatarMoeda(item.preco_venda)}</strong>
                                             </div>
 
                                             <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
-                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Margem</p>
+                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px' }}>Margem</p>
                                                <strong style={{ color: ana.margem_final > 0 ? colors.successText : colors.danger, fontSize: '16px' }}>{formatarNumero(ana.margem_final * 100)}%</strong>
                                             </div>
 
                                             <div style={{ borderLeft: `2px solid ${colors.borderStrong}`, paddingLeft: '20px' }}>
-                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lucro Líquido</p>
+                                               <p style={{ margin: '0 0 5px 0', color: colors.textSecondary, fontSize: '11.5px' }}>Lucro Líquido</p>
                                                <strong style={{ color: ana.lucro_liquido > 0 ? colors.success : colors.danger, fontSize: '18px' }}>{formatarMoeda(ana.lucro_liquido)}</strong>
                                             </div>
                                           </div>
@@ -1794,7 +1883,8 @@ function App() {
             abaInicial={view === 'tiktok' ? 'tiktok' : 'shopee'}
           />
         )}
-      </div>
+        </div>
+      </main>
 
       {produtoParaEditar && (
         <ModalEditarProduto

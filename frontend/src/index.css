@@ -1,13 +1,145 @@
+/* =========================================================
+   SKOLD STOCK — FUNDAÇÃO VISUAL (linguagem inspirada no Mercury)
+   Sobriedade: superfícies claras, bordas finas, um único
+   acento índigo, pesos de fonte contidos e números tabulares.
+   Os estilos inline (theme.ts) apontam para os tokens abaixo;
+   o tema escuro só redefine os tokens.
+   ========================================================= */
+
 @font-face {
   font-family: 'Rostex';
   src: url('/Rostex.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
-.brand-title {
-  font-family: 'Rostex', 'Inter', sans-serif !important;
-  letter-spacing: 0.04em;
+/* ---------- Tema claro (padrão) ---------- */
+:root {
+  color-scheme: light;
+
+  --bg-app: #f7f7f9;
+  --bg-sidebar: #f7f7f9;
+  --bg-card: #ffffff;
+  --bg-sunken: #f3f3f6;
+  --bg-input: #ffffff;
+  --bg-elevated: #ffffff;
+
+  --border: #e8e8ee;
+  --border-strong: #d9d9e2;
+
+  --text-primary: #1c1c24;
+  --text-secondary: #5d5d6f;
+  --text-muted: #8a8a9b;
+
+  --accent: #5266eb;
+  --accent-hover: #4255d9;
+  --accent-text: #4a5be0;
+  --accent-border: #4558de;
+  --on-accent: #ffffff;
+
+  --positive: #11805a;
+  --positive-bg: #edf8f3;
+  --positive-border: #c3e7d5;
+  --negative: #cc3a3d;
+  --negative-bg: #fdf1f1;
+  --negative-border: #f2cbcc;
+  --warning: #a35f00;
+  --purple: #7351e2;
+  --info: #1573ad;
+
+  --surface-neutral: #f1f1f5;
+  --surface-neutral-hover: #e9e9ef;
+
+  --scrim: rgba(22, 22, 34, 0.34);
+  --material: rgba(247, 247, 249, 0.82);
+  --scrollbar: #d3d3dc;
+  --skeleton-a: #ececf1;
+  --skeleton-b: #f6f6f9;
+
+  --nav-active-bg: #ffffff;
+  --nav-active-shadow: 0 1px 2px rgba(22, 22, 44, 0.06), 0 0 0 1px rgba(22, 22, 44, 0.05);
+
+  --shadow-card: 0 1px 2px rgba(22, 22, 44, 0.04);
+  --shadow-input: 0 1px 2px rgba(22, 22, 44, 0.04);
+  --shadow-btn-primary: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(45, 55, 150, 0.28);
+  --shadow-lg: 0 24px 48px -12px rgba(22, 22, 44, 0.2), 0 2px 6px rgba(22, 22, 44, 0.06);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Curvas fortes — nada de ease-in em UI */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --dur-press: 140ms;
+  --dur-fast: 160ms;
+  --dur-base: 240ms;
+  --dur-sheet: 380ms;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --tabbar-h: 60px;
+}
+
+/* ---------- Tema escuro ---------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-app: #0f0f13;
+  --bg-sidebar: #0f0f13;
+  --bg-card: #17171c;
+  --bg-sunken: #121216;
+  --bg-input: #121216;
+  --bg-elevated: #1d1d23;
+
+  --border: #25252d;
+  --border-strong: #32323c;
+
+  --text-primary: #ececf1;
+  --text-secondary: #a3a3b2;
+  --text-muted: #6f6f7f;
+
+  --accent: #5d6ff0;
+  --accent-hover: #6f80f4;
+  --accent-text: #9ba7ff;
+  --accent-border: #7182f5;
+  --on-accent: #ffffff;
+
+  --positive: #3fcf93;
+  --positive-bg: rgba(63, 207, 147, 0.09);
+  --positive-border: rgba(63, 207, 147, 0.26);
+  --negative: #f2767c;
+  --negative-bg: rgba(242, 118, 124, 0.09);
+  --negative-border: rgba(242, 118, 124, 0.28);
+  --warning: #f0b450;
+  --purple: #ab96ff;
+  --info: #62c3f0;
+
+  --surface-neutral: #1e1e25;
+  --surface-neutral-hover: #26262e;
+
+  --scrim: rgba(0, 0, 0, 0.6);
+  --material: rgba(15, 15, 19, 0.8);
+  --scrollbar: #34343e;
+  --skeleton-a: #1c1c22;
+  --skeleton-b: #25252d;
+
+  --nav-active-bg: #1d1d23;
+  --nav-active-shadow: 0 0 0 1px #2a2a33;
+
+  --shadow-card: none;
+  --shadow-input: none;
+  --shadow-btn-primary: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --shadow-lg: 0 24px 60px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px #2a2a33;
 }
 
 * {
@@ -16,24 +148,184 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
-  width: 100vw;
-  min-height: 100vh;
-  background-color: #0f172a; /* Fundo principal escuro */
-  color: #f8fafc; /* Texto claro padrão */
-  font-family: 'Inter', sans-serif;
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior: none;
+  scrollbar-color: var(--scrollbar) transparent;
 }
 
-/* Estilização moderna e padronizada das setas de caixas <select> */
+html, body, #root {
+  width: 100%;
+  min-height: 100%;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.45;
+  font-feature-settings: 'cv11', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-feature-settings: inherit;
+}
+
+.brand-title {
+  font-family: 'Rostex', var(--font-sans) !important;
+  letter-spacing: 0.04em;
+}
+
+/* Números alinham em colunas (estoque, preços, margens) */
+table, .tabular, strong {
+  font-variant-numeric: tabular-nums;
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* ---------------------------------------------------------
+   INTERAÇÃO — controles respondem no toque, não na soltura
+   --------------------------------------------------------- */
+button,
+a,
+[role="button"],
+.link-btn {
+  touch-action: manipulation;
+}
+
+button,
+[role="button"],
+.nav-item,
+.tab-item,
+.link-btn {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+button {
+  font: inherit;
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    filter var(--dur-fast) ease,
+    background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    opacity var(--dur-fast) ease;
+}
+
+/* Feedback de pressão: imediato e sutil */
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.5;
+}
+
+/* Hover só onde existe mouse — no toque ele "gruda".
+   filter funciona por cima da cor inline, em qualquer tema. */
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):hover {
+    filter: brightness(0.96);
+  }
+
+  :root[data-theme="dark"] button:not(:disabled):hover {
+    filter: brightness(1.18);
+  }
+
+  div[style*="cursor: pointer"]:hover,
+  tr[style*="cursor: pointer"]:hover > td {
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--text-primary) 5%, transparent),
+      color-mix(in srgb, var(--text-primary) 5%, transparent)
+    );
+  }
+
+  tbody tr:hover > td {
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--text-primary) 2.5%, transparent),
+      color-mix(in srgb, var(--text-primary) 2.5%, transparent)
+    );
+  }
+
+  .link-btn:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* Foco visível só para teclado */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+input,
+select,
+textarea {
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent) !important;
+  outline: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 2px 0;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Setas padronizadas nas caixas <select> */
 select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8a9b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
-  background-position: right 14px center;
+  background-position: right 12px center;
   background-size: 14px;
-  padding-right: 38px !important;
+  padding-right: 36px !important;
   cursor: pointer;
 }
 
@@ -41,219 +333,892 @@ select::-ms-expand {
   display: none;
 }
 
-/* =========================================================
-   RESPONSIVIDADE MOBILE
-   Como a maior parte dos estilos do app vem de inline styles
-   (theme.ts), aqui usamos classes + !important só onde é
-   necessário sobrepor um inline style (largura/padding fixos).
-   ========================================================= */
+:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
 
-/* Botão hambúrguer: escondido no desktop por padrão */
-.mobile-menu-toggle {
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Scrollbars discretas (desktop) */
+@media (pointer: fine) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar);
+    border-radius: 10px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+/* ---------------------------------------------------------
+   SHELL — barra lateral (desktop) / topo + abas (celular)
+   A lateral se funde ao fundo, como no Mercury: sem caixa,
+   sem borda pesada. O item ativo é uma "pílula" elevada.
+   --------------------------------------------------------- */
+.app-sidebar {
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+}
+
+.app-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 10px 10px;
+}
+
+.app-sidebar-brand img,
+.brand-mark {
+  object-fit: contain;
+  flex-shrink: 0;
+  background: #15151d;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 2px rgba(22, 22, 44, 0.2);
+}
+
+.app-sidebar-brand img {
+  width: 30px;
+  height: 30px;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+:root[data-theme="dark"] .app-sidebar-brand img,
+:root[data-theme="dark"] .brand-mark {
+  background: #1f1f27;
+}
+
+.app-sidebar-brand h1 {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.nav-group-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 18px 10px 4px;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  margin-bottom: 1px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    transform var(--dur-press) var(--ease-out);
+}
+
+.nav-item svg {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  color: var(--text-muted);
+  transition: color var(--dur-fast) ease;
+}
+
+.nav-item:active {
+  transform: scale(0.98);
+}
+
+.nav-item[aria-current="page"] {
+  background-color: var(--nav-active-bg);
+  box-shadow: var(--nav-active-shadow);
+  color: var(--text-primary);
+}
+
+.nav-item[aria-current="page"] svg {
+  color: var(--accent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-item:not([aria-current="page"]):hover {
+    background-color: color-mix(in srgb, var(--text-primary) 5%, transparent);
+    color: var(--text-primary);
+  }
+}
+
+.user-card {
+  margin-top: auto;
+  padding: 12px 4px 2px;
+  border-top: 1px solid var(--border);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-card));
+  color: var(--accent-text);
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.role-badge {
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.sidebar-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.logout-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-input);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .logout-btn:hover {
+    filter: none !important;
+    color: var(--negative);
+    border-color: var(--negative-border);
+  }
+}
+
+/* Alternador de tema: controle segmentado */
+.theme-switch {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-md);
+  background: var(--surface-neutral);
+  border: 1px solid var(--border);
+}
+
+.theme-switch button {
+  width: 32px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.theme-switch button[aria-pressed="true"] {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--nav-active-shadow);
+}
+
+/* Troca de tema: cross-fade suave (View Transitions) em vez de "piscar" */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 280ms;
+  animation-timing-function: ease;
+}
+
+/* Botão de recolher: só o ícone, no canto do cabeçalho do menu */
+.sidebar-toggle {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-toggle:hover {
+    filter: none !important;
+    background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+    color: var(--text-primary);
+  }
+}
+
+/* Dica flutuante do menu lateral (fora da barra, para não ser cortada) */
+.sidebar-tooltip {
+  position: fixed;
+  z-index: 3000;
+  transform: translateY(-50%);
+  transform-origin: left center;
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--text-primary);
+  color: var(--bg-card);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--shadow-lg);
+  animation: tipIn 125ms var(--ease-out) both;
+}
+
+.sidebar-tooltip.imediata {
+  animation: none;
+}
+
+@keyframes tipIn {
+  from {
+    opacity: 0;
+    transform: translate(-4px, -50%) scale(0.97);
+  }
+}
+
+/* Tabelas no desktop: rolagem só vertical. Os números nunca quebram linha;
+   a coluna de nome/descrição (.col-wrap) é a que cede espaço e quebra. */
+@media (min-width: 861px) {
+  .table-scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .table-scroll table {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .table-scroll th,
+  .table-scroll td {
+    white-space: nowrap;
+  }
+
+  .table-scroll .col-wrap,
+  .table-scroll .col-wrap * {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  .table-scroll .col-wrap {
+    width: 100%;
+    min-width: 160px;
+  }
+}
+
+@media (min-width: 861px) {
+  .app-sidebar {
+    overflow: hidden;
+    transition: width var(--dur-base) var(--ease-out);
+  }
+
+  .nav-item {
+    white-space: nowrap;
+  }
+
+  /* Trilho de ícones */
+  [data-collapsed="true"] .app-sidebar-brand {
+    flex-direction: column;
+    gap: 10px;
+    padding: 2px 0 6px;
+  }
+
+  [data-collapsed="true"] .sidebar-toggle {
+    margin-left: 0;
+  }
+
+  [data-collapsed="true"] .app-sidebar-brand h1,
+  [data-collapsed="true"] .nav-item span,
+  [data-collapsed="true"] .user-info,
+  [data-collapsed="true"] .logout-btn span {
+    display: none;
+  }
+
+  [data-collapsed="true"] .nav-group-label {
+    font-size: 0;
+    height: 1px;
+    margin: 12px 10px;
+    background: var(--border);
+  }
+
+  [data-collapsed="true"] .nav-item {
+    justify-content: center;
+    padding: 9px 0;
+  }
+
+  [data-collapsed="true"] .user-card > div:first-child {
+    justify-content: center;
+  }
+
+  [data-collapsed="true"] .sidebar-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  [data-collapsed="true"] .theme-switch {
+    flex-direction: column;
+  }
+
+  [data-collapsed="true"] .logout-btn {
+    flex: none;
+    width: 38px;
+    padding: 7px 0;
+  }
+}
+
+/* Elementos só do celular: escondidos no desktop */
+.mobile-menu-toggle,
+.nav-scrim,
+.tab-bar,
+.drawer-close {
   display: none;
 }
 
-/* Sidebar Nav no Desktop: flex-1 com rolagem interna independente */
 @media (min-width: 861px) {
   .app-sidebar-nav {
     flex: 1;
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
-    padding-right: 4px;
+    margin: 0 -6px;
+    padding: 0 6px 2px;
   }
 
   .app-sidebar-nav::-webkit-scrollbar {
     width: 4px;
   }
-  .app-sidebar-nav::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 4px;
+}
+
+.table-scroll {
+  width: 100%;
+  max-height: calc(100dvh - 260px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ---------------------------------------------------------
+   MOTION
+   --------------------------------------------------------- */
+/* Troca de tela: as seções entram em cascata (35ms entre cada), de cima
+   para baixo. Rápido o bastante para não atrasar a leitura. */
+.page-enter > * > *,
+.stagger > * {
+  animation: rise 280ms var(--ease-out) both;
+}
+
+.page-enter > * > *:nth-child(2) { animation-delay: 35ms; }
+.page-enter > * > *:nth-child(3) { animation-delay: 70ms; }
+.page-enter > * > *:nth-child(4) { animation-delay: 105ms; }
+.page-enter > * > *:nth-child(5) { animation-delay: 140ms; }
+.page-enter > * > *:nth-child(n+6) { animation-delay: 175ms; }
+
+/* Grupos de cards (KPIs) entram um a um, depois do bloco que os contém */
+.stagger > *:nth-child(1) { animation-delay: 60ms; }
+.stagger > *:nth-child(2) { animation-delay: 100ms; }
+.stagger > *:nth-child(3) { animation-delay: 140ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(n+5) { animation-delay: 220ms; }
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
 }
 
-/* Tabelas: sempre dentro de um wrapper com scroll horizontal,
-   assim nunca quebram o layout, mesmo no desktop com telas
-   estreitas ou zoom alto. */
-.table-scroll {
-  width: 100%;
-  max-height: calc(100vh - 260px);
-  overflow-y: auto;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+/* Valor que chega depois do skeleton: aparece focando, sem "pular" */
+.value-in {
+  display: inline-block;
+  animation: valueIn 320ms var(--ease-out) both;
 }
 
-.table-scroll::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+@keyframes valueIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(3px);
+  }
 }
-.table-scroll::-webkit-scrollbar-track {
-  background: #0b1220;
+
+/* Dropdowns e menus: nascem do gatilho (origem no topo), nunca do centro */
+.popover {
+  transform-origin: top left;
+  animation: popIn 170ms var(--ease-out) both;
 }
-.table-scroll::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
+
+.popover-right {
+  transform-origin: top right;
 }
-.table-scroll::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+/* Detalhe da linha (+ Info) desce do próprio produto */
+.row-expand {
+  animation: expandIn 220ms var(--ease-out) both;
+}
+
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* Linhas de tabela: só opacidade (dado não "anda"), cascata curta */
+.table-scroll tbody tr {
+  animation: rowIn 220ms ease both;
+}
+
+.table-scroll tbody tr:nth-child(2) { animation-delay: 15ms; }
+.table-scroll tbody tr:nth-child(3) { animation-delay: 30ms; }
+.table-scroll tbody tr:nth-child(4) { animation-delay: 45ms; }
+.table-scroll tbody tr:nth-child(5) { animation-delay: 60ms; }
+.table-scroll tbody tr:nth-child(6) { animation-delay: 75ms; }
+.table-scroll tbody tr:nth-child(7) { animation-delay: 90ms; }
+.table-scroll tbody tr:nth-child(8) { animation-delay: 105ms; }
+.table-scroll tbody tr:nth-child(n+9) { animation-delay: 120ms; }
+
+@keyframes rowIn {
+  from { opacity: 0; }
+}
+
+.banner-enter {
+  animation: bannerEnter 240ms var(--ease-out) both;
+}
+
+@keyframes bannerEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+}
+
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-base) var(--ease-out), opacity var(--dur-fast) ease;
+  opacity: 0;
+}
+
+.collapse[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapse > .collapse-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.modal-overlay {
+  animation-delay: 0ms !important;
+  background-color: var(--scrim) !important;
+  -webkit-backdrop-filter: blur(3px) !important;
+  backdrop-filter: blur(3px) !important;
+  animation: overlayIn 200ms ease both;
+  overscroll-behavior: contain;
+}
+
+.modal-panel {
+  animation-delay: 0ms !important;
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-xl) !important;
+  animation: modalIn 260ms var(--ease-out) both;
+  transform-origin: center;
+  overscroll-behavior: contain;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-box {
+  display: inline-block;
+  background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 37%, var(--skeleton-a) 63%);
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
+  border-radius: 6px;
+}
+
+/* ---------------------------------------------------------
+   CELULAR / TABLET
+   --------------------------------------------------------- */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 @media (max-width: 860px) {
-  html, body, #root {
-    width: 100%;
-    overflow-x: hidden;
-  }
-
   .app-layout {
     flex-direction: column !important;
-    width: 100% !important;
-    min-height: 100vh !important;
   }
 
-  /* Sidebar vira uma barra superior fixa com logo + hambúrguer (altura automática) */
+  /* Topo translúcido; o material fica num pseudo-elemento para não
+     virar "containing block" do menu fixo (backdrop-filter faz isso) */
   .app-sidebar {
     width: 100% !important;
     height: auto !important;
-    min-height: unset !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 10px 14px !important;
-    border-right: none !important;
-    border-bottom: 1px solid #243247;
-    position: sticky;
+    padding: calc(8px + var(--safe-top)) calc(12px + var(--safe-right)) 8px calc(14px + var(--safe-left)) !important;
+    position: sticky !important;
     top: 0;
     z-index: 100;
+    background: transparent;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .app-sidebar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--material);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    backdrop-filter: blur(20px) saturate(170%);
   }
 
   .app-sidebar-brand {
-    margin-bottom: 0 !important;
-    text-align: left !important;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .app-sidebar-brand img {
-    width: 32px !important;
-    margin-bottom: 0 !important;
-  }
-
-  .app-sidebar-brand h1 {
-    font-size: 14px !important;
+    padding: 0;
   }
 
   .mobile-menu-toggle {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    border: 1px solid #334155;
-    background: transparent;
-    color: #f1f5f9;
-    font-size: 18px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-input);
+    color: var(--text-primary);
     cursor: pointer;
     flex-shrink: 0;
   }
 
-  /* Menu de navegação algumas vezes some por padrão e aparece como dropdown */
+  /* Menu vira gaveta lateral com véu */
   .app-sidebar-nav {
-    display: none;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    width: min(84vw, 320px);
+    display: flex;
+    flex-direction: column;
+    padding: calc(14px + var(--safe-top)) 12px calc(14px + var(--safe-bottom)) calc(12px + var(--safe-left));
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateX(-104%);
+    visibility: hidden;
+    transition:
+      transform var(--dur-sheet) var(--ease-drawer),
+      visibility 0s linear var(--dur-sheet);
   }
 
   .app-sidebar-nav.open {
+    transform: translateX(0);
+    visibility: visible;
+    transition:
+      transform var(--dur-sheet) var(--ease-drawer),
+      visibility 0s;
+  }
+
+  .sidebar-toggle,
+  .sidebar-tooltip {
+    display: none;
+  }
+
+  .drawer-close {
     display: flex;
-    flex-direction: column;
-    position: absolute;
-    top: 100%;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 2px 10px;
+  }
+
+  .drawer-close button {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: none;
+    background: var(--surface-neutral);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .nav-item {
+    padding: 10px 10px;
+    font-size: 15px;
+  }
+
+  .nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background: var(--scrim);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-sheet) var(--ease-out);
+  }
+
+  .nav-scrim.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Barra de abas inferior, estilo app nativo */
+  .tab-bar {
+    display: flex;
+    position: fixed;
     left: 0;
     right: 0;
-    background-color: #111a2c;
-    padding: 12px 16px 20px;
-    border-bottom: 1px solid #243247;
-    box-shadow: 0 12px 20px -8px rgba(0,0,0,0.5);
-    max-height: calc(100vh - 60px);
-    overflow-y: auto;
+    bottom: 0;
+    z-index: 90;
+    padding: 6px calc(8px + var(--safe-right)) calc(6px + var(--safe-bottom)) calc(8px + var(--safe-left));
+    background: var(--material);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    backdrop-filter: blur(20px) saturate(170%);
+    border-top: 1px solid var(--border);
   }
 
-  /* Conteúdo da página sem margens vazias gigantes no celular */
+  .tab-item {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 48px;
+    border: none;
+    background: none;
+    border-radius: 12px;
+    color: var(--text-muted);
+    font-size: 10.5px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .tab-item span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tab-item[aria-current="page"] {
+    color: var(--accent);
+  }
+
+  .tab-item:active {
+    transform: scale(0.94);
+    background: var(--surface-neutral);
+  }
+
   .app-content {
-    padding: 14px 10px !important;
+    overflow-x: clip;
+    padding: 20px calc(14px + var(--safe-right)) calc(var(--tabbar-h) + 28px + var(--safe-bottom)) calc(14px + var(--safe-left)) !important;
     max-width: 100% !important;
     width: 100% !important;
-    flex: 1 !important;
-    box-sizing: border-box !important;
   }
 
-  /* Título da página compacto no celular */
   .app-content h2 {
-    font-size: 19px !important;
+    font-size: 22px !important;
   }
 
-  .app-content p {
-    font-size: 13px !important;
+  .app-content > .page-enter > div:first-child {
+    margin-bottom: 18px !important;
   }
 
-  /* Reduzir o espaço do cabeçalho da página no celular */
-  .app-content > div:first-child {
-    margin-bottom: 14px !important;
-  }
-
-  /* Tabelas ajustadas no celular */
   .table-scroll {
-    max-height: calc(100vh - 180px) !important;
+    max-height: calc(100dvh - 220px) !important;
   }
 
   .table-scroll table {
     min-width: 640px;
   }
 
-  /* Modals centralizados no celular */
-  div[style*="position: fixed"] > div[style*="backgroundColor"],
-  div[style*="position:fixed"] > div[style*="backgroundColor"] {
-    width: 95vw !important;
-    max-width: 95vw !important;
-    padding: 16px 12px !important;
-    max-height: 90vh !important;
+  .table-scroll td:first-child {
+    white-space: nowrap;
+  }
+
+  /* Modais viram bottom sheets */
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .modal-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92dvh !important;
     overflow-y: auto !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    padding: 22px 16px calc(20px + var(--safe-bottom)) !important;
+    animation: sheetIn var(--dur-sheet) var(--ease-drawer) both;
+  }
+
+  .modal-panel::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--border-strong);
+    margin: -10px auto 14px;
+  }
+
+  @keyframes sheetIn {
+    from { transform: translateY(100%); }
   }
 }
 
-/* =========================================================
-   ANIMATED SKELETON SHIMMER LOADING
-   ========================================================= */
-@keyframes skeletonShimmer {
-  0% {
-    background-position: -200% 0;
+/* ---------------------------------------------------------
+   ACESSIBILIDADE — movimento, transparência e contraste
+   --------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .banner-enter,
+  .modal-panel,
+  .modal-overlay,
+  .page-enter > * > *,
+  .stagger > *,
+  .value-in,
+  .popover,
+  .row-expand {
+    animation-name: fadeOnly !important;
+    animation-duration: 160ms !important;
   }
-  100% {
-    background-position: 200% 0;
+
+  .app-sidebar {
+    transition: none !important;
+  }
+
+  @keyframes fadeOnly {
+    from { opacity: 0; }
+  }
+
+  button:not(:disabled):active,
+  .nav-item:active,
+  .tab-item:active {
+    transform: none;
+  }
+
+  .app-sidebar-nav,
+  .app-sidebar-nav.open {
+    transition: visibility 0s, opacity 160ms ease !important;
+  }
+
+  .collapse {
+    transition: opacity 160ms ease;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
   }
 }
 
-.skeleton-box {
-  display: inline-block;
-  background: linear-gradient(
-    90deg,
-    rgba(30, 41, 59, 0.6) 25%,
-    rgba(51, 65, 85, 0.8) 37%,
-    rgba(30, 41, 59, 0.6) 63%
-  );
-  background-size: 400% 100%;
-  animation: skeletonShimmer 1.4s ease infinite;
-  border-radius: 6px;
+@media (prefers-reduced-transparency: reduce) {
+  .app-sidebar::before,
+  .tab-bar {
+    background: var(--bg-sidebar);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
-/* Ícone de Calendário Branco para inputs de data no tema escuro */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: brightness(0) invert(1) !important;
-  cursor: pointer !important;
-  opacity: 0.9 !important;
-}
-input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1 !important;
-}
-input[type="date"] {
-  color-scheme: dark !important;
+@media (prefers-contrast: more) {
+  :root {
+    --border: #c9c9d3;
+    --border-strong: #a9a9b6;
+    --text-secondary: #44444f;
+  }
+  :root[data-theme="dark"] {
+    --border: #3d3d48;
+    --border-strong: #4d4d5a;
+    --text-secondary: #c4c4cf;
+  }
 }

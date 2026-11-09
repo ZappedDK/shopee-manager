@@ -46,13 +46,13 @@ export function SeletorProdutoSearchable({ produtos, skuSelecionado, onSelectSku
           justifyContent: 'space-between',
           alignItems: 'center',
           cursor: 'pointer',
-          border: `1px solid ${aberto ? (colors.accent || '#3b82f6') : (colors.borderStrong || colors.border || '#374151')}`,
-          backgroundColor: colors.bgInput || colors.cardBackground || '#1f2937',
+          border: `1px solid ${aberto ? (colors.accent || 'var(--accent)') : (colors.borderStrong || colors.border || 'var(--border-strong)')}`,
+          backgroundColor: colors.bgInput || colors.cardBackground || 'var(--bg-elevated)',
           userSelect: 'none',
           boxSizing: 'border-box'
         }}
       >
-        <span style={{ color: produtoAtual ? (colors.textPrimary || '#fff') : (colors.textMuted || colors.textSecondary || '#9ca3af'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ color: produtoAtual ? (colors.textPrimary || 'var(--text-primary)') : (colors.textMuted || colors.textSecondary || 'var(--text-muted)'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '8px' }}>
           {produtoAtual ? (
             <>
               <Package size={15} style={{ flexShrink: 0, color: colors.accent }} />
@@ -62,23 +62,23 @@ export function SeletorProdutoSearchable({ produtos, skuSelecionado, onSelectSku
             'Selecione um produto...'
           )}
         </span>
-        <span style={{ color: colors.textSecondary || '#9ca3af', marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
+        <span style={{ color: colors.textSecondary || 'var(--text-muted)', marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
           {aberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </span>
       </div>
 
       {/* Painel Flutuante com busca + lista */}
       {aberto && (
-        <div
+        <div className="popover"
           style={{
             position: 'absolute',
             top: 'calc(100% + 4px)',
             left: 0,
             right: 0,
-            backgroundColor: colors.bgSidebar || colors.cardBackground || '#111827',
-            border: `1px solid ${colors.borderStrong || colors.border || '#374151'}`,
+            backgroundColor: colors.bgSidebar || colors.cardBackground || 'var(--bg-sunken)',
+            border: `1px solid ${colors.borderStrong || colors.border || 'var(--border-strong)'}`,
             borderRadius: '10px',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 1000,
             padding: '8px',
           }}
@@ -99,7 +99,7 @@ export function SeletorProdutoSearchable({ produtos, skuSelecionado, onSelectSku
                 margin: 0,
                 padding: '8px 12px 8px 32px',
                 fontSize: '13px',
-                backgroundColor: colors.bgApp || colors.background || '#030712',
+                backgroundColor: colors.bgApp || colors.background || 'var(--bg-sunken)',
                 boxSizing: 'border-box'
               }}
             />
@@ -108,7 +108,7 @@ export function SeletorProdutoSearchable({ produtos, skuSelecionado, onSelectSku
           {/* Lista de Opções */}
           <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
             {produtosFiltrados.length === 0 ? (
-              <div style={{ padding: '10px', color: colors.textMuted || '#6b7280', textAlign: 'center', fontSize: '13px' }}>
+              <div style={{ padding: '10px', color: colors.textMuted || 'var(--text-muted)', textAlign: 'center', fontSize: '13px' }}>
                 Nenhum produto encontrado
               </div>
             ) : (
@@ -127,25 +127,19 @@ export function SeletorProdutoSearchable({ produtos, skuSelecionado, onSelectSku
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '13px',
-                      backgroundColor: selecionado ? 'rgba(59,130,246,0.2)' : 'transparent',
-                      color: selecionado ? '#fff' : (colors.textPrimary || '#f3f4f6'),
+                      backgroundColor: selecionado ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+                      color: selecionado ? 'var(--text-primary)' : (colors.textPrimary || 'var(--text-primary)'),
                       fontWeight: selecionado ? 600 : 400,
                       marginBottom: '2px',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center'
                     }}
-                    onMouseEnter={(e) => {
-                      if (!selecionado) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
                   >
                     <span>
-                      <strong style={{ color: colors.accent || '#3b82f6' }}>{p.sku}</strong> — {p.nome}
+                      <strong style={{ color: colors.accent || 'var(--accent)' }}>{p.sku}</strong> — {p.nome}
                     </span>
-                    <span style={{ fontSize: '12px', color: colors.textSecondary || '#9ca3af', marginLeft: '8px' }}>
+                    <span style={{ fontSize: '12px', color: colors.textSecondary || 'var(--text-muted)', marginLeft: '8px' }}>
                       Estoque: {p.quantidade_estoque ?? 0} un.
                     </span>
                   </div>

@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { CheckCircle2, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
 import {
   pageTitleStyle, pageSubtitleStyle, messageBannerStyle, sectionGapStyle,
-  cardStyle, cardTitleStyle, cardDescStyle, colors,
+  cardStyle, cardTitleStyle, cardDescStyle,
   btnToggleClosedStyle, btnToggleOpenStyle,
 } from './theme';
 
 export function PageHeader({ title, subtitle }: { title: React.ReactNode; subtitle?: string }) {
   return (
-    <div style={{ marginBottom: '32px' }}>
+    <div style={{ marginBottom: '22px' }}>
       <h2 style={pageTitleStyle}>{title}</h2>
       {subtitle && <p style={pageSubtitleStyle}>{subtitle}</p>}
     </div>
@@ -23,7 +23,12 @@ export function MessageBanner({ mensagem }: { mensagem: string }) {
   const Icon = isError ? XCircle : (isWarning ? AlertTriangle : CheckCircle2);
 
   return (
-    <div style={{ ...messageBannerStyle(isError), display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <div
+      key={mensagem}
+      role={isError ? 'alert' : 'status'}
+      className="banner-enter"
+      style={{ ...messageBannerStyle(isError), display: 'flex', alignItems: 'center', gap: '10px' }}
+    >
       <Icon size={18} style={{ flexShrink: 0 }} />
       <span>{textoLimpo}</span>
     </div>
@@ -47,27 +52,40 @@ interface CollapsibleCardProps {
 /** Card com um botão que abre/fecha o conteúdo (formulário) — usado para deixar as telas de cadastro mais limpas. */
 export function CollapsibleCard({ icon, title, description, buttonLabel, defaultOpen = false, style, children }: CollapsibleCardProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const contentId = useId();
 
   return (
     <div style={{ ...cardStyle, ...style }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
-        <div>
+        <div style={{ minWidth: 0, flex: '1 1 260px' }}>
           <h3 style={{ ...cardTitleStyle, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
             {icon}
             <span>{title}</span>
           </h3>
-          {description && <p style={{ ...cardDescStyle, marginBottom: open ? '18px' : 0 }}>{description}</p>}
+          {description && <p style={{ ...cardDescStyle, marginBottom: 0 }}>{description}</p>}
         </div>
         <button
+          type="button"
           onClick={() => setOpen(o => !o)}
+          aria-expanded={open}
+          aria-controls={contentId}
           style={open ? btnToggleOpenStyle : btnToggleClosedStyle}
-          onMouseEnter={e => { if (!open) e.currentTarget.style.backgroundColor = 'rgba(59,130,246,0.12)'; else e.currentTarget.style.backgroundColor = colors.slateHover; }}
-          onMouseLeave={e => { if (!open) e.currentTarget.style.backgroundColor = 'transparent'; else e.currentTarget.style.backgroundColor = colors.slate; }}
         >
           {open ? 'Fechar' : buttonLabel}
+          <ChevronDown
+            size={14}
+            style={{
+              transform: open ? 'rotate(180deg)' : 'none',
+              transition: 'transform 240ms cubic-bezier(0.23, 1, 0.32, 1)',
+            }}
+          />
         </button>
       </div>
-      {open && <div>{children}</div>}
+      <div id={contentId} className="collapse" data-open={open} inert={!open}>
+        <div className="collapse-inner">
+          <div style={{ paddingTop: '20px' }}>{children}</div>
+        </div>
+      </div>
     </div>
   );
 }

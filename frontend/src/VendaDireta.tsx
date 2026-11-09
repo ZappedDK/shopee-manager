@@ -176,7 +176,7 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
             <>
               <Package size={14} style={{ color: colors.accent, flexShrink: 0 }} />
               <span>
-                <strong style={{ color: colors.accent }}>{produtoAtual.sku}</strong> — {produtoAtual.nome} (Estoque: <strong style={{ color: produtoAtual.quantidade_estoque > 0 ? '#34d399' : '#f87171' }}>{produtoAtual.quantidade_estoque} un</strong>)
+                <strong style={{ color: colors.accent }}>{produtoAtual.sku}</strong> — {produtoAtual.nome} (Estoque: <strong style={{ color: produtoAtual.quantidade_estoque > 0 ? 'var(--positive)' : 'var(--negative)' }}>{produtoAtual.quantidade_estoque} un</strong>)
               </span>
             </>
           ) : 'Selecione um produto do estoque...'}
@@ -187,7 +187,7 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
       </div>
 
       {aberto && (
-        <div
+        <div className="popover"
           style={{
             position: 'absolute',
             top: 'calc(100% + 4px)',
@@ -196,7 +196,7 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
             backgroundColor: colors.bgSidebar,
             border: `1px solid ${colors.borderStrong}`,
             borderRadius: '10px',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 1000,
             padding: '8px',
           }}
@@ -242,25 +242,19 @@ function SeletorProdutoVenda({ produtos, skuSelecionado, onSelectSku }: { produt
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '13px',
-                      backgroundColor: selecionado ? 'rgba(59,130,246,0.2)' : 'transparent',
-                      color: selecionado ? '#fff' : colors.textPrimary,
+                      backgroundColor: selecionado ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+                      color: selecionado ? 'var(--text-primary)' : colors.textPrimary,
                       fontWeight: selecionado ? 600 : 400,
                       marginBottom: '2px',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center'
                     }}
-                    onMouseEnter={(e) => {
-                      if (!selecionado) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
                   >
                     <span>
                       <strong style={{ color: colors.accent }}>{p.sku}</strong> — {p.nome}
                     </span>
-                    <span style={{ fontSize: '12px', color: semEstoque ? '#f87171' : '#34d399', fontWeight: 600, marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ fontSize: '12px', color: semEstoque ? 'var(--negative)' : 'var(--positive)', fontWeight: 600, marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {semEstoque ? (
                         <>
                           <AlertTriangle size={13} />
@@ -337,7 +331,7 @@ function SeletorPlataformaVenda({ plataformas, plataformaIdStr, onSelectPlatafor
       </div>
 
       {aberto && (
-        <div
+        <div className="popover"
           style={{
             position: 'absolute',
             top: 'calc(100% + 4px)',
@@ -346,7 +340,7 @@ function SeletorPlataformaVenda({ plataformas, plataformaIdStr, onSelectPlatafor
             backgroundColor: colors.bgSidebar,
             border: `1px solid ${colors.borderStrong}`,
             borderRadius: '10px',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 1000,
             padding: '6px',
           }}
@@ -365,19 +359,13 @@ function SeletorPlataformaVenda({ plataformas, plataformaIdStr, onSelectPlatafor
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '13px',
-                  backgroundColor: selecionado ? 'rgba(59,130,246,0.2)' : 'transparent',
-                  color: selecionado ? '#fff' : colors.textPrimary,
+                  backgroundColor: selecionado ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+                  color: selecionado ? 'var(--text-primary)' : colors.textPrimary,
                   fontWeight: selecionado ? 600 : 400,
                   marginBottom: '2px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
-                }}
-                onMouseEnter={(e) => {
-                  if (!selecionado) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
                 <span>{op.nome}</span>
@@ -411,10 +399,10 @@ function SeletorFormaPagamento({ formaPagamento, onSelectForma }: SeletorFormaPa
   }, []);
 
   const opcoes = [
-    { id: 'PIX', nome: 'PIX', icon: <Zap size={14} style={{ color: '#38bdf8' }} /> },
-    { id: 'Dinheiro', nome: 'Dinheiro', icon: <Banknote size={14} style={{ color: '#34d399' }} /> },
-    { id: 'Cartão de Crédito', nome: 'Cartão de Crédito', icon: <CreditCard size={14} style={{ color: '#a78bfa' }} /> },
-    { id: 'Cartão de Débito', nome: 'Cartão de Débito', icon: <CreditCard size={14} style={{ color: '#60a5fa' }} /> },
+    { id: 'PIX', nome: 'PIX', icon: <Zap size={14} style={{ color: 'var(--info)' }} /> },
+    { id: 'Dinheiro', nome: 'Dinheiro', icon: <Banknote size={14} style={{ color: 'var(--positive)' }} /> },
+    { id: 'Cartão de Crédito', nome: 'Cartão de Crédito', icon: <CreditCard size={14} style={{ color: 'var(--purple)' }} /> },
+    { id: 'Cartão de Débito', nome: 'Cartão de Débito', icon: <CreditCard size={14} style={{ color: 'var(--accent-text)' }} /> },
     { id: 'Outros', nome: 'Outros', icon: <RefreshCw size={14} style={{ color: colors.textMuted }} /> }
   ];
 
@@ -438,7 +426,7 @@ function SeletorFormaPagamento({ formaPagamento, onSelectForma }: SeletorFormaPa
           userSelect: 'none'
         }}
       >
-        <span style={{ color: '#60a5fa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span style={{ color: 'var(--accent-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
           {opcaoAtual?.icon}
           <span>{opcaoAtual ? opcaoAtual.nome : formaPagamento}</span>
         </span>
@@ -448,7 +436,7 @@ function SeletorFormaPagamento({ formaPagamento, onSelectForma }: SeletorFormaPa
       </div>
 
       {aberto && (
-        <div
+        <div className="popover"
           style={{
             position: 'absolute',
             top: 'calc(100% + 4px)',
@@ -457,7 +445,7 @@ function SeletorFormaPagamento({ formaPagamento, onSelectForma }: SeletorFormaPa
             backgroundColor: colors.bgSidebar,
             border: `1px solid ${colors.borderStrong}`,
             borderRadius: '10px',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 1000,
             padding: '6px',
           }}
@@ -476,19 +464,13 @@ function SeletorFormaPagamento({ formaPagamento, onSelectForma }: SeletorFormaPa
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '13px',
-                  backgroundColor: selecionado ? 'rgba(59,130,246,0.2)' : 'transparent',
-                  color: selecionado ? '#60a5fa' : colors.textPrimary,
+                  backgroundColor: selecionado ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+                  color: selecionado ? 'var(--accent-text)' : colors.textPrimary,
                   fontWeight: selecionado ? 600 : 400,
                   marginBottom: '2px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
-                }}
-                onMouseEnter={(e) => {
-                  if (!selecionado) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -666,8 +648,8 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '28px' }}>
         {/* Formulário de Baixa */}
-        <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.success}` }}>
-          <h3 style={{ ...cardTitleStyle, color: '#34d399', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ ...cardStyle }}>
+          <h3 style={{ ...cardTitleStyle, color: 'var(--positive)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <ClipboardEdit size={18} /> Dar Baixa de Venda no Estoque
           </h3>
           <p style={{ ...cardDescStyle, marginBottom: '20px' }}>
@@ -693,9 +675,9 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                 style={{
                   padding: '10px 14px',
                   borderRadius: '8px',
-                  backgroundColor: estoqueInsuficiente ? 'rgba(239, 68, 68, 0.18)' : 'rgba(16, 185, 129, 0.15)',
-                  border: `1px solid ${estoqueInsuficiente ? '#f87171' : 'rgba(16, 185, 129, 0.4)'}`,
-                  color: estoqueInsuficiente ? '#f87171' : '#34d399',
+                  backgroundColor: estoqueInsuficiente ? 'color-mix(in srgb, var(--negative) 18%, transparent)' : 'color-mix(in srgb, var(--positive) 15%, transparent)',
+                  border: `1px solid ${estoqueInsuficiente ? 'var(--negative)' : 'color-mix(in srgb, var(--positive) 40%, transparent)'}`,
+                  color: estoqueInsuficiente ? 'var(--negative)' : 'var(--positive)',
                   fontSize: '12.5px',
                   fontWeight: 600,
                   display: 'flex',
@@ -776,7 +758,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                   value={precoUnitarioStr}
                   onChange={(e) => setPrecoUnitarioStr(e.target.value)}
                   placeholder="Ex: 69.99"
-                  style={{ ...inputStyle, width: '100%', maxWidth: 'none', margin: 0, fontWeight: 'bold', color: '#60a5fa' }}
+                  style={{ ...inputStyle, width: '100%', maxWidth: 'none', margin: 0, fontWeight: 'bold', color: 'var(--accent-text)' }}
                 />
               </div>
             </div>
@@ -842,9 +824,9 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
         </div>
 
         {/* Resumo Financeiro */}
-        <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderLeft: `4px solid ${colors.accent}` }}>
+        <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
-            <h3 style={{ ...cardTitleStyle, color: '#60a5fa', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ ...cardTitleStyle, color: 'var(--accent-text)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <BarChart3 size={18} /> Resumo da Precificação da Venda
             </h3>
             <p style={{ ...cardDescStyle, marginBottom: '20px' }}>
@@ -859,25 +841,25 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: colors.bgInput, borderRadius: '8px' }}>
                 <span style={{ color: colors.textSecondary, fontSize: '13px' }}>Custo da Mercadoria:</span>
-                <span style={{ color: '#f87171', fontWeight: 600, fontSize: '14px' }}>- {formatarMoeda(custoProdNum * quantidade)}</span>
+                <span style={{ color: 'var(--negative)', fontWeight: 600, fontSize: '14px' }}>- {formatarMoeda(custoProdNum * quantidade)}</span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: colors.bgInput, borderRadius: '8px' }}>
                 <span style={{ color: colors.textSecondary, fontSize: '13px' }}>Insumos (Embalagem + Etiqueta):</span>
-                <span style={{ color: '#f87171', fontWeight: 600, fontSize: '14px' }}>- {formatarMoeda((custoEmbNum + custoEtiqNum) * quantidade)}</span>
+                <span style={{ color: 'var(--negative)', fontWeight: 600, fontSize: '14px' }}>- {formatarMoeda((custoEmbNum + custoEtiqNum) * quantidade)}</span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: plataformaSelecionada ? 'rgba(239, 68, 68, 0.12)' : 'rgba(59, 130, 246, 0.15)', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: plataformaSelecionada ? 'color-mix(in srgb, var(--negative) 12%, transparent)' : 'color-mix(in srgb, var(--accent) 15%, transparent)', borderRadius: '8px' }}>
                 <span style={{ color: colors.textSecondary, fontSize: '13px' }}>Taxa da Plataforma ({taxaInfo.taxaDesc}):</span>
-                <strong style={{ color: plataformaSelecionada ? '#f87171' : '#34d399', fontSize: '14px' }}>
+                <strong style={{ color: plataformaSelecionada ? 'var(--negative)' : 'var(--positive)', fontSize: '14px' }}>
                   {plataformaSelecionada ? `- ${formatarMoeda(taxaTotal)}` : 'R$ 0,00 (ISENTO)'}
                 </strong>
               </div>
 
-              <div style={{ marginTop: '10px', padding: '16px', backgroundColor: 'rgba(16, 185, 129, 0.18)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '10px', textAlign: 'center' }}>
+              <div style={{ marginTop: '10px', padding: '16px', backgroundColor: 'color-mix(in srgb, var(--positive) 18%, transparent)', border: '1px solid color-mix(in srgb, var(--positive) 40%, transparent)', borderRadius: '10px', textAlign: 'center' }}>
                 <span style={{ color: colors.textSecondary, fontSize: '12px', display: 'block', marginBottom: '4px' }}>LUCRO LÍQUIDO REAL ESTIMADO</span>
-                <strong style={{ color: '#34d399', fontSize: '26px', display: 'block' }}>{formatarMoeda(lucroTotal)}</strong>
-                <span style={{ fontSize: '13px', color: '#60a5fa', fontWeight: 600 }}>Margem Líquida Real: {margemPct.toFixed(1)}%</span>
+                <strong style={{ color: 'var(--positive)', fontSize: '26px', display: 'block' }}>{formatarMoeda(lucroTotal)}</strong>
+                <span style={{ fontSize: '13px', color: 'var(--accent-text)', fontWeight: 600 }}>Margem Líquida Real: {margemPct.toFixed(1)}%</span>
               </div>
             </div>
           </div>
@@ -886,14 +868,14 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
 
       {/* Modal de Confirmação de Baixa de Venda */}
       {modalConfirmacaoAberto && prodSelecionado && (
-        <div
+        <div className="modal-overlay"
           style={{
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backgroundColor: 'var(--scrim)',
             backdropFilter: 'blur(5px)',
             display: 'flex',
             alignItems: 'center',
@@ -903,23 +885,23 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
           }}
           onClick={() => !salvando && setModalConfirmacaoAberto(false)}
         >
-          <div
+          <div className="modal-panel"
             style={{
               backgroundColor: colors.bgCard,
               border: `1px solid ${colors.borderStrong}`,
               borderRadius: '16px',
               width: '100%',
               maxWidth: '480px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+              boxShadow: 'var(--shadow-lg)',
               padding: '24px',
               boxSizing: 'border-box'
             }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <AlertTriangle size={28} color="#f59e0b" style={{ flexShrink: 0 }} />
+              <AlertTriangle size={28} color="var(--warning)" style={{ flexShrink: 0 }} />
               <div>
-                <h3 style={{ ...cardTitleStyle, fontSize: '18px', margin: 0, color: '#f59e0b' }}>
+                <h3 style={{ ...cardTitleStyle, fontSize: '18px', margin: 0, color: 'var(--warning)' }}>
                   Confirmar Baixa no Estoque?
                 </h3>
                 <p style={{ ...cardDescStyle, margin: 0, fontSize: '12.5px' }}>
@@ -942,7 +924,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                 <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Store size={14} /> Plataforma:
                 </span>
-                <span style={{ color: '#60a5fa', fontWeight: 600 }}>
+                <span style={{ color: 'var(--accent-text)', fontWeight: 600 }}>
                   {plataformaSelecionada ? plataformaSelecionada.nome : `Venda Direta [${formaPagamento}]`}
                 </span>
               </div>
@@ -951,7 +933,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                 <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <TrendingDown size={14} /> Qtd. Vendida:
                 </span>
-                <strong style={{ color: '#f87171' }}>- {quantidade} un.</strong>
+                <strong style={{ color: 'var(--negative)' }}>- {quantidade} un.</strong>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
@@ -959,7 +941,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                   <BarChart3 size={14} /> Novo Estoque:
                 </span>
                 <span style={{ color: colors.textPrimary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {estoqueAtual} un. <ArrowRight size={13} /> <strong style={{ color: '#34d399' }}>{estoqueAtual - quantidade} un.</strong>
+                  {estoqueAtual} un. <ArrowRight size={13} /> <strong style={{ color: 'var(--positive)' }}>{estoqueAtual - quantidade} un.</strong>
                 </span>
               </div>
 
@@ -974,7 +956,7 @@ export function VendaDireta({ mostrarMensagem, carregarEstoqueGlobal }: BaixaVen
                 <span style={{ color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <DollarSign size={14} /> Lucro Líquido Real:
                 </span>
-                <strong style={{ color: '#34d399', fontSize: '15px' }}>{formatarMoeda(lucroTotal)} ({margemPct.toFixed(1)}%)</strong>
+                <strong style={{ color: 'var(--positive)', fontSize: '15px' }}>{formatarMoeda(lucroTotal)} ({margemPct.toFixed(1)}%)</strong>
               </div>
             </div>
 

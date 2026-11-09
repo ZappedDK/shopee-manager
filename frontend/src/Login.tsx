@@ -163,26 +163,27 @@ export function Login({ onLoginSuccess }: LoginProps) {
   return (
     <div
       style={{
-        minHeight: '100vh',
-        width: '100vw',
+        minHeight: '100dvh',
+        width: '100%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.bgApp,
-        fontFamily: "'Inter', sans-serif",
-        padding: '20px',
+        backgroundImage: 'radial-gradient(60% 45% at 50% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%)',
+        padding: 'calc(24px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px))',
         boxSizing: 'border-box'
       }}
     >
       <div
+        className="page-enter"
         style={{
           width: '100%',
-          maxWidth: '420px',
+          maxWidth: '400px',
           backgroundColor: colors.bgCard,
-          borderRadius: '16px',
+          borderRadius: '20px',
           border: `1px solid ${colors.border}`,
-          padding: '36px 32px',
-          boxShadow: '0 12px 30px rgba(0,0,0,0.5)',
+          padding: '36px 28px 30px',
+          boxShadow: 'var(--shadow-lg)',
         }}
       >
         {/* Logotipo / Header */}
@@ -190,7 +191,8 @@ export function Login({ onLoginSuccess }: LoginProps) {
           <img
             src="/icone.png"
             alt="Skold Stock Icon"
-            style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'contain', marginBottom: '8px' }}
+            className="brand-mark"
+            style={{ width: '64px', height: '64px', objectFit: 'contain', marginBottom: '16px', padding: '8px', borderRadius: '16px' }}
           />
           <h2
             className="brand-title"
@@ -199,7 +201,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
               margin: '0 0 6px 0',
               fontSize: '25px',
               fontWeight: 700,
-              fontFamily: "'Rostex-Regular', 'Inter', sans-serif"
+              letterSpacing: '0.04em'
             }}
           >
             Skold Stock
@@ -275,8 +277,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                 justifyContent: 'center',
                 gap: '10px',
                 marginBottom: '20px',
-                transition: '0.2s',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                boxShadow: 'var(--shadow-lg)'
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24">
@@ -290,7 +291,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
 
             <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '10px' }}>
               <div style={{ flex: 1, height: '1px', backgroundColor: colors.border }} />
-              <span style={{ color: colors.textMuted, fontSize: '12px', textTransform: 'uppercase' }}>ou e-mail</span>
+              <span style={{ color: colors.textMuted, fontSize: '12px' }}>ou e-mail</span>
               <div style={{ flex: 1, height: '1px', backgroundColor: colors.border }} />
             </div>
 
@@ -299,6 +300,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </label>
             <input
               type="email"
+              autoComplete="email"
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -311,6 +313,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </label>
             <input
               type="password"
+              autoComplete="current-password"
               placeholder="••••••••"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
@@ -319,12 +322,14 @@ export function Login({ onLoginSuccess }: LoginProps) {
             />
 
             <div style={{ textAlign: 'right', marginBottom: '20px' }}>
-              <span
+              <button
+                type="button"
+                className="link-btn"
                 onClick={() => { limparMensagens(); setModo('esqueci'); setStepEsqueci(1); }}
-                style={{ color: colors.accent, fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                style={{ fontSize: '13px', fontWeight: 500 }}
               >
                 Esqueci minha senha
-              </span>
+              </button>
             </div>
 
             <button
@@ -339,12 +344,14 @@ export function Login({ onLoginSuccess }: LoginProps) {
               <span style={{ color: colors.textSecondary, fontSize: '13.5px' }}>
                 Não tem uma conta?{' '}
               </span>
-              <span
+              <button
+                type="button"
+                className="link-btn"
                 onClick={() => { limparMensagens(); setModo('registro'); }}
-                style={{ color: colors.accent, fontSize: '13.5px', cursor: 'pointer', fontWeight: 600 }}
+                style={{ fontSize: '13.5px', fontWeight: 600 }}
               >
                 Cadastrar-se
-              </span>
+              </button>
             </div>
           </form>
         )}
@@ -369,6 +376,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </label>
             <input
               type="email"
+              autoComplete="email"
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -381,6 +389,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </label>
             <input
               type="password"
+              autoComplete="new-password"
               placeholder="••••••••"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
@@ -393,6 +402,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </label>
             <input
               type="password"
+              autoComplete="new-password"
               placeholder="••••••••"
               value={confirmarSenha}
               onChange={(e) => setConfirmarSenha(e.target.value)}
@@ -409,12 +419,14 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </button>
 
             <div style={{ textAlign: 'center', marginTop: '20px' }}>
-              <span
+              <button
+                type="button"
+                className="link-btn"
                 onClick={() => { limparMensagens(); setModo('login'); }}
-                style={{ color: colors.accent, fontSize: '13.5px', cursor: 'pointer', fontWeight: 500 }}
+                style={{ fontSize: '13.5px', fontWeight: 500 }}
               >
                 ← Voltar para o Login
-              </span>
+              </button>
             </div>
           </form>
         )}
@@ -429,6 +441,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                 </label>
                 <input
                   type="email"
+                  autoComplete="email"
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -451,6 +464,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                 </label>
                 <input
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={inputStyle}
@@ -462,6 +476,8 @@ export function Login({ onLoginSuccess }: LoginProps) {
                 </label>
                 <input
                   type="text"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
                   placeholder="Ex: A1B2C3"
                   value={tokenReset}
                   onChange={(e) => setTokenReset(e.target.value.toUpperCase())}
@@ -474,6 +490,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                 </label>
                 <input
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Sua nova senha"
                   value={novaSenha}
                   onChange={(e) => setNovaSenha(e.target.value)}
@@ -492,12 +509,14 @@ export function Login({ onLoginSuccess }: LoginProps) {
             )}
 
             <div style={{ textAlign: 'center', marginTop: '20px' }}>
-              <span
+              <button
+                type="button"
+                className="link-btn"
                 onClick={() => { limparMensagens(); setModo('login'); }}
-                style={{ color: colors.accent, fontSize: '13.5px', cursor: 'pointer', fontWeight: 500 }}
+                style={{ fontSize: '13.5px', fontWeight: 500 }}
               >
                 ← Cancelar e voltar ao Login
-              </span>
+              </button>
             </div>
           </div>
         )}

@@ -39,9 +39,9 @@ function badgeDias(dias: number) {
   if (dias === 9999) {
     return (
       <span style={{
-        backgroundColor: 'rgba(239, 68, 68, 0.15)',
-        color: '#fca5a5',
-        border: '1px solid rgba(239, 68, 68, 0.35)',
+        backgroundColor: 'color-mix(in srgb, var(--negative) 15%, transparent)',
+        color: 'var(--negative)',
+        border: '1px solid color-mix(in srgb, var(--negative) 35%, transparent)',
         borderRadius: '6px',
         padding: '2px 8px',
         fontSize: '12px',
@@ -53,9 +53,9 @@ function badgeDias(dias: number) {
   if (dias >= 60) {
     return (
       <span style={{
-        backgroundColor: 'rgba(239, 68, 68, 0.15)',
-        color: '#fca5a5',
-        border: '1px solid rgba(239, 68, 68, 0.35)',
+        backgroundColor: 'color-mix(in srgb, var(--negative) 15%, transparent)',
+        color: 'var(--negative)',
+        border: '1px solid color-mix(in srgb, var(--negative) 35%, transparent)',
         borderRadius: '6px',
         padding: '2px 8px',
         fontSize: '12px',
@@ -67,9 +67,9 @@ function badgeDias(dias: number) {
   if (dias >= 30) {
     return (
       <span style={{
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        color: '#fcd34d',
-        border: '1px solid rgba(245, 158, 11, 0.35)',
+        backgroundColor: 'color-mix(in srgb, var(--warning) 15%, transparent)',
+        color: 'var(--warning)',
+        border: '1px solid color-mix(in srgb, var(--warning) 35%, transparent)',
         borderRadius: '6px',
         padding: '2px 8px',
         fontSize: '12px',
@@ -80,9 +80,9 @@ function badgeDias(dias: number) {
   }
   return (
     <span style={{
-      backgroundColor: 'rgba(59, 130, 246, 0.12)',
-      color: '#60a5fa',
-      border: '1px solid rgba(59, 130, 246, 0.3)',
+      backgroundColor: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+      color: 'var(--accent-text)',
+      border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
       borderRadius: '6px',
       padding: '2px 8px',
       fontSize: '12px',
@@ -224,7 +224,7 @@ export default function ProdutosSemVenda() {
       {/* Cabeçalho */}
       <div style={{ marginBottom: '28px' }}>
         <h2 style={{ ...pageTitleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <TrendingDown size={24} color="#f87171" /> Produtos Sem Vendas
+          <TrendingDown size={24} color="var(--negative)" /> Produtos Sem Vendas
         </h2>
         <p style={pageSubtitleStyle}>
           Identifique produtos parados no estoque para impulsionar as vendas.
@@ -240,7 +240,7 @@ export default function ProdutosSemVenda() {
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           {/* Dropdown */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '5px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <label style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '5px', fontWeight: 600 }}>
               Selecione o período
             </label>
             <select
@@ -264,7 +264,7 @@ export default function ProdutosSemVenda() {
           {periodoSelecionado === -1 && (
             <>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '5px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '5px', fontWeight: 600 }}>
                   Data Início
                 </label>
                 <input
@@ -275,7 +275,7 @@ export default function ProdutosSemVenda() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '5px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '5px', fontWeight: 600 }}>
                   Data Fim
                 </label>
                 <input
@@ -325,25 +325,25 @@ export default function ProdutosSemVenda() {
       {/* Resumo */}
       {dados && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-            <div style={{ ...cardStyle, padding: '20px 24px', borderLeft: `3px solid ${colors.danger}` }}>
-              <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Produtos Parados</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#fca5a5' }}>{produtosFiltrados.length}</div>
+          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ ...cardStyle, padding: '20px 24px' }}>
+              <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 600, marginBottom: '6px' }}>Produtos Parados</div>
+              <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--negative)' }}>{produtosFiltrados.length}</div>
               <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px' }}>no período analisado</div>
             </div>
-            <div style={{ ...cardStyle, padding: '20px 24px', borderLeft: `3px solid ${colors.amber}` }}>
-              <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Nunca Vendidos</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#fcd34d' }}>{nuncaVendidos}</div>
+            <div style={{ ...cardStyle, padding: '20px 24px' }}>
+              <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 600, marginBottom: '6px' }}>Nunca Vendidos</div>
+              <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--warning)' }}>{nuncaVendidos}</div>
               <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px' }}>sem histórico de venda</div>
             </div>
-            <div style={{ ...cardStyle, padding: '20px 24px', borderLeft: `3px solid ${colors.accent}` }}>
-              <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Unidades Paradas</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#60a5fa' }}>{totalEstoque}</div>
+            <div style={{ ...cardStyle, padding: '20px 24px' }}>
+              <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 600, marginBottom: '6px' }}>Unidades Paradas</div>
+              <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--accent-text)' }}>{totalEstoque}</div>
               <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px' }}>em estoque</div>
             </div>
-            <div style={{ ...cardStyle, padding: '20px 24px', borderLeft: `3px solid ${colors.purple}` }}>
-              <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Capital Parado</div>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: '#c084fc' }}>{formatarMoeda(totalCapitalParado)}</div>
+            <div style={{ ...cardStyle, padding: '20px 24px' }}>
+              <div style={{ fontSize: '12px', color: colors.textMuted, fontWeight: 600, marginBottom: '6px' }}>Capital Parado</div>
+              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--purple)' }}>{formatarMoeda(totalCapitalParado)}</div>
               <div style={{ fontSize: '12px', color: colors.textMuted, marginTop: '4px' }}>custo × estoque de cada produto</div>
             </div>
           </div>
@@ -458,13 +458,11 @@ export default function ProdutosSemVenda() {
                       const capitalItem = (p.custo_produto || 0) * (p.quantidade_estoque || 0);
                       return (
                         <tr key={p.id} style={{ backgroundColor: 'transparent' }}
-                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)')}
-                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                         >
                           <td style={{ ...tableCellStyle, fontFamily: 'monospace', fontSize: '12px', color: colors.textMuted, whiteSpace: 'nowrap', width: '1%' }}>
                             {p.sku || '—'}
                           </td>
-                          <td style={{ ...tableCellStyle, whiteSpace: 'nowrap' }}>
+                          <td className="col-wrap" style={{ ...tableCellStyle, whiteSpace: 'nowrap' }}>
                             <div style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{p.nome}</div>
                           </td>
                           <td style={{ ...tableCellStyle, textAlign: 'right', color: colors.textSecondary }}>

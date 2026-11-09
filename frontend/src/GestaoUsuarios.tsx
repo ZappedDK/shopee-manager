@@ -147,7 +147,6 @@ export function GestaoUsuarios() {
                     borderRadius: '10px',
                     padding: '20px',
                     opacity: user.ativo ? 1 : 0.65,
-                    transition: '0.2s'
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
@@ -160,7 +159,7 @@ export function GestaoUsuarios() {
                             fontWeight: 700,
                             padding: '2px 8px',
                             borderRadius: '12px',
-                            backgroundColor: user.role === 'admin' ? 'rgba(59, 130, 246, 0.2)' : user.role === 'editor' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(148, 163, 184, 0.2)',
+                            backgroundColor: user.role === 'admin' ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : user.role === 'editor' ? 'color-mix(in srgb, var(--positive) 20%, transparent)' : 'color-mix(in srgb, var(--text-muted) 20%, transparent)',
                             color: user.role === 'admin' ? colors.accent : user.role === 'editor' ? colors.successText : colors.textMuted,
                             border: `1px solid ${user.role === 'admin' ? colors.accent : colors.border}`
                           }}
@@ -272,9 +271,8 @@ export function GestaoUsuarios() {
                               fontWeight: 600,
                               cursor: 'pointer',
                               border: `1px solid ${estaLiberada ? colors.accent : colors.border}`,
-                              backgroundColor: estaLiberada ? 'rgba(59, 130, 246, 0.2)' : colors.bgCard,
+                              backgroundColor: estaLiberada ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : colors.bgCard,
                               color: estaLiberada ? colors.accent : colors.textMuted,
-                              transition: '0.15s',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '6px'

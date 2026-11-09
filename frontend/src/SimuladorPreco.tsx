@@ -78,7 +78,7 @@ function SeletorProdutoComBusca({ produtos, skuSelecionado, onSelectSku }: Selet
       </div>
 
       {aberto && (
-        <div
+        <div className="popover"
           style={{
             position: 'absolute',
             top: 'calc(100% + 4px)',
@@ -87,7 +87,7 @@ function SeletorProdutoComBusca({ produtos, skuSelecionado, onSelectSku }: Selet
             backgroundColor: colors.bgSidebar,
             border: `1px solid ${colors.borderStrong}`,
             borderRadius: '10px',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 1000,
             padding: '8px',
           }}
@@ -134,19 +134,13 @@ function SeletorProdutoComBusca({ produtos, skuSelecionado, onSelectSku }: Selet
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '13px',
-                      backgroundColor: selecionado ? 'rgba(59,130,246,0.2)' : 'transparent',
-                      color: selecionado ? '#fff' : colors.textPrimary,
+                      backgroundColor: selecionado ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+                      color: selecionado ? 'var(--text-primary)' : colors.textPrimary,
                       fontWeight: selecionado ? 600 : 400,
                       marginBottom: '2px',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!selecionado) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!selecionado) e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
                     <span>
@@ -588,11 +582,10 @@ export function SimuladorPreco() {
             ...btnStyle,
             padding: '10px 18px',
             borderRadius: '8px',
-            backgroundColor: modo === 'existente' ? 'rgba(59, 130, 246, 0.18)' : 'rgba(30, 41, 59, 0.75)',
-            border: modo === 'existente' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid #334155',
-            color: modo === 'existente' ? '#60a5fa' : '#cbd5e1',
-            boxShadow: modo === 'existente' ? '0 2px 8px rgba(59, 130, 246, 0.15)' : 'none',
-            transition: '0.15s ease-in-out',
+            backgroundColor: modo === 'existente' ? 'color-mix(in srgb, var(--accent) 18%, transparent)' : 'var(--surface-neutral)',
+            border: modo === 'existente' ? '1px solid color-mix(in srgb, var(--accent) 40%, transparent)' : '1px solid var(--border-strong)',
+            color: modo === 'existente' ? 'var(--accent-text)' : 'var(--text-secondary)',
+            boxShadow: modo === 'existente' ? '0 2px 8px color-mix(in srgb, var(--accent) 15%, transparent)' : 'none',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px'
@@ -606,11 +599,10 @@ export function SimuladorPreco() {
             ...btnStyle,
             padding: '10px 18px',
             borderRadius: '8px',
-            backgroundColor: modo === 'livre' ? 'rgba(59, 130, 246, 0.18)' : 'rgba(30, 41, 59, 0.75)',
-            border: modo === 'livre' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid #334155',
-            color: modo === 'livre' ? '#60a5fa' : '#cbd5e1',
-            boxShadow: modo === 'livre' ? '0 2px 8px rgba(59, 130, 246, 0.15)' : 'none',
-            transition: '0.15s ease-in-out',
+            backgroundColor: modo === 'livre' ? 'color-mix(in srgb, var(--accent) 18%, transparent)' : 'var(--surface-neutral)',
+            border: modo === 'livre' ? '1px solid color-mix(in srgb, var(--accent) 40%, transparent)' : '1px solid var(--border-strong)',
+            color: modo === 'livre' ? 'var(--accent-text)' : 'var(--text-secondary)',
+            boxShadow: modo === 'livre' ? '0 2px 8px color-mix(in srgb, var(--accent) 15%, transparent)' : 'none',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px'
@@ -624,11 +616,10 @@ export function SimuladorPreco() {
             ...btnStyle,
             padding: '10px 18px',
             borderRadius: '8px',
-            backgroundColor: modo === 'comparativo' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(30, 41, 59, 0.75)',
-            border: modo === 'comparativo' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #334155',
-            color: modo === 'comparativo' ? '#34d399' : '#cbd5e1',
-            boxShadow: modo === 'comparativo' ? '0 2px 8px rgba(16, 185, 129, 0.15)' : 'none',
-            transition: '0.15s ease-in-out',
+            backgroundColor: modo === 'comparativo' ? 'color-mix(in srgb, var(--positive) 18%, transparent)' : 'var(--surface-neutral)',
+            border: modo === 'comparativo' ? '1px solid color-mix(in srgb, var(--positive) 40%, transparent)' : '1px solid var(--border-strong)',
+            color: modo === 'comparativo' ? 'var(--positive)' : 'var(--text-secondary)',
+            boxShadow: modo === 'comparativo' ? '0 2px 8px color-mix(in srgb, var(--positive) 15%, transparent)' : 'none',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px'
@@ -648,25 +639,25 @@ export function SimuladorPreco() {
               <strong style={{ fontSize: '22px', color: colors.textPrimary }}>{produtos.length}</strong>
             </div>
 
-            <div style={{ ...cardStyle, padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '4px solid #34d399' }}>
+            <div style={{ ...cardStyle, padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <CheckCircle2 size={14} color="#34d399" /> Boa Margem (≥ 20%)
+                <CheckCircle2 size={14} color="var(--positive)" /> Boa Margem (≥ 20%)
               </span>
-              <strong style={{ fontSize: '22px', color: '#34d399' }}>{totalComBoaMargem} SKUs</strong>
+              <strong style={{ fontSize: '22px', color: 'var(--positive)' }}>{totalComBoaMargem} SKUs</strong>
             </div>
 
-            <div style={{ ...cardStyle, padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '4px solid #fbbf24' }}>
+            <div style={{ ...cardStyle, padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <AlertTriangle size={14} color="#fbbf24" /> Margem em Alerta (&lt; 10%)
+                <AlertTriangle size={14} color="var(--warning)" /> Margem em Alerta (&lt; 10%)
               </span>
-              <strong style={{ fontSize: '22px', color: '#fbbf24' }}>{totalComAlerta} SKUs</strong>
+              <strong style={{ fontSize: '22px', color: 'var(--warning)' }}>{totalComAlerta} SKUs</strong>
             </div>
 
-            <div style={{ ...cardStyle, padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '4px solid #f87171' }}>
+            <div style={{ ...cardStyle, padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <span style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <XCircle size={14} color="#f87171" /> No Prejuízo (&lt; 0%)
+                <XCircle size={14} color="var(--negative)" /> No Prejuízo (&lt; 0%)
               </span>
-              <strong style={{ fontSize: '22px', color: '#f87171' }}>{totalComPrejuizo} SKUs</strong>
+              <strong style={{ fontSize: '22px', color: 'var(--negative)' }}>{totalComPrejuizo} SKUs</strong>
             </div>
           </div>
 
@@ -684,9 +675,9 @@ export function SimuladorPreco() {
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    border: filtroStatusComparativo === 'ativos' ? '1px solid #34d399' : '1px solid #334155',
-                    backgroundColor: filtroStatusComparativo === 'ativos' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-                    color: filtroStatusComparativo === 'ativos' ? '#34d399' : colors.textMuted,
+                    border: filtroStatusComparativo === 'ativos' ? '1px solid var(--positive)' : '1px solid var(--border-strong)',
+                    backgroundColor: filtroStatusComparativo === 'ativos' ? 'color-mix(in srgb, var(--positive) 20%, transparent)' : 'transparent',
+                    color: filtroStatusComparativo === 'ativos' ? 'var(--positive)' : colors.textMuted,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px'
@@ -702,9 +693,9 @@ export function SimuladorPreco() {
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    border: filtroStatusComparativo === 'inativos' ? '1px solid #f87171' : '1px solid #334155',
-                    backgroundColor: filtroStatusComparativo === 'inativos' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-                    color: filtroStatusComparativo === 'inativos' ? '#f87171' : colors.textMuted,
+                    border: filtroStatusComparativo === 'inativos' ? '1px solid var(--negative)' : '1px solid var(--border-strong)',
+                    backgroundColor: filtroStatusComparativo === 'inativos' ? 'color-mix(in srgb, var(--negative) 20%, transparent)' : 'transparent',
+                    color: filtroStatusComparativo === 'inativos' ? 'var(--negative)' : colors.textMuted,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px'
@@ -720,9 +711,9 @@ export function SimuladorPreco() {
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    border: filtroStatusComparativo === 'todos' ? '1px solid #60a5fa' : '1px solid #334155',
-                    backgroundColor: filtroStatusComparativo === 'todos' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                    color: filtroStatusComparativo === 'todos' ? '#60a5fa' : colors.textMuted,
+                    border: filtroStatusComparativo === 'todos' ? '1px solid var(--accent-text)' : '1px solid var(--border-strong)',
+                    backgroundColor: filtroStatusComparativo === 'todos' ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+                    color: filtroStatusComparativo === 'todos' ? 'var(--accent-text)' : colors.textMuted,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px'
@@ -745,9 +736,9 @@ export function SimuladorPreco() {
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    border: filtroMargemComparativo === 'todos' ? '1px solid #60a5fa' : '1px solid #334155',
-                    backgroundColor: filtroMargemComparativo === 'todos' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                    color: filtroMargemComparativo === 'todos' ? '#60a5fa' : colors.textMuted,
+                    border: filtroMargemComparativo === 'todos' ? '1px solid var(--accent-text)' : '1px solid var(--border-strong)',
+                    backgroundColor: filtroMargemComparativo === 'todos' ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+                    color: filtroMargemComparativo === 'todos' ? 'var(--accent-text)' : colors.textMuted,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px'
@@ -763,9 +754,9 @@ export function SimuladorPreco() {
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    border: filtroMargemComparativo === 'alerta' ? '1px solid #fbbf24' : '1px solid #334155',
-                    backgroundColor: filtroMargemComparativo === 'alerta' ? 'rgba(245, 158, 11, 0.2)' : 'transparent',
-                    color: filtroMargemComparativo === 'alerta' ? '#fbbf24' : colors.textMuted,
+                    border: filtroMargemComparativo === 'alerta' ? '1px solid var(--warning)' : '1px solid var(--border-strong)',
+                    backgroundColor: filtroMargemComparativo === 'alerta' ? 'color-mix(in srgb, var(--warning) 20%, transparent)' : 'transparent',
+                    color: filtroMargemComparativo === 'alerta' ? 'var(--warning)' : colors.textMuted,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px'
@@ -781,9 +772,9 @@ export function SimuladorPreco() {
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    border: filtroMargemComparativo === 'prejuizo' ? '1px solid #f87171' : '1px solid #334155',
-                    backgroundColor: filtroMargemComparativo === 'prejuizo' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-                    color: filtroMargemComparativo === 'prejuizo' ? '#f87171' : colors.textMuted,
+                    border: filtroMargemComparativo === 'prejuizo' ? '1px solid var(--negative)' : '1px solid var(--border-strong)',
+                    backgroundColor: filtroMargemComparativo === 'prejuizo' ? 'color-mix(in srgb, var(--negative) 20%, transparent)' : 'transparent',
+                    color: filtroMargemComparativo === 'prejuizo' ? 'var(--negative)' : colors.textMuted,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px'
@@ -838,7 +829,7 @@ export function SimuladorPreco() {
                           height: '34px',
                           textAlign: 'center',
                           borderLeft: `2px solid ${colors.border}`,
-                          backgroundColor: '#1e293b',
+                          backgroundColor: 'var(--bg-elevated)',
                           position: 'sticky',
                           top: 0,
                           zIndex: 30,
@@ -880,14 +871,14 @@ export function SimuladorPreco() {
                     {plataformas.map((plat) => (
                       <FragmentKey key={plat.id}>
                         <th
-                          style={{ ...tableHeaderStyle, width: '75px', minWidth: '75px', maxWidth: '75px', height: '32px', fontSize: '11px', textAlign: 'center', borderLeft: `2px solid ${colors.border}`, color: '#60a5fa', cursor: 'pointer', userSelect: 'none', padding: '0 2px', position: 'sticky', top: '30px', zIndex: 30, backgroundColor: colors.bgCard, verticalAlign: 'middle', boxShadow: `0 -3px 0 ${colors.bgCard}` }}
+                          style={{ ...tableHeaderStyle, width: '75px', minWidth: '75px', maxWidth: '75px', height: '32px', fontSize: '11px', textAlign: 'center', borderLeft: `2px solid ${colors.border}`, color: 'var(--accent-text)', cursor: 'pointer', userSelect: 'none', padding: '0 2px', position: 'sticky', top: '30px', zIndex: 30, backgroundColor: colors.bgCard, verticalAlign: 'middle', boxShadow: `0 -3px 0 ${colors.bgCard}` }}
                           onClick={() => toggleSortComparativo(`preco_${plat.id}`)}
                           title={`Clique para ordenar por Preço Venda em ${plat.nome}`}
                         >
                           Preço {renderSortIcon(`preco_${plat.id}`)}
                         </th>
                         <th
-                          style={{ ...tableHeaderStyle, width: '75px', minWidth: '75px', maxWidth: '75px', height: '32px', fontSize: '11px', textAlign: 'center', color: '#34d399', cursor: 'pointer', userSelect: 'none', padding: '0 2px', position: 'sticky', top: '30px', zIndex: 30, backgroundColor: colors.bgCard, verticalAlign: 'middle', boxShadow: `0 -3px 0 ${colors.bgCard}` }}
+                          style={{ ...tableHeaderStyle, width: '75px', minWidth: '75px', maxWidth: '75px', height: '32px', fontSize: '11px', textAlign: 'center', color: 'var(--positive)', cursor: 'pointer', userSelect: 'none', padding: '0 2px', position: 'sticky', top: '30px', zIndex: 30, backgroundColor: colors.bgCard, verticalAlign: 'middle', boxShadow: `0 -3px 0 ${colors.bgCard}` }}
                           onClick={() => toggleSortComparativo(`lucro_${plat.id}`)}
                           title={`Clique para ordenar por Lucro Líquido em ${plat.nome}`}
                         >
@@ -928,7 +919,7 @@ export function SimuladorPreco() {
                             <span style={{ color: p.ativo === false ? colors.textMuted : colors.textPrimary, fontSize: '12.5px', fontWeight: 500 }} title={p.nome}>
                               {p.nome}
                               {p.ativo === false && (
-                                <span style={{ fontSize: '10px', color: '#f87171', backgroundColor: 'rgba(239, 68, 68, 0.2)', padding: '1px 5px', borderRadius: '4px', marginLeft: '6px', fontWeight: 700 }}>
+                                <span style={{ fontSize: '10px', color: 'var(--negative)', backgroundColor: 'color-mix(in srgb, var(--negative) 20%, transparent)', padding: '1px 5px', borderRadius: '4px', marginLeft: '6px', fontWeight: 700 }}>
                                   INATIVO
                                 </span>
                               )}
@@ -947,17 +938,17 @@ export function SimuladorPreco() {
                             const ehPrejuizo = metricas.lucroLiquido < 0;
                             const ehAlerta = margemPct < 10 && !ehPrejuizo;
 
-                            let bgMargem = 'rgba(59, 130, 246, 0.15)';
-                            let colorMargem = '#60a5fa';
+                            let bgMargem = 'color-mix(in srgb, var(--accent) 15%, transparent)';
+                            let colorMargem = 'var(--accent-text)';
                             if (ehPrejuizo) {
-                              bgMargem = 'rgba(239, 68, 68, 0.25)';
-                              colorMargem = '#f87171';
+                              bgMargem = 'color-mix(in srgb, var(--negative) 25%, transparent)';
+                              colorMargem = 'var(--negative)';
                             } else if (ehAlerta) {
-                              bgMargem = 'rgba(245, 158, 11, 0.2)';
-                              colorMargem = '#fbbf24';
+                              bgMargem = 'color-mix(in srgb, var(--warning) 20%, transparent)';
+                              colorMargem = 'var(--warning)';
                             } else if (margemPct >= 20) {
-                              bgMargem = 'rgba(16, 185, 129, 0.2)';
-                              colorMargem = '#34d399';
+                              bgMargem = 'color-mix(in srgb, var(--positive) 20%, transparent)';
+                              colorMargem = 'var(--positive)';
                             }
 
                             return (
@@ -979,7 +970,7 @@ export function SimuladorPreco() {
                                       padding: '3px 2px',
                                       fontSize: '11px',
                                       textAlign: 'center',
-                                      borderColor: ehPrejuizo ? '#f87171' : colors.border
+                                      borderColor: ehPrejuizo ? 'var(--negative)' : colors.border
                                     }}
                                   />
                                 </td>
@@ -989,7 +980,7 @@ export function SimuladorPreco() {
                                   <span style={{
                                     fontSize: '11px',
                                     fontWeight: 700,
-                                    color: ehPrejuizo ? '#f87171' : '#34d399'
+                                    color: ehPrejuizo ? 'var(--negative)' : 'var(--positive)'
                                   }}>
                                     {formatarMoeda(metricas.lucroLiquido)}
                                   </span>
@@ -1050,11 +1041,10 @@ export function SimuladorPreco() {
                 fontSize: '12.5px',
                 fontWeight: 600,
                 borderRadius: '6px',
-                border: tipoCalculo === 'margem' ? '1px solid rgba(59, 130, 246, 0.45)' : '1px solid transparent',
-                backgroundColor: tipoCalculo === 'margem' ? 'rgba(59, 130, 246, 0.18)' : 'transparent',
-                color: tipoCalculo === 'margem' ? '#60a5fa' : colors.textMuted,
+                border: tipoCalculo === 'margem' ? '1px solid color-mix(in srgb, var(--accent) 45%, transparent)' : '1px solid transparent',
+                backgroundColor: tipoCalculo === 'margem' ? 'color-mix(in srgb, var(--accent) 18%, transparent)' : 'transparent',
+                color: tipoCalculo === 'margem' ? 'var(--accent-text)' : colors.textMuted,
                 cursor: 'pointer',
-                transition: '0.15s',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
@@ -1070,11 +1060,10 @@ export function SimuladorPreco() {
                 fontSize: '12.5px',
                 fontWeight: 600,
                 borderRadius: '6px',
-                border: tipoCalculo === 'preco' ? '1px solid rgba(16, 185, 129, 0.45)' : '1px solid transparent',
-                backgroundColor: tipoCalculo === 'preco' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
-                color: tipoCalculo === 'preco' ? '#34d399' : colors.textMuted,
+                border: tipoCalculo === 'preco' ? '1px solid color-mix(in srgb, var(--positive) 45%, transparent)' : '1px solid transparent',
+                backgroundColor: tipoCalculo === 'preco' ? 'color-mix(in srgb, var(--positive) 18%, transparent)' : 'transparent',
+                color: tipoCalculo === 'preco' ? 'var(--positive)' : colors.textMuted,
                 cursor: 'pointer',
-                transition: '0.15s',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px'
@@ -1160,7 +1149,7 @@ export function SimuladorPreco() {
                       margin: 0,
                       fontWeight: 'bold',
                       fontSize: '14px',
-                      color: '#60a5fa',
+                      color: 'var(--accent-text)',
                       padding: '10px 14px'
                     }}
                   />
@@ -1183,7 +1172,7 @@ export function SimuladorPreco() {
                       margin: 0,
                       fontWeight: 'bold',
                       fontSize: '14px',
-                      color: '#34d399',
+                      color: 'var(--positive)',
                       padding: '10px 14px'
                     }}
                   />
@@ -1204,9 +1193,9 @@ export function SimuladorPreco() {
                       fontSize: '12.5px',
                       fontWeight: 600,
                       borderRadius: '6px',
-                      border: margemDesejada === p ? '1px solid #60a5fa' : `1px solid ${colors.border}`,
-                      backgroundColor: margemDesejada === p ? 'rgba(59, 130, 246, 0.25)' : 'transparent',
-                      color: margemDesejada === p ? '#60a5fa' : colors.textSecondary
+                      border: margemDesejada === p ? '1px solid var(--accent-text)' : `1px solid ${colors.border}`,
+                      backgroundColor: margemDesejada === p ? 'color-mix(in srgb, var(--accent) 25%, transparent)' : 'transparent',
+                      color: margemDesejada === p ? 'var(--accent-text)' : colors.textSecondary
                     }}
                   >
                     {p}%
@@ -1220,7 +1209,7 @@ export function SimuladorPreco() {
           {carregando ? (
             <SkeletonTable rows={4} cols={5} />
           ) : erro ? (
-            <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.dangerText}`, color: colors.dangerText, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ ...cardStyle, color: colors.dangerText, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <AlertTriangle size={16} />
               <span>{erro}</span>
             </div>
@@ -1314,7 +1303,7 @@ export function SimuladorPreco() {
                           {sim.inviavel ? (
                             <span style={{ color: colors.dangerText }}>—</span>
                           ) : (
-                            <span style={{ color: '#EE6C6D' }}>
+                            <span style={{ color: 'var(--negative)' }}>
                               {formatarMoeda(sim.taxa_plataforma_real + sim.taxa_fixa)}
                             </span>
                           )}
@@ -1322,13 +1311,13 @@ export function SimuladorPreco() {
 
                         {tipoCalculo === 'preco' && (
                           <td style={tableCellStyle}>
-                            <strong style={{ color: '#e2e8f0' }}>{formatarNumero(sim.roas_minimo)}</strong>
+                            <strong style={{ color: 'var(--text-primary)' }}>{formatarNumero(sim.roas_minimo)}</strong>
                           </td>
                         )}
 
                         <td style={tableCellStyle}>
                           {sim.inviavel ? (
-                            <span style={{ color: colors.dangerText, backgroundColor: '#7f1d1d', padding: '3px 8px', borderRadius: '6px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{ color: colors.dangerText, backgroundColor: 'var(--negative-border)', padding: '3px 8px', borderRadius: '6px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                               <AlertTriangle size={12} /> {tipoCalculo === 'preco' ? 'Prejuízo / Inviável' : 'Margem Inviável'}
                             </span>
                           ) : (

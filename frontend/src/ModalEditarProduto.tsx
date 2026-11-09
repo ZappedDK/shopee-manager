@@ -90,14 +90,14 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
   };
 
   return (
-    <div
+    <div className="modal-overlay"
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backgroundColor: 'var(--scrim)',
         backdropFilter: 'blur(4px)',
         zIndex: 2000,
         display: 'flex',
@@ -106,14 +106,14 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
         padding: '20px'
       }}
     >
-      <div
+      <div className="modal-panel"
         style={{
           ...cardStyle,
           width: '100%',
           maxWidth: '580px',
           maxHeight: '90vh',
           overflowY: 'auto',
-          boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+          boxShadow: 'var(--shadow-lg)',
           border: `1px solid ${colors.borderStrong}`,
           padding: '32px'
         }}
@@ -138,7 +138,6 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                transition: '0.2s'
               }}
               title="Clique para alternar o status do produto (Ativo / Desativado)"
             >
@@ -238,13 +237,13 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
           </div>
 
           {/* Opção Cross-docking / Venda sob Demanda */}
-          <div style={{ marginBottom: '16px', backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+          <div style={{ marginBottom: '16px', backgroundColor: 'color-mix(in srgb, var(--accent) 8%, transparent)', padding: '10px 14px', borderRadius: '8px', border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: colors.textPrimary, fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}>
               <input
                 type="checkbox"
                 checked={crossDocking}
                 onChange={(e) => setCrossDocking(e.target.checked)}
-                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent)' }}
               />
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <Package size={15} color={colors.accent} /> <strong>Produto Cross-docking</strong> <span style={{ color: colors.textSecondary, fontSize: '12px' }}>(Venda sob demanda)</span>
@@ -287,7 +286,7 @@ export function ModalEditarProduto({ produto, embalagens, plataformas, onClose, 
                       gap: '6px',
                       fontSize: '13.5px',
                       cursor: 'pointer',
-                      backgroundColor: marcado ? 'rgba(59,130,246,0.15)' : colors.bgApp,
+                      backgroundColor: marcado ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : colors.bgApp,
                       padding: '6px 12px',
                       borderRadius: '8px',
                       border: `1px solid ${marcado ? colors.accent : colors.border}`

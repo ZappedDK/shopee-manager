@@ -63,14 +63,14 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
   };
 
   return (
-    <div
+    <div className="modal-overlay"
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backgroundColor: 'var(--scrim)',
         backdropFilter: 'blur(4px)',
         zIndex: 2000,
         display: 'flex',
@@ -79,14 +79,14 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
         padding: '20px'
       }}
     >
-      <div
+      <div className="modal-panel"
         style={{
           ...cardStyle,
           width: '100%',
           maxWidth: '620px',
           maxHeight: '90vh',
           overflowY: 'auto',
-          boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+          boxShadow: 'var(--shadow-lg)',
           border: `1px solid ${colors.borderStrong}`,
           padding: '32px'
         }}
@@ -164,7 +164,7 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
             </label>
 
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: colors.textPrimary, fontSize: '13.5px', cursor: 'pointer', backgroundColor: modoDuplicados === 'atualizar' ? 'rgba(59,130,246,0.15)' : colors.bgApp, padding: '10px 14px', borderRadius: '8px', border: `1px solid ${modoDuplicados === 'atualizar' ? colors.accent : colors.border}`, flex: 1, minWidth: '180px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: colors.textPrimary, fontSize: '13.5px', cursor: 'pointer', backgroundColor: modoDuplicados === 'atualizar' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : colors.bgApp, padding: '10px 14px', borderRadius: '8px', border: `1px solid ${modoDuplicados === 'atualizar' ? colors.accent : colors.border}`, flex: 1, minWidth: '180px' }}>
                 <input
                   type="radio"
                   name="duplicados"
@@ -180,7 +180,7 @@ export function ImportarProdutosModal({ onClose, onSuccess }: ImportarProdutosMo
                 </div>
               </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: colors.textPrimary, fontSize: '13.5px', cursor: 'pointer', backgroundColor: modoDuplicados === 'pular' ? 'rgba(59,130,246,0.15)' : colors.bgApp, padding: '10px 14px', borderRadius: '8px', border: `1px solid ${modoDuplicados === 'pular' ? colors.accent : colors.border}`, flex: 1, minWidth: '180px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: colors.textPrimary, fontSize: '13.5px', cursor: 'pointer', backgroundColor: modoDuplicados === 'pular' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : colors.bgApp, padding: '10px 14px', borderRadius: '8px', border: `1px solid ${modoDuplicados === 'pular' ? colors.accent : colors.border}`, flex: 1, minWidth: '180px' }}>
                 <input
                   type="radio"
                   name="duplicados"

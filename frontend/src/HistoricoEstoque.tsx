@@ -102,7 +102,7 @@ export function HistoricoEstoque() {
       case 'AJUSTE':
       case 'REAJUSTE':
         return (
-          <span style={{ ...badgeBaseStyle, backgroundColor: 'rgba(59, 130, 246, 0.2)', color: colors.accent, border: '1px solid #2563eb' }}>
+          <span style={{ ...badgeBaseStyle, backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)', color: colors.accent, border: '1px solid var(--accent)' }}>
             <Settings2 size={13} /> REAJUSTE
           </span>
         );
@@ -149,7 +149,7 @@ export function HistoricoEstoque() {
           </div>
 
           {/* Seletor de Intervalo de Datas (De / Até) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: colors.bgApp, padding: '6px 12px', borderRadius: '8px', border: `1px solid ${colors.borderStrong}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', maxWidth: '100%', backgroundColor: colors.bgApp, padding: '6px 12px', borderRadius: '8px', border: `1px solid ${colors.borderStrong}` }}>
             <label style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600 }}>De:</label>
             <input
               type="date"
@@ -250,7 +250,7 @@ export function HistoricoEstoque() {
                         <strong style={{ color: colors.accent }}>{m.produto_sku}</strong>
                       </td>
 
-                      <td style={{ ...tableCellStyle, minWidth: '180px' }}>
+                      <td className="col-wrap" style={{ ...tableCellStyle, minWidth: '180px' }}>
                         {m.produto_nome}
                       </td>
 
@@ -284,7 +284,7 @@ export function HistoricoEstoque() {
                       </td>
 
                       {/* Nova Coluna: Valor Total de Venda */}
-                      <td style={{ ...tableCellStyle, fontSize: '13px', color: '#60a5fa', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      <td style={{ ...tableCellStyle, fontSize: '13px', color: 'var(--accent-text)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {(() => {
                           let qtd = Math.abs(m.qtd_alterada ?? m.quantidade_alterada ?? 1);
                           let vUn = m.valor_unitario;
@@ -319,7 +319,7 @@ export function HistoricoEstoque() {
                       </td>
 
                       {/* Descrição Limpa */}
-                      <td style={{ ...tableCellStyle, fontSize: '13px', color: colors.textSecondary }}>
+                      <td className="col-wrap" style={{ ...tableCellStyle, fontSize: '13px', color: colors.textSecondary }}>
                         {motivoLimpo}
                       </td>
 

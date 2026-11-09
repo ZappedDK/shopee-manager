@@ -84,9 +84,9 @@ export function IntegracaoShopee({ ocultarHeader = false }: IntegracaoShopeeProp
 
       <MessageBanner mensagem={mensagem} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '24px', alignItems: 'start', marginBottom: '24px' }}>
         {/* Card 1: Webhook Endpoint */}
-        <div style={{ ...cardStyle, borderLeft: `4px solid ${colors.accent}` }}>
+        <div style={{ ...cardStyle }}>
           <h3 style={{ ...cardTitleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Link2 size={18} color={colors.accent} /> URL do Webhook de Vendas
           </h3>
@@ -106,8 +106,8 @@ export function IntegracaoShopee({ ocultarHeader = false }: IntegracaoShopeeProp
               style={{
                 ...btnNeutralStyle,
                 whiteSpace: 'nowrap',
-                backgroundColor: copiado ? colors.successBg : 'rgba(59, 130, 246, 0.16)',
-                color: copiado ? colors.successText : '#60a5fa',
+                backgroundColor: copiado ? colors.successBg : 'color-mix(in srgb, var(--accent) 16%, transparent)',
+                color: copiado ? colors.successText : 'var(--accent-text)',
                 border: `1px solid ${copiado ? colors.successBorder : colors.borderStrong}`,
                 display: 'inline-flex',
                 alignItems: 'center',

@@ -99,14 +99,14 @@ export function ModalEditarPlataforma({ plataforma, onClose, onSuccess }: ModalE
   };
 
   return (
-    <div
+    <div className="modal-overlay"
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backgroundColor: 'var(--scrim)',
         backdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'center',
@@ -116,7 +116,7 @@ export function ModalEditarPlataforma({ plataforma, onClose, onSuccess }: ModalE
       }}
       onClick={onClose}
     >
-      <div
+      <div className="modal-panel"
         style={{
           backgroundColor: colors.bgCard,
           border: `1px solid ${colors.borderStrong}`,
@@ -125,7 +125,7 @@ export function ModalEditarPlataforma({ plataforma, onClose, onSuccess }: ModalE
           maxWidth: '750px',
           maxHeight: '90vh',
           overflowY: 'auto',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          boxShadow: 'var(--shadow-lg)',
           padding: '24px',
         }}
         onClick={e => e.stopPropagation()}
@@ -156,7 +156,7 @@ export function ModalEditarPlataforma({ plataforma, onClose, onSuccess }: ModalE
         {erro && (
           <div
             style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              backgroundColor: 'color-mix(in srgb, var(--negative) 15%, transparent)',
               color: colors.danger,
               padding: '12px 16px',
               borderRadius: '8px',
