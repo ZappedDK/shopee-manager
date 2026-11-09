@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 import { PlatformIcon } from './PlatformIcon';
-import { api, apiGet, apiGetSWR } from './services/api';
+import { api, apiGet, apiGetSWR, apiPrefetch } from './services/api';
 import { Dashboard } from './Dashboard';
 import { Login } from './Login';
 import { SimuladorPreco } from './SimuladorPreco';
@@ -184,7 +184,7 @@ function App() {
     apiGetSWR<any[]>('/configuracoes/', undefined, setConfiguracoes);
     apiGetSWR<any[]>('/plataformas/', undefined, setPlataformas);
 
-    // Se não há cache ainda (primeira carga), busca de forma assíncrona normal
+    // Primeira carga sem cache: apiGet reaproveita a mesma requisição do SWR acima
     apiGet<any[]>('/embalagens/').then(setEmbalagens).catch(() => {});
     apiGet<any[]>('/configuracoes/').then(setConfiguracoes).catch(() => {});
     apiGet<any[]>('/plataformas/').then(setPlataformas).catch(() => {});
@@ -200,6 +200,12 @@ function App() {
   const [totalProdutos, setTotalProdutos] = useState<number>(0);
   const [totalPaginas, setTotalPaginas] = useState<number>(1);
 
+  // Cada carga do estoque ganha um número; respostas de cargas antigas (ex.: a
+  // busca "cab" chegando depois de "cabo") são descartadas em vez de
+  // sobrescrever o resultado mais novo.
+  const reqEstoqueId = useRef(0);
+  const ultimaBuscaEstoque = useRef(buscaProduto);
+
   const carregarEstoque = (
     page = paginaAtual,
     limit = itensPorPagina,
@@ -214,7 +220,9 @@ function App() {
       if (busca) params['busca'] = busca;
       if (status) params['status'] = status;
 
+      const reqId = ++reqEstoqueId.current;
       const applyData = (data: any) => {
+        if (reqId !== reqEstoqueId.current) return;
         if (data && typeof data === 'object' && 'produtos' in data) {
           setProdutosDetalhados(data.produtos);
           setTotalProdutos(data.total);
@@ -231,7 +239,7 @@ function App() {
       // Stale-while-revalidate: serve do cache sem mostrar skeleton
       const cached = apiGetSWR<any>('/produtos/detalhados', params, (fresh) => {
         applyData(fresh);
-        setCarregandoEstoque(false);
+        if (reqId === reqEstoqueId.current) setCarregandoEstoque(false);
       });
 
       if (cached !== null) {
@@ -244,16 +252,20 @@ function App() {
         apiGet<any>('/produtos/detalhados', params)
           .then(applyData)
           .catch(err => console.error('Erro ao carregar estoque:', err))
-          .finally(() => setCarregandoEstoque(false));
+          .finally(() => { if (reqId === reqEstoqueId.current) setCarregandoEstoque(false); });
       }
     }
   };
 
   useEffect(() => {
     if (view === 'estoque') {
+      // Só a digitação na busca espera (300ms). Trocar página, filtro ou
+      // quantidade por página busca na hora.
+      const digitando = buscaProduto !== ultimaBuscaEstoque.current;
+      ultimaBuscaEstoque.current = buscaProduto;
       const timer = setTimeout(() => {
         carregarEstoque(paginaAtual, itensPorPagina, buscaProduto, filtroStatus);
-      }, 250);
+      }, digitando ? 300 : 0);
       return () => clearTimeout(timer);
     }
   }, [paginaAtual, itensPorPagina, buscaProduto, filtroStatus, view]);
@@ -526,6 +538,25 @@ function App() {
     window.scrollTo({ top: 0 });
   };
 
+  // Pré-carrega os dados da tela quando o mouse para sobre o link (ou o dedo
+  // toca), para que ela abra com os dados já no cache.
+  const preCarregar = (target: View) => {
+    if (target === view) return;
+    if (target === 'estoque') {
+      const params: Record<string, string> = { page: '1', limit: String(itensPorPagina) };
+      if (filtroStatus) params['status'] = filtroStatus;
+      apiPrefetch('/produtos/detalhados', params);
+    } else if (target === 'dashboard') {
+      apiPrefetch('/dashboard/resumo');
+      apiPrefetch('/produtos/alertas', { limite: '0' });
+    } else if (target === 'plataformas') {
+      apiPrefetch('/plataformas/');
+    } else if (target === 'cadastros' || target === 'almoxarifado') {
+      apiPrefetch('/embalagens/');
+      apiPrefetch('/configuracoes/');
+    }
+  };
+
   // Função (não componente) para não remontar os links a cada render
   const navItem = (icon: React.ReactNode, label: string, target: View) => (
     <a
@@ -535,6 +566,8 @@ function App() {
       data-tooltip={menuRecolhido ? label : undefined}
       aria-current={isViewAtiva(target) ? 'page' : undefined}
       onClick={(e) => irPara(e, target)}
+      onPointerEnter={() => preCarregar(target)}
+      onFocus={() => preCarregar(target)}
     >
       {icon}
       <span>{label}</span>
@@ -686,6 +719,7 @@ function App() {
             className="tab-item"
             aria-current={isViewAtiva(aba.target) ? 'page' : undefined}
             onClick={(e) => irPara(e, aba.target)}
+            onPointerDown={() => preCarregar(aba.target)}
           >
             {aba.icon}
             <span>{aba.label}</span>

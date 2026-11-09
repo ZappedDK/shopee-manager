@@ -164,19 +164,6 @@ export function Dashboard() {
     carregarRelatorioVendas(dataInicio, dataFim, canalFiltro);
   }, []);
 
-  const aplicarDadosProdutos = (produtos: any[]) => {
-    const totalCusto = produtos.reduce((soma: number, p: any) => soma + Math.max(0, p.valor_estoque || 0), 0);
-    setValorTotalEstoque(totalCusto);
-    const lucroTotal = produtos.reduce((soma: number, p: any) => {
-      if (!p.ativo) return soma;
-      const shopee = p.analises_plataformas?.find((plat: any) => plat.plataforma_nome?.toLowerCase().includes('shopee'));
-      const analise = shopee || p.analises_plataformas?.[0];
-      const lucroUn = analise?.lucro_liquido || 0;
-      return soma + (lucroUn * Math.max(0, p.quantidade_estoque || 0));
-    }, 0);
-    setLucroPotencialTotal(lucroTotal);
-  };
-
   const carregarAlertas = () => {
     // Stale-while-revalidate para alertas
     const cached = apiGetSWR<any[]>('/produtos/alertas', { limite: '0' }, (fresh) => {
@@ -196,17 +183,21 @@ export function Dashboard() {
     }
   };
 
+  // Totais do topo vêm prontos do servidor (/dashboard/resumo) — antes o
+  // Dashboard baixava o catálogo inteiro com análises só para somar dois números.
+  const aplicarResumo = (r: any) => {
+    setValorTotalEstoque(r?.valor_total_estoque ?? 0);
+    setLucroPotencialTotal(r?.lucro_potencial ?? 0);
+  };
+
   const carregarValorEstoque = () => {
-    // Stale-while-revalidate para valor do estoque
-    const cached = apiGetSWR<any[]>('/produtos/detalhados', undefined, (fresh) => {
-      aplicarDadosProdutos(fresh || []);
-    });
+    const cached = apiGetSWR<any>('/dashboard/resumo', undefined, aplicarResumo);
 
     if (cached !== null) {
-      aplicarDadosProdutos(cached || []);
+      aplicarResumo(cached);
     } else {
-      apiGet<any[]>('/produtos/detalhados')
-        .then(data => aplicarDadosProdutos(data || []))
+      apiGet<any>('/dashboard/resumo')
+        .then(aplicarResumo)
         .catch(err => console.error('Erro ao calcular valor do estoque:', err));
     }
   };

@@ -19,7 +19,16 @@ DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL)
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-if DATABASE_URL.startswith("postgresql://") and "sslmode" not in DATABASE_URL:
+# Fixa o driver psycopg2 (é o que está no requirements.txt).
+# A partir do SQLAlchemy 2.1, "postgresql://" sem driver passou a usar o
+# psycopg 3 por padrão — que não está instalado — e o deploy quebrava com
+# "No module named 'psycopg'". Também cobre strings "postgresql+psycopg://".
+for _prefixo in ("postgresql+psycopg://", "postgresql://"):
+    if DATABASE_URL.startswith(_prefixo):
+        DATABASE_URL = "postgresql+psycopg2://" + DATABASE_URL[len(_prefixo):]
+        break
+
+if DATABASE_URL.startswith("postgresql") and "sslmode" not in DATABASE_URL:
     DATABASE_URL += "?sslmode=require" if "?" not in DATABASE_URL else "&sslmode=require"
 
 # Se for SQLite com caminho relativo tipo sqlite:///./estoque_shopee.db, garante o caminho absoluto na pasta backend

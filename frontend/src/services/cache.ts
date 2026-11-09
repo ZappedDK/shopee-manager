@@ -30,6 +30,7 @@ const TTL_MAP: Array<[string, number]> = [
   ['/relatorios/produtos-sem-venda', 2 * 60_000],
   ['/produtos/movimentacoes', 2 * 60_000],
   ['/produtos/detalhados', 60_000],
+  ['/dashboard/resumo', 60_000],
 ];
 
 /** Escolhe o TTL baseado no prefixo da URL */
@@ -58,6 +59,12 @@ export function cacheGet(key: string): unknown | null {
   return entry.data;
 }
 
+/** Idade (ms) de uma entrada no cache; Infinity se ausente */
+export function cacheAge(key: string): number {
+  const entry = store.get(key);
+  return entry ? Date.now() - entry.timestamp : Infinity;
+}
+
 /** Invalida todas as chaves cujo início bate com algum dos prefixos fornecidos */
 export function cacheInvalidate(...prefixes: string[]): void {
   for (const key of store.keys()) {
@@ -74,12 +81,12 @@ export function cacheClear(): void {
 
 /** Mapa de mutação → rotas que devem ser invalidadas */
 const INVALIDATION_MAP: Array<[string, string[]]> = [
-  ['/produtos', ['/produtos', '/relatorios']],
-  ['/embalagens', ['/embalagens']],
-  ['/plataformas', ['/plataformas', '/produtos']],
-  ['/configuracoes', ['/configuracoes']],
-  ['/vendas', ['/relatorios', '/produtos']],
-  ['/almoxarifado', ['/almoxarifado', '/produtos']],
+  ['/produtos', ['/produtos', '/relatorios', '/dashboard']],
+  ['/embalagens', ['/embalagens', '/produtos', '/dashboard']],
+  ['/plataformas', ['/plataformas', '/produtos', '/dashboard']],
+  ['/configuracoes', ['/configuracoes', '/produtos', '/dashboard']],
+  ['/vendas', ['/relatorios', '/produtos', '/dashboard']],
+  ['/almoxarifado', ['/almoxarifado', '/produtos', '/dashboard']],
 ];
 
 /** Dado o path de uma mutação, invalida os caches relacionados */

@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from sqlalchemy import inspect, text
+from fastapi.middleware.gzip import GZipMiddleware
+from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy import inspect, text, func
 from pydantic import BaseModel
 import uvicorn
 from sqlalchemy.exc import IntegrityError
@@ -109,6 +110,21 @@ try:
 except Exception as e:
     print(f"Aviso ao verificar migração de banco: {e}")
 
+# Índices de performance (idempotentes — IF NOT EXISTS funciona em SQLite e PostgreSQL).
+# O histórico de movimentações é filtrado por data/tipo/produto em quase toda tela.
+try:
+    with engine.begin() as conn:
+        for ddl in (
+            "CREATE INDEX IF NOT EXISTS ix_mov_tipo_criado ON movimentacoes_estoque (tipo, criado_em)",
+            "CREATE INDEX IF NOT EXISTS ix_mov_criado_em ON movimentacoes_estoque (criado_em)",
+            "CREATE INDEX IF NOT EXISTS ix_mov_produto_id ON movimentacoes_estoque (produto_id)",
+            "CREATE INDEX IF NOT EXISTS ix_mov_produto_sku ON movimentacoes_estoque (produto_sku)",
+            "CREATE INDEX IF NOT EXISTS ix_prod_plat_produto ON produto_plataforma (produto_id)",
+        ):
+            conn.execute(text(ddl))
+except Exception as e:
+    print(f"Aviso ao criar índices: {e}")
+
 
 app = FastAPI(title="Skold Stock API")
 
@@ -119,6 +135,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Compacta respostas JSON grandes (listas de produtos/relatórios ficam ~80% menores)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 from core.auth import (
     gerar_hash_senha,
@@ -949,7 +968,7 @@ def obter_relatorio_vendas(
     fim_utc = dt_fim_brt + timedelta(hours=3)
 
     # Produtos e Plataformas para cálculo exato de margem
-    produtos = db.query(models_domain.Produto).all()
+    produtos = db.query(models_domain.Produto).options(joinedload(models_domain.Produto.embalagem)).all()
     plataformas = db.query(models_domain.Plataforma).all()
     prod_map = {p.id: p for p in produtos}
     sku_map = {p.sku.upper(): p for p in produtos if p.sku}
@@ -962,7 +981,9 @@ def obter_relatorio_vendas(
         return None
 
     movs = db.query(models_domain.MovimentacaoEstoque).filter(
-        models_domain.MovimentacaoEstoque.tipo.in_(["VENDA", "VENDA_DIRETA", "VENDA_WEBHOOK", "SAIDA"])
+        models_domain.MovimentacaoEstoque.tipo.in_(["VENDA", "VENDA_DIRETA", "VENDA_WEBHOOK", "SAIDA"]),
+        models_domain.MovimentacaoEstoque.criado_em >= inicio_utc,
+        models_domain.MovimentacaoEstoque.criado_em <= fim_utc,
     ).order_by(models_domain.MovimentacaoEstoque.criado_em.desc()).all()
 
     qtd_total = 0
@@ -1056,12 +1077,15 @@ def obter_relatorio_vendas(
         "data_fim": dt_fim_brt.strftime("%Y-%m-%d")
     }
 
+    # A lista de vendas vai uma única vez (em "resumo"). As chaves legadas
+    # trazem só os totais — antes a mesma lista era repetida 5x na resposta.
+    totais = {k: v for k, v in dados_resumo.items() if k != "vendas"}
     return {
         "resumo": dados_resumo,
-        "hoje": dados_resumo,
-        "semana": dados_resumo,
-        "mes": dados_resumo,
-        **dados_resumo
+        "hoje": totais,
+        "semana": totais,
+        "mes": totais,
+        **totais
     }
 
 @app.get("/relatorios/vendas/exportar", tags=["Dashboard"])
@@ -1184,19 +1208,29 @@ def relatorio_produtos_sem_venda(
             "dias_sem_venda": None,  # última venda histórica
         })
 
-    # Enriquecer com a data da última venda de cada produto (histórico completo)
-    for item in resultado:
-        sku_upper = (item["sku"] or "").upper()
-        ultima = db.query(models_domain.MovimentacaoEstoque).filter(
-            models_domain.MovimentacaoEstoque.tipo.in_(["VENDA", "VENDA_DIRETA", "VENDA_WEBHOOK"]),
-            (
-                (models_domain.MovimentacaoEstoque.produto_id == item["id"]) |
-                (models_domain.MovimentacaoEstoque.produto_sku == item["sku"])
-            )
-        ).order_by(models_domain.MovimentacaoEstoque.criado_em.desc()).first()
+    # Enriquecer com a data da última venda de cada produto (histórico completo).
+    # Uma única consulta agrupada, em vez de uma consulta por produto.
+    ultima_por_id = {}
+    ultima_por_sku = {}
+    if resultado:
+        Mov = models_domain.MovimentacaoEstoque
+        linhas = db.query(Mov.produto_id, Mov.produto_sku, func.max(Mov.criado_em)).filter(
+            Mov.tipo.in_(["VENDA", "VENDA_DIRETA", "VENDA_WEBHOOK"])
+        ).group_by(Mov.produto_id, Mov.produto_sku).all()
+        for pid, psku, data_max in linhas:
+            if data_max is None:
+                continue
+            if pid is not None and (pid not in ultima_por_id or data_max > ultima_por_id[pid]):
+                ultima_por_id[pid] = data_max
+            if psku and (psku not in ultima_por_sku or data_max > ultima_por_sku[psku]):
+                ultima_por_sku[psku] = data_max
 
-        if ultima and ultima.criado_em:
-            ultima_brt = ultima.criado_em - timedelta(hours=3)
+    for item in resultado:
+        candidatas = [d for d in (ultima_por_id.get(item["id"]), ultima_por_sku.get(item["sku"])) if d]
+        ultima_data = max(candidatas) if candidatas else None
+
+        if ultima_data:
+            ultima_brt = ultima_data - timedelta(hours=3)
             delta = agora_brt - ultima_brt
             item["ultima_venda"] = ultima_brt.strftime("%d/%m/%Y")
             item["dias_sem_venda"] = delta.days
@@ -1259,6 +1293,52 @@ def alertas_de_estoque(limite: int = 0, db: Session = Depends(get_db)):
     ).all()
     return produtos_criticos
 
+@app.get("/dashboard/resumo", tags=["Dashboard"])
+def resumo_dashboard(
+    db: Session = Depends(get_db),
+    usuario_atual: models_domain.Usuario = Depends(get_current_user),
+):
+    """
+    Totais do topo do Dashboard calculados no servidor.
+    Mesma regra que o front usava sobre /produtos/detalhados:
+    - valor_total_estoque: soma de max(0, estoque) * custo de todos os produtos
+    - lucro_potencial: para produtos ativos, lucro líquido unitário na Shopee
+      (ou na primeira plataforma vinculada) * estoque disponível
+    """
+    etiqueta = obter_ou_criar_etiqueta_padrao(db)
+    produtos = db.query(models_domain.Produto).options(
+        joinedload(models_domain.Produto.embalagem),
+        selectinload(models_domain.Produto.plataformas),
+    ).all()
+    custo_etiq = etiqueta.valor_pacote / etiqueta.qtd_unidades if etiqueta.qtd_unidades else 0.0
+
+    valor_total = 0.0
+    lucro_total = 0.0
+    for p in produtos:
+        estoque = max(0, p.quantidade_estoque or 0)
+        valor_total += estoque * (p.custo_produto or 0.0)
+        if p.ativo is False or not p.plataformas:
+            continue
+        emb = p.embalagem
+        custo_emb = (emb.custo_pacote / emb.qtd_unidades) if (emb and emb.qtd_unidades and emb.qtd_unidades > 0) else 0.0
+        plats = sorted(p.plataformas, key=lambda pl: pl.id)
+        plat = next((pl for pl in plats if "shopee" in (pl.nome or "").lower()), plats[0])
+        metricas = calcular_metricas_plataforma(
+            preco_venda=p.preco_venda,
+            custo_unitario=p.custo_produto,
+            custo_embalagem_un=custo_emb,
+            custo_etiqueta_un=custo_etiq,
+            plataforma=plat,
+        )
+        lucro_total += (metricas.get("lucro_liquido", 0.0) or 0.0) * estoque
+
+    return {
+        "valor_total_estoque": round(valor_total, 2),
+        "lucro_potencial": round(lucro_total, 2),
+        "total_produtos": len(produtos),
+    }
+
+
 @app.get("/produtos/detalhados", tags=["Estoque"])
 def listar_produtos_detalhados(
     page: int = 1,
@@ -1267,6 +1347,11 @@ def listar_produtos_detalhados(
     status: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
+    # Busca/cria a etiqueta ANTES de carregar os produtos: se ela precisar ser
+    # criada, o commit expiraria os produtos já carregados e cada um seria
+    # recarregado do banco individualmente.
+    etiqueta = obter_ou_criar_etiqueta_padrao(db)
+
     query = db.query(models_domain.Produto)
 
     if status == "ativos":
@@ -1285,7 +1370,10 @@ def listar_produtos_detalhados(
 
     total_registros = query.count()
 
-    query_ordenada = query.order_by(
+    query_ordenada = query.options(
+        joinedload(models_domain.Produto.embalagem),
+        selectinload(models_domain.Produto.plataformas),
+    ).order_by(
         cast(models_domain.Produto.sku, Integer).asc(),
         models_domain.Produto.sku.asc(),
         models_domain.Produto.id.asc()
@@ -1301,7 +1389,6 @@ def listar_produtos_detalhados(
         page_val = 1
         total_paginas = 1
 
-    etiqueta = obter_ou_criar_etiqueta_padrao(db)
     resultados = []
     custo_etiq = etiqueta.valor_pacote / etiqueta.qtd_unidades
 
@@ -1314,7 +1401,8 @@ def listar_produtos_detalhados(
         metricas_multiplas = []
         
         # Calcula as métricas apenas para a página de produtos retornada
-        for plat in p.plataformas:
+        # (ordem estável por id — o carregamento em lote não garante a ordem)
+        for plat in sorted(p.plataformas, key=lambda pl: pl.id):
             res_plat = calcular_metricas_plataforma(
                 preco_venda=p.preco_venda,
                 custo_unitario=p.custo_produto,

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { cacheGet, cacheSet, getTtl, invalidateByMutation, cacheClear } from './cache';
+import { cacheGet, cacheSet, getTtl, invalidateByMutation, cacheClear, cacheAge } from './cache';
 
 // Em desenvolvimento, defina VITE_API_URL no arquivo .env da pasta frontend/
 // apontando para o IP da máquina que roda o backend (ex: http://192.168.0.10:8000).
@@ -52,6 +52,32 @@ api.interceptors.response.use(
   }
 );
 
+// ─── Requisições em andamento (deduplicação) ──────────────────────────────────
+// Se a mesma URL+parâmetros já está sendo buscada, quem pedir de novo recebe a
+// MESMA promessa em vez de disparar outra ida ao servidor. Antes, abrir uma tela
+// sem cache disparava 2 requisições idênticas (SWR + fetch normal).
+const emAndamento = new Map<string, Promise<unknown>>();
+
+function chaveDe(url: string, params?: Record<string, string>): string {
+  const queryString = params ? new URLSearchParams(params).toString() : '';
+  return `${url}?${queryString}`;
+}
+
+function buscarCompartilhado<T>(url: string, params?: Record<string, string>): Promise<T> {
+  const chave = chaveDe(url, params);
+  const existente = emAndamento.get(chave);
+  if (existente) return existente as Promise<T>;
+  const req = api
+    .get<T>(url, { params })
+    .then((res) => res.data)
+    .finally(() => emAndamento.delete(chave));
+  emAndamento.set(chave, req);
+  return req;
+}
+
+/** Revalidação em segundo plano só se o dado em cache tiver mais que isso. */
+const JANELA_REVALIDACAO_MS = 15_000;
+
 /**
  * Versão com cache de api.get — serve do cache imediatamente se disponível,
  * e retorna uma Promise que resolve com os dados (cache ou rede).
@@ -63,45 +89,51 @@ export async function apiGet<T = unknown>(
   url: string,
   params?: Record<string, string>
 ): Promise<T> {
-  const queryString = params ? new URLSearchParams(params).toString() : '';
-  const cacheKey = `${url}?${queryString}`;
-
-  const cached = cacheGet(cacheKey);
+  const cached = cacheGet(chaveDe(url, params));
   if (cached !== null) {
     return cached as T;
   }
+  return buscarCompartilhado<T>(url, params);
+}
 
-  const res = await api.get<T>(url, { params });
-  return res.data;
+/**
+ * Pré-carrega uma rota no cache (ex.: ao passar o mouse num item do menu).
+ * Silencioso: erros são ignorados e nada acontece se o cache já estiver quente.
+ */
+export function apiPrefetch(url: string, params?: Record<string, string>): void {
+  if (cacheGet(chaveDe(url, params)) !== null) return;
+  buscarCompartilhado(url, params).catch(() => {});
 }
 
 /**
  * Stale-while-revalidate: retorna dados do cache instantaneamente (ou null)
  * e dispara revalidação em background. O callback `onUpdate` é chamado
  * quando a resposta da rede chega (se diferente do cache).
+ * Cache com menos de 15s não é revalidado (evita ir ao servidor a cada
+ * troca de tela); mutações já invalidam o cache na hora.
  */
 export function apiGetSWR<T = unknown>(
   url: string,
   params: Record<string, string> | undefined,
   onUpdate: (data: T) => void
 ): T | null {
-  const queryString = params ? new URLSearchParams(params).toString() : '';
-  const cacheKey = `${url}?${queryString}`;
-
+  const cacheKey = chaveDe(url, params);
   const cached = cacheGet(cacheKey) as T | null;
 
-  // Revalida em background sempre
-  api
-    .get<T>(url, { params })
-    .then((res) => {
+  if (cached !== null && cacheAge(cacheKey) < JANELA_REVALIDACAO_MS) {
+    return cached;
+  }
+
+  buscarCompartilhado<T>(url, params)
+    .then((data) => {
       // Só chama onUpdate se os dados são diferentes do cache atual
-      const newJson = JSON.stringify(res.data);
+      const newJson = JSON.stringify(data);
       const cachedJson = cached !== null ? JSON.stringify(cached) : null;
       if (newJson !== cachedJson) {
-        onUpdate(res.data);
+        onUpdate(data);
       }
     })
-    .catch(() => {/* silencioso — cache já serviu */});
+    .catch(() => {/* silencioso — quem chamou trata o erro pelo próprio fluxo */});
 
   return cached;
 }
