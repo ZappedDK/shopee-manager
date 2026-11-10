@@ -2,7 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { BarraProgresso } from './ui'
+import { acordarServidor } from './services/api'
+import { BarraProgresso, AvisoConexao } from './ui'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -12,9 +13,12 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+acordarServidor()
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BarraProgresso />
     <App />
+    <AvisoConexao />
   </StrictMode>,
 )

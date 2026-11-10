@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useState } from 'react';
-import { CheckCircle2, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, ChevronDown, Loader2, WifiOff, RotateCw } from 'lucide-react';
 import {
   pageTitleStyle, pageSubtitleStyle, messageBannerStyle, sectionGapStyle,
   cardStyle, cardTitleStyle, cardDescStyle,
@@ -116,6 +116,69 @@ export function BarraProgresso() {
   return (
     <div className="top-progress" data-ativo={ativo} role="progressbar" aria-hidden={!ativo} aria-label="Carregando">
       <span />
+    </div>
+  );
+}
+
+/**
+ * Aviso flutuante de conexão com o servidor:
+ * - "Conectando…" quando uma espera passa de 6s ou o sistema está repetindo
+ *   requisições (servidor gratuito acordando);
+ * - erro com botão "Tentar novamente" se as tentativas se esgotarem.
+ */
+export function AvisoConexao() {
+  const [estado, setEstado] = useState<'oculto' | 'lento' | 'falhou'>('oculto');
+
+  useEffect(() => {
+    let timerLento: number | undefined;
+    const onCarregando = (e: Event) => {
+      const n = (e as CustomEvent<number>).detail;
+      window.clearTimeout(timerLento);
+      if (n > 0) {
+        timerLento = window.setTimeout(() => setEstado(s => (s === 'falhou' ? s : 'lento')), 6000);
+      } else {
+        setEstado(s => (s === 'falhou' ? s : 'oculto'));
+      }
+    };
+    const onConexao = (e: Event) => {
+      const d = (e as CustomEvent<string>).detail;
+      if (d === 'tentando') setEstado(s => (s === 'falhou' ? s : 'lento'));
+      else if (d === 'ok') setEstado('oculto');
+      else if (d === 'falhou') setEstado('falhou');
+    };
+    window.addEventListener('api-carregando', onCarregando);
+    window.addEventListener('api-conexao', onConexao);
+    return () => {
+      window.removeEventListener('api-carregando', onCarregando);
+      window.removeEventListener('api-conexao', onConexao);
+      window.clearTimeout(timerLento);
+    };
+  }, []);
+
+  if (estado === 'oculto') return null;
+
+  return (
+    <div className="aviso-conexao" role={estado === 'falhou' ? 'alert' : 'status'} key={estado}>
+      {estado === 'lento' ? (
+        <>
+          <Loader2 size={16} className="spin" style={{ flexShrink: 0, color: 'var(--accent)' }} />
+          <div>
+            <strong>Conectando ao servidor…</strong>
+            <span>Se ele estava inativo, pode levar até 1 minuto para acordar.</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <WifiOff size={16} style={{ flexShrink: 0, color: 'var(--negative)' }} />
+          <div>
+            <strong>Não foi possível conectar ao servidor</strong>
+            <span>Verifique sua internet ou tente de novo em instantes.</span>
+          </div>
+          <button type="button" onClick={() => window.location.reload()}>
+            <RotateCw size={14} /> Tentar novamente
+          </button>
+        </>
+      )}
     </div>
   );
 }

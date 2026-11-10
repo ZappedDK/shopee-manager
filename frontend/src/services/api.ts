@@ -11,6 +11,24 @@ export const api = axios.create({
   baseURL,
 });
 
+// Sem tempo limite, uma requisição perdida (ex.: enquanto o Render acorda)
+// deixava a tela carregando para sempre. Leituras: 25s (e são repetidas).
+// Escritas: 70s, porque não são repetidas e o servidor pode estar acordando.
+const TIMEOUT_LEITURA_MS = 25_000;
+const TIMEOUT_ESCRITA_MS = 70_000;
+
+// ─── Servidor acordando / fora do ar ──────────────────────────────────────────
+// No plano gratuito o Render desliga o backend após 15 min sem uso e leva de
+// 30s a 1min para religar. Leituras (GET) que falham por rede, tempo esgotado ou
+// 502/503/504 são repetidas sozinhas com espera crescente (~1min no total).
+// Escritas (POST/PUT/DELETE) NUNCA são repetidas: poderiam duplicar uma venda.
+const ESPERAS_RETRY_MS = [1500, 3000, 6000, 10_000, 15_000, 20_000];
+const avisarConexao = (estado: 'tentando' | 'ok' | 'falhou') =>
+  window.dispatchEvent(new CustomEvent('api-conexao', { detail: estado }));
+
+const ehFalhaDeConexao = (error: any) =>
+  !error.response || [502, 503, 504].includes(error.response.status);
+
 // ─── Indicador global de carregamento ─────────────────────────────────────────
 // Conta requisições em andamento e avisa a barra de progresso do topo
 // (evento 'api-carregando'). Requisições "silenciosas" — revalidação em segundo
@@ -33,6 +51,9 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    if (!config.timeout) {
+      config.timeout = (config.method || 'get').toLowerCase() === 'get' ? TIMEOUT_LEITURA_MS : TIMEOUT_ESCRITA_MS;
+    }
     if (!(config as any).silencioso) {
       (config as any).__contado = true;
       pendentes += 1;
@@ -47,6 +68,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     encerrarContagem(response.config);
+    if ((response.config as any).__tentativa && !(response.config as any).silencioso) avisarConexao('ok');
     const method = response.config.method?.toLowerCase();
     const url = response.config.url || '';
 
@@ -62,8 +84,22 @@ api.interceptors.response.use(
 
     return response;
   },
-  (error) => {
+  async (error) => {
     encerrarContagem(error.config);
+    const cfg = error.config as any;
+
+    if (cfg && !axios.isCancel(error) && ehFalhaDeConexao(error) && (cfg.method || 'get').toLowerCase() === 'get') {
+      const tentativa = cfg.__tentativa || 0;
+      if (tentativa < ESPERAS_RETRY_MS.length) {
+        cfg.__tentativa = tentativa + 1;
+        if (!cfg.silencioso) avisarConexao('tentando');
+        await new Promise((r) => setTimeout(r, ESPERAS_RETRY_MS[tentativa]));
+        return api(cfg);
+      }
+      if (!cfg.silencioso) avisarConexao('falhou');
+      return Promise.reject(error);
+    }
+
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
@@ -159,4 +195,12 @@ export function apiGetSWR<T = unknown>(
     .catch(() => {/* silencioso — quem chamou trata o erro pelo próprio fluxo */});
 
   return cached;
+}
+
+/**
+ * Acorda o backend assim que o app abre (ex.: enquanto a pessoa digita o login),
+ * para que as primeiras telas não esperem o servidor gratuito religar.
+ */
+export function acordarServidor(): void {
+  api.get('/', { silencioso: true, timeout: TIMEOUT_ESCRITA_MS } as any).catch(() => {});
 }
