@@ -164,8 +164,7 @@ export function HistoricoEstoque() {
                 fontSize: '12px',
                 color: colors.textPrimary,
                 backgroundColor: colors.bgSidebar,
-                border: `1px solid ${colors.border}`,
-                colorScheme: 'dark'
+                border: `1px solid ${colors.border}`
               }}
             />
             <label style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600, marginLeft: '4px' }}>Até:</label>
@@ -182,8 +181,7 @@ export function HistoricoEstoque() {
                 fontSize: '12px',
                 color: colors.textPrimary,
                 backgroundColor: colors.bgSidebar,
-                border: `1px solid ${colors.border}`,
-                colorScheme: 'dark'
+                border: `1px solid ${colors.border}`
               }}
             />
           </div>

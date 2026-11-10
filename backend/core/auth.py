@@ -12,7 +12,19 @@ from models.domain import Usuario
 
 import bcrypt
 
-SECRET_KEY = os.getenv("SECRET_KEY", "shopee_manager_super_secret_jwt_key_2026")
+# Chave que assina os logins (JWT). Em produção (PostgreSQL) ela é OBRIGATÓRIA:
+# o valor padrão antigo estava no código-fonte, então qualquer pessoa com acesso
+# ao repositório conseguia gerar um login de administrador válido.
+# No SQLite local (desenvolvimento) continua havendo um valor padrão.
+_CHAVE_DEV = "skold-dev-somente-local-nunca-usar-em-producao"
+SECRET_KEY = os.getenv("SECRET_KEY", "")
+if not SECRET_KEY:
+    if os.getenv("DATABASE_URL", "").startswith("postgres"):
+        raise RuntimeError(
+            "SECRET_KEY não configurada. Defina a variável de ambiente SECRET_KEY "
+            "no servidor (Render → Environment) com um valor longo e aleatório."
+        )
+    SECRET_KEY = _CHAVE_DEV
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 

@@ -333,10 +333,8 @@ select::-ms-expand {
   display: none;
 }
 
-:root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-}
-
+/* O ícone do calendário segue o color-scheme do tema (claro → ícone escuro,
+   escuro → ícone claro). Não forçar color-scheme nem inverter no input. */
 input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.6;

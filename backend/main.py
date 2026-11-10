@@ -315,7 +315,7 @@ def cadastrar_plataforma(plat: schemas_domain.PlataformaCreate, db: Session = De
     return {"status": "sucesso"}
 
 @app.get("/plataformas/", tags=["Cadastros"])
-def listar_plataformas(db: Session = Depends(get_db)):
+def listar_plataformas(db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
     plataformas = db.query(models_domain.Plataforma).all()
     resultado = []
     for p in plataformas:
@@ -397,7 +397,7 @@ def cadastrar_embalagem(embalagem: schemas_domain.EmbalagemCreate, db: Session =
     return {"status": "sucesso", "id": nova_embalagem.id}
 
 @app.get("/embalagens/", tags=["Cadastros"])
-def listar_embalagens(db: Session = Depends(get_db)):
+def listar_embalagens(db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
     return db.query(models_domain.Embalagem).order_by(models_domain.Embalagem.id.asc()).all()
 
 @app.put("/embalagens/{id}", tags=["Cadastros"])
@@ -426,7 +426,7 @@ def salvar_configuracao_global(config: schemas_domain.ConfiguracaoGlobalCreate, 
     return {"status": "sucesso"}
 
 @app.get("/configuracoes/", tags=["Cadastros"])
-def listar_configuracoes(db: Session = Depends(get_db)):
+def listar_configuracoes(db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
     return db.query(models_domain.ConfiguracaoGlobal).all()
 
 @app.delete("/embalagens/{id}", tags=["Cadastros"])
@@ -843,7 +843,8 @@ def listar_movimentacoes_estoque(
     data_inicio: Optional[str] = None,
     data_fim: Optional[str] = None,
     limite: Optional[int] = 500,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario_atual: models_domain.Usuario = Depends(get_current_user),
 ):
     query = db.query(models_domain.MovimentacaoEstoque)
     if sku:
@@ -938,7 +939,8 @@ def obter_relatorio_vendas(
     data_inicio: Optional[str] = None,
     data_fim: Optional[str] = None,
     canal: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario_atual: models_domain.Usuario = Depends(get_current_user),
 ):
     """
     Retorna métricas de vendas consolidadas por intervalo de datas personalizado (data_inicio / data_fim) e Canal/Plataforma.
@@ -1093,7 +1095,8 @@ def exportar_relatorio_vendas_excel(
     data_inicio: Optional[str] = None,
     data_fim: Optional[str] = None,
     canal: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario_atual: models_domain.Usuario = Depends(get_current_user),
 ):
     """
     Gera e faz download do relatório de vendas formatado para Excel (.csv) por intervalo de datas e canal.
@@ -1143,7 +1146,8 @@ def exportar_relatorio_vendas_excel(
 def relatorio_produtos_sem_venda(
     data_inicio: Optional[str] = None,
     data_fim: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario_atual: models_domain.Usuario = Depends(get_current_user),
 ):
     """
     Retorna produtos ativos que NÃO tiveram nenhuma venda no período informado.
@@ -1255,7 +1259,8 @@ def relatorio_produtos_sem_venda(
 def exportar_produtos_sem_venda(
     data_inicio: Optional[str] = None,
     data_fim: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario_atual: models_domain.Usuario = Depends(get_current_user),
 ):
     """Exporta CSV dos produtos sem venda no período para anúncios Shopee."""
     dados = relatorio_produtos_sem_venda(data_inicio=data_inicio, data_fim=data_fim, db=db)
@@ -1285,7 +1290,7 @@ def exportar_produtos_sem_venda(
     )
 
 @app.get("/produtos/alertas", tags=["Dashboard"])
-def alertas_de_estoque(limite: int = 0, db: Session = Depends(get_db)):
+def alertas_de_estoque(limite: int = 0, db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
     produtos_criticos = db.query(models_domain.Produto).filter(
         models_domain.Produto.quantidade_estoque <= limite,
         models_domain.Produto.ativo != False,
@@ -1345,7 +1350,8 @@ def listar_produtos_detalhados(
     limit: Optional[int] = None,
     busca: Optional[str] = None,
     status: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario_atual: models_domain.Usuario = Depends(get_current_user),
 ):
     # Busca/cria a etiqueta ANTES de carregar os produtos: se ela precisar ser
     # criada, o commit expiraria os produtos já carregados e cada um seria
@@ -1439,7 +1445,7 @@ def listar_produtos_detalhados(
     return resultados
 
 @app.get("/produtos/{sku}/financeiro", tags=["Inteligência Financeira"])
-def relatorio_financeiro_produto(sku: str, db: Session = Depends(get_db)):
+def relatorio_financeiro_produto(sku: str, db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(get_current_user)):
     produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado.")
@@ -1470,7 +1476,8 @@ def simular_preco_livre(
     preco_venda: Optional[float] = None,
     embalagem_id: Optional[int] = None,
     custo_embalagem_custom: float = 0.0,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario_atual: models_domain.Usuario = Depends(get_current_user),
 ):
     etiqueta = db.query(models_domain.ConfiguracaoGlobal).filter_by(chave="etiqueta_padrao").first()
     custo_etiq = (etiqueta.valor_pacote / etiqueta.qtd_unidades) if etiqueta else 0.0
@@ -1523,7 +1530,8 @@ def simular_preco_produto_existente(
     tipo_calculo: str = "margem",
     margem_desejada: float = 20.0,
     preco_venda: Optional[float] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario_atual: models_domain.Usuario = Depends(get_current_user),
 ):
     produto = db.query(models_domain.Produto).filter_by(sku=sku).first()
     if not produto:
@@ -1588,7 +1596,7 @@ class SimularVendaShopeeSchema(BaseModel):
     order_sn: Optional[str] = None
 
 @app.get("/shopee/config", tags=["Integração Shopee"])
-def obter_configuracao_shopee(db: Session = Depends(get_db)):
+def obter_configuracao_shopee(db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     configs = db.query(models_domain.ConfiguracaoGlobal).filter(
         models_domain.ConfiguracaoGlobal.chave.in_(["shopee_partner_id", "shopee_partner_key", "shopee_shop_id", "shopee_ambiente"])
     ).all()
@@ -1625,8 +1633,24 @@ def salvar_configuracao_shopee(
     db.commit()
     return {"status": "sucesso", "mensagem": "Credenciais da Shopee salvas com sucesso!"}
 
+def validar_token_webhook(request: Request):
+    """
+    Webhooks não têm login, então exigem um token secreto na URL:
+    https://SEU-BACKEND/webhooks/shopee?token=VALOR_DE_WEBHOOK_TOKEN
+    Sem a variável WEBHOOK_TOKEN configurada no servidor, os webhooks ficam
+    desativados — antes, qualquer pessoa podia simular uma venda e baixar estoque.
+    """
+    import hmac as _hmac
+    esperado = os.getenv("WEBHOOK_TOKEN", "")
+    if not esperado:
+        raise HTTPException(status_code=503, detail="Webhook desativado: configure WEBHOOK_TOKEN no servidor.")
+    recebido = request.query_params.get("token", "")
+    if not _hmac.compare_digest(recebido, esperado):
+        raise HTTPException(status_code=401, detail="Token de webhook inválido.")
+
+
 @app.post("/webhooks/shopee", tags=["Integração Shopee"])
-async def receber_venda_shopee(payload: dict, db: Session = Depends(get_db)):
+async def receber_venda_shopee(payload: dict, db: Session = Depends(get_db), _token: None = Depends(validar_token_webhook)):
     """
     Webhook oficial para receber notificações de vendas da Shopee (API v2).
     Extrai SKUs e quantidades vendidas, abatendo automaticamente no Skold Stock.
@@ -1747,7 +1771,7 @@ class SimularVendaTikTokSchema(BaseModel):
     order_id: Optional[str] = None
 
 @app.get("/tiktok/config", tags=["Integração TikTok Shop"])
-def obter_configuracao_tiktok(db: Session = Depends(get_db)):
+def obter_configuracao_tiktok(db: Session = Depends(get_db), usuario_atual: models_domain.Usuario = Depends(exigir_editor_ou_admin)):
     configs = db.query(models_domain.ConfiguracaoGlobal).filter(
         models_domain.ConfiguracaoGlobal.chave.in_(["tiktok_app_key", "tiktok_app_secret", "tiktok_shop_cipher", "tiktok_ambiente"])
     ).all()
@@ -1785,7 +1809,7 @@ def salvar_configuracao_tiktok(
     return {"status": "sucesso", "mensagem": "Credenciais do TikTok Shop salvas com sucesso!"}
 
 @app.post("/webhooks/tiktok", tags=["Integração TikTok Shop"])
-async def receber_venda_tiktok(payload: dict, db: Session = Depends(get_db)):
+async def receber_venda_tiktok(payload: dict, db: Session = Depends(get_db), _token: None = Depends(validar_token_webhook)):
     """
     Webhook oficial para receber notificações de vendas do TikTok Shop.
     Extrai SKUs e quantidades vendidas, abatendo automaticamente no Skold Stock.

@@ -9,7 +9,7 @@ import {
 import {
   Globe, Handshake, ChevronDown, ChevronUp, Check, BarChart3,
   Download, ShoppingCart, DollarSign, TrendingUp, Package,
-  ClipboardList, AlertTriangle, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown
+  ClipboardList, AlertTriangle, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, Loader2
 } from 'lucide-react';
 import { SkeletonBox, SkeletonList, SkeletonTable } from './Skeleton';
 
@@ -230,15 +230,30 @@ export function Dashboard() {
     }
   };
 
-  const exportarExcel = () => {
-    const baseURL = api.defaults.baseURL || 'http://localhost:8000';
-    const params = new URLSearchParams();
-    if (dataInicio) params.append('data_inicio', dataInicio);
-    if (dataFim) params.append('data_fim', dataFim);
-    if (canalFiltro && canalFiltro !== 'todos') {
-      params.append('canal', canalFiltro);
+  // A exportação exige login: baixa pelo axios (que envia o token) em vez de
+  // abrir a URL direto numa aba, que chegaria ao servidor sem autenticação.
+  const [exportando, setExportando] = useState(false);
+  const exportarExcel = async () => {
+    const params: Record<string, string> = {};
+    if (dataInicio) params['data_inicio'] = dataInicio;
+    if (dataFim) params['data_fim'] = dataFim;
+    if (canalFiltro && canalFiltro !== 'todos') params['canal'] = canalFiltro;
+    try {
+      setExportando(true);
+      const res = await api.get('/relatorios/vendas/exportar', { params, responseType: 'blob' });
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio_vendas_${dataInicio || 'inicio'}_a_${dataFim || 'hoje'}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (err) {
+      console.error('Erro ao exportar relatório:', err);
+    } finally {
+      setExportando(false);
     }
-    window.open(`${baseURL}/relatorios/vendas/exportar?${params.toString()}`, '_blank');
   };
 
   const handleSort = (field: SortFieldVendas) => {
@@ -350,8 +365,7 @@ export function Dashboard() {
                   fontSize: '12px',
                   color: colors.textPrimary,
                   backgroundColor: colors.bgSidebar,
-                  border: `1px solid ${colors.border}`,
-                  colorScheme: 'dark'
+                  border: `1px solid ${colors.border}`
                 }}
               />
               <label style={{ fontSize: '12px', color: colors.textSecondary, fontWeight: 600, marginLeft: '4px' }}>Até:</label>
@@ -372,8 +386,7 @@ export function Dashboard() {
                   fontSize: '12px',
                   color: colors.textPrimary,
                   backgroundColor: colors.bgSidebar,
-                  border: `1px solid ${colors.border}`,
-                  colorScheme: 'dark'
+                  border: `1px solid ${colors.border}`
                 }}
               />
             </div>
@@ -390,6 +403,7 @@ export function Dashboard() {
             {/* Botão Exportar para Excel */}
             <button
               onClick={exportarExcel}
+              disabled={exportando}
               style={{
                 padding: '7px 14px',
                 borderRadius: '8px',
@@ -405,7 +419,7 @@ export function Dashboard() {
               }}
               title="Baixar relatório em formato Excel (.csv)"
             >
-              <Download size={15} /> Exportar Excel
+              {exportando ? <Loader2 size={15} className="spin" /> : <Download size={15} />} {exportando ? 'Gerando…' : 'Exportar Excel'}
             </button>
           </div>
         </div>

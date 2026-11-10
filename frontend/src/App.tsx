@@ -31,8 +31,26 @@ import {
 
 type View = 'dashboard' | 'cadastros' | 'estoque' | 'almoxarifado' | 'plataformas' | 'simulador' | 'historico' | 'usuarios' | 'shopee' | 'tiktok' | 'venda_direta' | 'sem_venda' | 'integracoes';
 
+// Sessão vencida (o login vale 7 dias) volta direto para a tela de login,
+// em vez de abrir o sistema e só falhar na primeira consulta.
+function tokenValido(token: string | null): boolean {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.exp !== 'number' || payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 function App() {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(() => {
+    const salvo = localStorage.getItem('token');
+    if (tokenValido(salvo)) return salvo;
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    return null;
+  });
   const [usuario, setUsuario] = useState<any>(() => {
     const saved = localStorage.getItem('usuario');
     return saved ? JSON.parse(saved) : null;
